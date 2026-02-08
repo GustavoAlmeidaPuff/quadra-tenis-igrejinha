@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
-import { Bell } from 'lucide-react';
+import { Bell, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import CourtStatus from './CourtStatus';
 import Avatar from './Avatar';
@@ -36,8 +36,9 @@ export default function Header({ user }: HeaderProps) {
   return (
     <header className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-40 safe-area-top">
       <div className="flex items-center justify-between h-16 px-4 max-w-md mx-auto">
-        <Link href="/perfil">
+        <Link href="/perfil" className="flex items-center gap-1 hover:opacity-90 transition-opacity">
           <Avatar user={user} size="sm" />
+          <ChevronDown className="w-4 h-4 text-gray-600" strokeWidth={2.5} />
         </Link>
 
         <CourtStatus showLabel={true} />
