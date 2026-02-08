@@ -16,7 +16,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
-import { Search, Swords, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Search, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getRandomColor } from '@/lib/utils';
@@ -164,11 +164,6 @@ export default function SocialPage() {
     } finally {
       setPublishing(false);
     }
-  };
-
-  const handleChallenge = (authorId: string) => {
-    if (authorId === auth.currentUser?.uid) return;
-    window.location.href = `/perfil/${authorId}?desafiar=1`;
   };
 
   const handleStartEdit = (post: PostItem) => {
@@ -458,18 +453,6 @@ export default function SocialPage() {
                       <p className="text-gray-700 text-sm leading-relaxed mb-3">
                         {post.content}
                       </p>
-                    )}
-                    {!isEditing && (
-                      <div className="flex items-center gap-4">
-                        <button
-                          onClick={() => handleChallenge(post.authorId)}
-                          disabled={post.authorId === auth.currentUser?.uid}
-                          className="flex items-center gap-1.5 text-gray-600 hover:text-emerald-600 transition-colors disabled:opacity-50"
-                        >
-                          <Swords className="w-4 h-4" />
-                          <span className="text-sm">Desafiar</span>
-                        </button>
-                      </div>
                     )}
                   </div>
                 </div>
