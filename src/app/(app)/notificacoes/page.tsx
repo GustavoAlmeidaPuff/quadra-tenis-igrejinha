@@ -11,8 +11,9 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
-import { Check, X, Swords } from 'lucide-react';
+import { Check, X, Swords, XCircle } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface ChallengeWithAuthor {
   id: string;
@@ -52,6 +53,7 @@ function formatTimeAgo(date: Date): string {
 }
 
 export default function NotificacoesPage() {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,6 +69,7 @@ export default function NotificacoesPage() {
     const receivedSnap = await getDocs(receivedQuery);
     for (const d of receivedSnap.docs) {
       const data = d.data();
+      if (data.status === 'cancelled') continue;
       const fromSnap = await getDoc(doc(db, 'users', data.fromUserId));
       const fromUser = fromSnap.exists() ? fromSnap.data() : {};
       const createdAt = data.createdAt?.toDate?.() ?? new Date();
@@ -90,6 +93,7 @@ export default function NotificacoesPage() {
     const sentSnap = await getDocs(sentQuery);
     for (const d of sentSnap.docs) {
       const data = d.data();
+      if (data.status === 'cancelled') continue;
       const toSnap = await getDoc(doc(db, 'users', data.toUserId));
       const toUser = toSnap.exists() ? toSnap.data() : {};
       const createdAt = data.createdAt?.toDate?.() ?? new Date();
@@ -155,7 +159,7 @@ export default function NotificacoesPage() {
     markReceivedPendingAsViewed();
   }, []);
 
-  const handleAccept = async (challengeId: string) => {
+  const handleAccept = async (challengeId: string, fromUserId: string) => {
     try {
       await updateDoc(doc(db, 'challenges', challengeId), {
         status: 'accepted',
@@ -165,6 +169,7 @@ export default function NotificacoesPage() {
           (n) => !(n.type === 'received_challenge' && n.challenge.id === challengeId)
         )
       );
+      router.push(`/reservar?adicionarJogador=${encodeURIComponent(fromUserId)}`);
     } catch (e) {
       console.error(e);
     }
@@ -178,6 +183,21 @@ export default function NotificacoesPage() {
       setNotifications((prev) =>
         prev.filter(
           (n) => !(n.type === 'received_challenge' && n.challenge.id === challengeId)
+        )
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCancelSent = async (challengeId: string) => {
+    try {
+      await updateDoc(doc(db, 'challenges', challengeId), {
+        status: 'cancelled',
+      });
+      setNotifications((prev) =>
+        prev.filter(
+          (n) => !(n.type === 'sent_challenge' && n.challenge.id === challengeId)
         )
       );
     } catch (e) {
@@ -236,7 +256,7 @@ export default function NotificacoesPage() {
                   {item.challenge.status === 'pending' && (
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleAccept(item.challenge.id)}
+                        onClick={() => handleAccept(item.challenge.id, item.challenge.fromUserId)}
                         className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white rounded-xl px-4 py-2 font-medium hover:bg-emerald-700 transition-colors"
                       >
                         <Check className="w-4 h-4" />
@@ -274,9 +294,19 @@ export default function NotificacoesPage() {
                         ? 'Aceito'
                         : 'Recusado'}
                   </span>
-                  <span className="text-xs text-gray-500 w-full">
+                  <span className="text-xs text-gray-500">
                     {item.createdAtLabel}
                   </span>
+                  {item.challenge.status === 'pending' && (
+                    <button
+                      type="button"
+                      onClick={() => handleCancelSent(item.challenge.id)}
+                      className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-600 transition-colors mt-1"
+                    >
+                      <XCircle className="w-4 h-4" />
+                      Cancelar desafio
+                    </button>
+                  )}
                 </div>
               )}
 

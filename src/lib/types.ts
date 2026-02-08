@@ -39,7 +39,7 @@ export interface Challenge {
   fromUserId: string;
   toUserId: string;
   message?: string;
-  status: 'pending' | 'accepted' | 'declined';
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
   createdAt: Timestamp;
 }
 
