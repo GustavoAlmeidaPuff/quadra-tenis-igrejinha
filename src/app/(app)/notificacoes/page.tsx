@@ -9,6 +9,7 @@ import {
   getDoc,
   doc,
   updateDoc,
+  onSnapshot,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
 import { Check, X, Swords, XCircle } from 'lucide-react';
@@ -57,18 +58,12 @@ export default function NotificacoesPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadChallenges = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
-
+  const buildReceivedFromSnap = async (
+    docs: { id: string; data: () => Record<string, unknown> }[]
+  ): Promise<ChallengeWithAuthor[]> => {
     const received: ChallengeWithAuthor[] = [];
-    const receivedQuery = query(
-      collection(db, 'challenges'),
-      where('toUserId', '==', user.uid)
-    );
-    const receivedSnap = await getDocs(receivedQuery);
-    for (const d of receivedSnap.docs) {
-      const data = d.data();
+    for (const d of docs) {
+      const data = d.data() as { fromUserId: string; message?: string; status?: string; createdAt?: { toDate: () => Date } };
       if (data.status === 'cancelled') continue;
       const fromSnap = await getDoc(doc(db, 'users', data.fromUserId));
       const fromUser = fromSnap.exists() ? fromSnap.data() : {};
@@ -84,22 +79,23 @@ export default function NotificacoesPage() {
         createdAtLabel: formatTimeAgo(createdAt),
       });
     }
+    return received;
+  };
 
+  const buildSentFromSnap = async (
+    docs: { id: string; data: () => Record<string, unknown> }[],
+    userId: string
+  ): Promise<ChallengeWithAuthor[]> => {
     const sent: ChallengeWithAuthor[] = [];
-    const sentQuery = query(
-      collection(db, 'challenges'),
-      where('fromUserId', '==', user.uid)
-    );
-    const sentSnap = await getDocs(sentQuery);
-    for (const d of sentSnap.docs) {
-      const data = d.data();
+    for (const d of docs) {
+      const data = d.data() as { toUserId: string; message?: string; status?: string; createdAt?: { toDate: () => Date } };
       if (data.status === 'cancelled') continue;
       const toSnap = await getDoc(doc(db, 'users', data.toUserId));
       const toUser = toSnap.exists() ? toSnap.data() : {};
       const createdAt = data.createdAt?.toDate?.() ?? new Date();
       sent.push({
         id: d.id,
-        fromUserId: user.uid,
+        fromUserId: userId,
         fromUserName: `${toUser.firstName ?? ''} ${toUser.lastName ?? ''}`.trim() || 'Jogador',
         fromUserInitials: `${(toUser.firstName ?? 'J')[0]}${(toUser.lastName ?? '?')[0]}`.toUpperCase(),
         message: data.message ?? '',
@@ -108,16 +104,22 @@ export default function NotificacoesPage() {
         createdAtLabel: formatTimeAgo(createdAt),
       });
     }
+    return sent;
+  };
 
+  const mergeAndSort = (
+    receivedItems: ChallengeWithAuthor[],
+    sentItems: ChallengeWithAuthor[]
+  ): NotificationItem[] => {
     const items: NotificationItem[] = [
-      ...received.map((c) => ({
+      ...receivedItems.map((c) => ({
         type: 'received_challenge' as const,
         id: c.id,
         createdAt: c.createdAt,
         createdAtLabel: c.createdAtLabel,
         challenge: c,
       })),
-      ...sent.map((c) => ({
+      ...sentItems.map((c) => ({
         type: 'sent_challenge' as const,
         id: c.id,
         createdAt: c.createdAt,
@@ -126,12 +128,57 @@ export default function NotificacoesPage() {
       })),
     ];
     items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    setNotifications(items);
-    setLoading(false);
+    return items;
   };
 
   useEffect(() => {
-    loadChallenges();
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const receivedQuery = query(
+      collection(db, 'challenges'),
+      where('toUserId', '==', user.uid)
+    );
+    const sentQuery = query(
+      collection(db, 'challenges'),
+      where('fromUserId', '==', user.uid)
+    );
+
+    const initialLoadDone = { received: false, sent: false };
+    const maybeDone = () => {
+      if (initialLoadDone.received && initialLoadDone.sent) setLoading(false);
+    };
+
+    const unsubReceived = onSnapshot(receivedQuery, (snap) => {
+      buildReceivedFromSnap(snap.docs).then((received) => {
+        initialLoadDone.received = true;
+        maybeDone();
+        setNotifications((prev) => {
+          const sentItems = prev
+            .filter((n): n is NotificationItem & { type: 'sent_challenge' } => n.type === 'sent_challenge')
+            .map((n) => n.challenge);
+          return mergeAndSort(received, sentItems);
+        });
+      });
+    });
+
+    const unsubSent = onSnapshot(sentQuery, (snap) => {
+      buildSentFromSnap(snap.docs, user.uid).then((sent) => {
+        initialLoadDone.sent = true;
+        maybeDone();
+        setNotifications((prev) => {
+          const receivedItems = prev
+            .filter((n): n is NotificationItem & { type: 'received_challenge' } => n.type === 'received_challenge')
+            .map((n) => n.challenge);
+          return mergeAndSort(receivedItems, sent);
+        });
+      });
+    });
+
+    return () => {
+      unsubReceived();
+      unsubSent();
+    };
   }, []);
 
   // Marcar desafios recebidos pendentes como visualizados ao abrir a página
