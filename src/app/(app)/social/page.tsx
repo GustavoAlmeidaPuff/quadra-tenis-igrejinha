@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   collection,
   query,
@@ -118,6 +119,7 @@ export default function SocialPage() {
   const [newCommentByPost, setNewCommentByPost] = useState<Record<string, string>>({});
   const [submittingCommentPostId, setSubmittingCommentPostId] = useState<string | null>(null);
   const [openMenuCommentKey, setOpenMenuCommentKey] = useState<string | null>(null);
+  const [commentMenuPosition, setCommentMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [editingCommentKey, setEditingCommentKey] = useState<string | null>(null);
   const [editCommentContent, setEditCommentContent] = useState('');
   const [deletingCommentKey, setDeletingCommentKey] = useState<string | null>(null);
@@ -471,6 +473,7 @@ export default function SocialPage() {
     setEditingCommentKey(commentKey(postId, comment.id));
     setEditCommentContent(comment.content);
     setOpenMenuCommentKey(null);
+    setCommentMenuPosition(null);
   };
 
   const handleSaveEditComment = async () => {
@@ -500,6 +503,7 @@ export default function SocialPage() {
     const key = commentKey(postId, commentId);
     setDeletingCommentKey(key);
     setOpenMenuCommentKey(null);
+    setCommentMenuPosition(null);
     try {
       await deleteDoc(doc(db, 'posts', postId, 'comments', commentId));
       await updateDoc(doc(db, 'posts', postId), { commentCount: increment(-1) });
@@ -1063,48 +1067,27 @@ export default function SocialPage() {
                                           </Link>
                                           <span className="text-xs text-gray-500">{comment.createdAtLabel}</span>
                                           {isMyComment && (
-                                            <div className="ml-auto relative">
+                                            <div className="ml-auto">
                                               <button
                                                 type="button"
-                                                onClick={() => setOpenMenuCommentKey(openMenuCommentKey === menuKey ? null : menuKey)}
+                                                onClick={(e) => {
+                                                  if (openMenuCommentKey === menuKey) {
+                                                    setOpenMenuCommentKey(null);
+                                                    setCommentMenuPosition(null);
+                                                  } else {
+                                                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                                    setCommentMenuPosition({
+                                                      top: rect.bottom + 4,
+                                                      left: Math.min(rect.right - 140, window.innerWidth - 156),
+                                                    });
+                                                    setOpenMenuCommentKey(menuKey);
+                                                  }
+                                                }}
                                                 className="p-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                                                 aria-label="Abrir menu do comentário"
                                               >
                                                 <MoreVertical className="w-4 h-4" />
                                               </button>
-                                              {openMenuCommentKey === menuKey && (
-                                                <>
-                                                  <div
-                                                    className="fixed inset-0 z-10"
-                                                    aria-hidden
-                                                    onClick={() => setOpenMenuCommentKey(null)}
-                                                  />
-                                                  <nav
-                                                    className="absolute right-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[120px]"
-                                                    role="menu"
-                                                  >
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => handleStartEditComment(comment, post.id)}
-                                                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left"
-                                                      role="menuitem"
-                                                    >
-                                                      <Pencil className="w-4 h-4 text-emerald-600" />
-                                                      Editar
-                                                    </button>
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => handleDeleteComment(post.id, comment.id)}
-                                                      disabled={isDeleting}
-                                                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 text-left disabled:opacity-50"
-                                                      role="menuitem"
-                                                    >
-                                                      <Trash2 className="w-4 h-4" />
-                                                      {isDeleting ? 'Excluindo...' : 'Excluir'}
-                                                    </button>
-                                                  </nav>
-                                                </>
-                                              )}
                                             </div>
                                           )}
                                         </div>
@@ -1257,6 +1240,57 @@ export default function SocialPage() {
           </>
         )}
       </div>
+      {openMenuCommentKey &&
+        commentMenuPosition &&
+        (() => {
+          const idx = openMenuCommentKey.indexOf('_');
+          const postId = openMenuCommentKey.slice(0, idx);
+          const commentId = openMenuCommentKey.slice(idx + 1);
+          const comment = commentsByPost[postId]?.find((c) => c.id === commentId);
+          if (!comment) return null;
+          const isDeleting = deletingCommentKey === openMenuCommentKey;
+          return createPortal(
+            <>
+              <div
+                className="fixed inset-0 z-[100]"
+                aria-hidden
+                onClick={() => {
+                  setOpenMenuCommentKey(null);
+                  setCommentMenuPosition(null);
+                }}
+              />
+              <nav
+                className="fixed z-[101] bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[120px]"
+                style={{
+                  top: commentMenuPosition.top,
+                  left: commentMenuPosition.left,
+                }}
+                role="menu"
+              >
+                <button
+                  type="button"
+                  onClick={() => handleStartEditComment(comment, postId)}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left"
+                  role="menuitem"
+                >
+                  <Pencil className="w-4 h-4 text-emerald-600" />
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteComment(postId, comment.id)}
+                  disabled={isDeleting}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 text-left disabled:opacity-50"
+                  role="menuitem"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {isDeleting ? 'Excluindo...' : 'Excluir'}
+                </button>
+              </nav>
+            </>,
+            document.body
+          );
+        })()}
     </div>
   );
 }
