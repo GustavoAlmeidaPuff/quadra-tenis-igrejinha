@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Copy, Check, User } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
 
 const PIX_KEY_DISPLAY = '64.523.312/0001-62';
 const PIX_KEY_COPY = '64523312000162';
@@ -99,10 +99,16 @@ export default function CafePage() {
           <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start">
               <div
-                className="shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gray-200 flex items-center justify-center"
+                className="shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center"
                 aria-hidden
               >
-                <User className="w-12 h-12 sm:w-14 sm:h-14 text-gray-400" />
+                <Image
+                  src="/images/dev.png"
+                  alt="Gustavo Almeida"
+                  width={112}
+                  height={112}
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="flex-1 text-center sm:text-left">
                 <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
