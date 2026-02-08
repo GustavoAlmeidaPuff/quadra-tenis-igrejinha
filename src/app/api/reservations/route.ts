@@ -119,9 +119,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Verificar se o usuário é o criador
     const reservationDoc = await adminDb.collection('reservations').doc(reservationId).get();
-    
+
     if (!reservationDoc.exists) {
       return NextResponse.json(
         { error: 'Reserva não encontrada' },
@@ -129,11 +128,26 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const reservationData = reservationDoc.data();
-    if (reservationData?.createdById !== userId) {
+    // Verificar se o usuário é participante (criador ou convidado)
+    const participantSnap = await adminDb
+      .collection('reservationParticipants')
+      .where('reservationId', '==', reservationId)
+      .where('userId', '==', userId)
+      .limit(1)
+      .get();
+
+    if (participantSnap.empty) {
       return NextResponse.json(
-        { error: 'Apenas o criador pode cancelar a reserva' },
+        { error: 'Você não é participante desta reserva' },
         { status: 403 }
+      );
+    }
+
+    const reservationData = reservationDoc.data();
+    if (!reservationData?.startAt) {
+      return NextResponse.json(
+        { error: 'Reserva inválida' },
+        { status: 400 }
       );
     }
 

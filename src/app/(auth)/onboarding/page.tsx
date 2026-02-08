@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
+import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -11,12 +12,14 @@ export default function OnboardingPage() {
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!firstName.trim() || !lastName.trim()) return;
     
+    setError('');
     try {
       setLoading(true);
       const user = auth.currentUser;
@@ -44,8 +47,9 @@ export default function OnboardingPage() {
       setTimeout(() => {
         router.push('/home');
       }, 3000);
-    } catch (error) {
-      console.error('Erro ao salvar dados:', error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao salvar dados. Tente novamente.';
+      setError(message);
       setLoading(false);
     }
   };
@@ -124,6 +128,12 @@ export default function OnboardingPage() {
               required
             />
           </div>
+
+          {error && (
+            <div className="bg-red-50 text-red-700 px-4 py-3 rounded-xl text-sm">
+              <ErrorWithSupportLink message={error} roleAlert />
+            </div>
+          )}
 
           <button
             type="submit"

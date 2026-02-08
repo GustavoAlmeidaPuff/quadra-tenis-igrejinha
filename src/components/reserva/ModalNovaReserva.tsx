@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { X, Search, UserPlus } from 'lucide-react';
 import { collection, getDocs, getDoc, doc, query, where } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
+import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
 
 interface User {
   id: string;
@@ -234,7 +235,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
 
           {error && (
             <div className="bg-red-50 text-red-700 px-4 py-3 rounded-xl text-sm">
-              {error}
+              <ErrorWithSupportLink message={error} roleAlert />
             </div>
           )}
 

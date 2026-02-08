@@ -27,8 +27,11 @@ import {
   Shield,
   ChevronRight,
   MessageCircle,
+  X,
+  Trash2,
 } from 'lucide-react';
 import Avatar from '@/components/layout/Avatar';
+import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
 import { User } from '@/lib/types';
 import {
   getUserStats,
@@ -61,6 +64,8 @@ export default function PerfilUserIdPage({ params }: PageProps) {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [linkingPassword, setLinkingPassword] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<ReservationListItem | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     const uid =
@@ -181,6 +186,40 @@ export default function PerfilUserIdPage({ params }: PageProps) {
   const handleLogout = async () => {
     await signOut(auth);
     router.push('/login');
+  };
+
+  const refreshStats = async () => {
+    const uid = userIdParam === 'me' ? auth.currentUser?.uid : userIdParam;
+    if (!uid) return;
+    try {
+      const userStats = await getUserStats(uid);
+      setStats(userStats);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCancelReservation = async (reservationId: string) => {
+    if (!auth.currentUser) return;
+    setCancelling(true);
+    try {
+      const res = await fetch(
+        `/api/reservations?id=${encodeURIComponent(reservationId)}&userId=${encodeURIComponent(auth.currentUser.uid)}`,
+        { method: 'DELETE' }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error ?? 'Erro ao cancelar reserva');
+        return;
+      }
+      setSelectedReservation(null);
+      await refreshStats();
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao cancelar reserva');
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const hasPasswordProvider =
@@ -430,9 +469,9 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                         className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm"
                       />
                       {passwordError && (
-                        <p className="text-sm text-red-600" role="alert">
-                          {passwordError}
-                        </p>
+                        <div className="text-sm text-red-600">
+                          <ErrorWithSupportLink message={passwordError} roleAlert />
+                        </div>
                       )}
                       <div className="flex gap-2">
                         <button
@@ -511,7 +550,12 @@ export default function PerfilUserIdPage({ params }: PageProps) {
             ) : (
               <div className="space-y-2">
                 {upcoming.map((res) => (
-                  <ReservationCard key={res.id} item={res} />
+                  <ReservationCard
+                    key={res.id}
+                    item={res}
+                    isUpcoming
+                    onClick={() => setSelectedReservation(res)}
+                  />
                 ))}
               </div>
             )}
@@ -537,18 +581,36 @@ export default function PerfilUserIdPage({ params }: PageProps) {
               </div>
             )}
           </div>
+
+          {/* Modal de detalhes e cancelamento da reserva */}
+          {selectedReservation && (
+            <ReservationDetailModal
+              item={selectedReservation}
+              onClose={() => setSelectedReservation(null)}
+              onCancel={handleCancelReservation}
+              cancelling={cancelling}
+            />
+          )}
         </>
       )}
     </div>
   );
 }
 
-function ReservationCard({ item }: { item: ReservationListItem }) {
+function ReservationCard({
+  item,
+  isUpcoming,
+  onClick,
+}: {
+  item: ReservationListItem;
+  isUpcoming?: boolean;
+  onClick?: () => void;
+}) {
   const participantsLabel = item.participants.length > 0
     ? item.participants.join(', ')
     : '—';
-  return (
-    <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm flex items-center justify-between gap-3">
+  const content = (
+    <>
       <div className="min-w-0 flex-1">
         <div className="font-medium text-gray-900 capitalize">{item.dateLabel}</div>
         <div className="text-sm text-gray-500 truncate">
@@ -556,6 +618,82 @@ function ReservationCard({ item }: { item: ReservationListItem }) {
         </div>
       </div>
       <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+    </>
+  );
+  if (isUpcoming && onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="w-full bg-white rounded-2xl p-4 border border-gray-200 shadow-sm flex items-center justify-between gap-3 text-left hover:bg-gray-50 transition-colors"
+      >
+        {content}
+      </button>
+    );
+  }
+  return (
+    <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm flex items-center justify-between gap-3">
+      {content}
+    </div>
+  );
+}
+
+function ReservationDetailModal({
+  item,
+  onClose,
+  onCancel,
+  cancelling,
+}: {
+  item: ReservationListItem;
+  onClose: () => void;
+  onCancel: (reservationId: string) => void;
+  cancelling: boolean;
+}) {
+  const participantsLabel = item.participants.length > 0
+    ? item.participants.join(', ')
+    : '—';
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Detalhes da reserva</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            aria-label="Fechar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="space-y-2 mb-6">
+          <p className="font-medium text-gray-900 capitalize">{item.dateLabel}</p>
+          <p className="text-sm text-gray-500">{item.time}</p>
+          <p className="text-sm text-gray-600">{participantsLabel}</p>
+        </div>
+        <p className="text-xs text-gray-500 mb-4">
+          Ao cancelar, a reserva será removida para todos os participantes.
+        </p>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => onCancel(item.id)}
+            disabled={cancelling}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+          >
+            <Trash2 className="w-4 h-4" />
+            {cancelling ? 'Cancelando...' : 'Cancelar reserva'}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={cancelling}
+            className="py-3 px-4 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

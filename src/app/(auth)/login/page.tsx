@@ -13,6 +13,7 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
 import CourtStatus from '@/components/layout/CourtStatus';
+import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
 import Image from 'next/image';
 
 type AuthMode = 'login' | 'signup';
@@ -245,9 +246,9 @@ export default function LoginPage() {
               )}
             </div>
             {errorMessage && (
-              <p className="text-sm text-red-600" role="alert">
-                {errorMessage}
-              </p>
+              <div className="text-sm text-red-600">
+                <ErrorWithSupportLink message={errorMessage} roleAlert />
+              </div>
             )}
             <button
               type="submit"
