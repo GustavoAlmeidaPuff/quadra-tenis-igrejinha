@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   signOut,
   linkWithCredential,
@@ -30,6 +31,8 @@ import {
   X,
   Trash2,
   Coffee,
+  BarChart2,
+  Trophy,
 } from 'lucide-react';
 import Avatar from '@/components/layout/Avatar';
 import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
@@ -540,6 +543,24 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                   )}
                 </>
               )}
+
+              {/* Estatísticas e nível */}
+              <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                <Link
+                  href={`/perfil/${userIdParam}/estatisticas`}
+                  className="w-full flex items-center justify-center gap-2 py-4 text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <BarChart2 className="w-4 h-4 text-gray-900" />
+                  Estatísticas de jogo
+                </Link>
+                <Link
+                  href={`/perfil/${userIdParam}/nivel`}
+                  className="w-full flex items-center justify-center gap-2 py-4 text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
+                >
+                  <Trophy className="w-4 h-4 text-gray-900" />
+                  Nível de jogo
+                </Link>
+              </div>
 
               {/* Suporte + Sair da conta */}
               <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
