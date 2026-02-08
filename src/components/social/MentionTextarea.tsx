@@ -103,6 +103,7 @@ export function MentionTextarea({
   const editableRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const lastEmittedValueRef = useRef<string>(value);
+  const isComposingRef = useRef(false);
 
   const filteredUsers = mentionTrigger
     ? users.filter((u) => u.name.toLowerCase().includes(mentionTrigger.query))
@@ -150,6 +151,21 @@ export function MentionTextarea({
     const serialized = serializeContent(el);
     lastEmittedValueRef.current = serialized;
     onChange(serialized);
+
+    // Durante IME/composição no mobile, não abrir dropdown
+    if (isComposingRef.current) {
+      setShowDropdown(false);
+      setMentionTrigger(null);
+      return;
+    }
+
+    // Evita abrir dropdown ao digitar depois de menção: ex. @[Maicon Berwian](id) + "o"
+    // faz getTextBeforeCursor retornar "@Maicon Berwiano", acionando trigger por engano
+    if (serialized.match(/@\[[^\]]+\]\([^)]+\)[^@]+$/)) {
+      setShowDropdown(false);
+      setMentionTrigger(null);
+      return;
+    }
 
     const textBefore = getTextBeforeCursor(el);
     const trigger = parseMentionTrigger(textBefore);
@@ -224,6 +240,8 @@ export function MentionTextarea({
       <div
         ref={editableRef}
         contentEditable={!disabled}
+        onCompositionStart={() => { isComposingRef.current = true; }}
+        onCompositionEnd={() => { isComposingRef.current = false; }}
         onInput={handleInput}
         onBlur={() => {
           setTimeout(() => {
