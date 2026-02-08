@@ -3,6 +3,17 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { X, Search, UserPlus } from 'lucide-react';
+
+/** Hosts externos de avatar; em prod o next/image pode falhar se não estiverem no config. */
+const EXTERNAL_AVATAR_HOSTS = ['i.ibb.co', 'i.imgur.com', 'lh3.googleusercontent.com', 'firebasestorage.googleapis.com'];
+
+function isExternalAvatarUrl(url: string): boolean {
+  try {
+    return EXTERNAL_AVATAR_HOSTS.includes(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
 import { collection, getDocs, getDoc, doc, query, where, updateDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
@@ -334,6 +345,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
                       width={40}
                       height={40}
                       className="object-cover w-full h-full"
+                      unoptimized={isExternalAvatarUrl(currentUser.pictureUrl)}
                     />
                   </div>
                 ) : (
@@ -362,6 +374,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
                         width={40}
                         height={40}
                         className="object-cover w-full h-full"
+                        unoptimized={isExternalAvatarUrl(participant.pictureUrl)}
                       />
                     </div>
                   ) : (
@@ -417,6 +430,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
                             width={32}
                             height={32}
                             className="object-cover w-full h-full"
+                            unoptimized={isExternalAvatarUrl(user.pictureUrl)}
                           />
                         </div>
                       ) : (
