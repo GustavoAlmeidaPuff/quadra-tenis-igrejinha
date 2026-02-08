@@ -64,6 +64,15 @@ service cloud.firestore {
       }
     }
     
+    // Notificações (ex.: menção em post/comentário)
+    match /notifications/{notificationId} {
+      // Só o destinatário pode ler e apagar
+      allow read, delete: if request.auth != null && request.auth.uid == resource.data.toUserId;
+      // Qualquer autenticado pode criar (ao mencionar alguém)
+      allow create: if request.auth != null;
+      allow update: if false;
+    }
+
     // Desafios
     match /challenges/{challengeId} {
       // Apenas usuários autenticados podem ler desafios onde são envolvidos
@@ -87,6 +96,9 @@ service cloud.firestore {
 3. Vá em **Firestore Database** → **Rules**
 4. **Substitua todo o conteúdo** do editor pelas regras do bloco acima (incluindo a parte de **Posts** com a subcoleção **comments** e a permissão de **commentCount**).
 5. Clique em **Publicar**.
+
+**Índice para notificações de menção:**  
+A página de notificações usa uma query em `notifications` com `toUserId`, `type == 'mention'` e `orderBy('createdAt', 'desc')`. Na primeira vez que a tela de notificações carregar, o Firestore pode pedir a criação de um **índice composto**. Use o link que aparecer no console do navegador para criar o índice no Firebase Console.
 
 **Se aparecer "Missing or insufficient permissions" ao curtir ou comentar:**  
 As regras no Console estão desatualizadas. É obrigatório que o bloco **Posts** tenha:

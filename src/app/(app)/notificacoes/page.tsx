@@ -5,15 +5,18 @@ import {
   collection,
   query,
   where,
+  orderBy,
+  limit,
   getDocs,
   getDoc,
   doc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   arrayUnion,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
-import { Check, X, Swords, XCircle, Trash2 } from 'lucide-react';
+import { Check, X, Swords, XCircle, Trash2, AtSign } from 'lucide-react';
 import Link from 'next/link';
 
 interface ChallengeWithAuthor {
@@ -31,6 +34,17 @@ interface ChallengeWithAuthor {
   acceptAttemptError?: string;
 }
 
+interface MentionNotification {
+  type: 'mention';
+  id: string;
+  createdAt: Date;
+  createdAtLabel: string;
+  fromUserId: string;
+  fromUserName: string;
+  postId: string;
+  commentId?: string;
+}
+
 type NotificationItem =
   | {
       type: 'received_challenge';
@@ -46,7 +60,7 @@ type NotificationItem =
       createdAtLabel: string;
       challenge: ChallengeWithAuthor;
     }
-  // Futuro: | { type: 'court_reserved'; id: string; fromUserName: string; createdAt: Date; createdAtLabel: string; }
+  | MentionNotification;
 
 function formatTimeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -161,6 +175,15 @@ export default function NotificacoesPage() {
     return items;
   };
 
+  const mergeAllAndSort = (
+    challengeItems: NotificationItem[],
+    mentionItems: MentionNotification[]
+  ): NotificationItem[] => {
+    const all = [...challengeItems, ...mentionItems];
+    all.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return all;
+  };
+
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -173,10 +196,17 @@ export default function NotificacoesPage() {
       collection(db, 'challenges'),
       where('fromUserId', '==', user.uid)
     );
+    const mentionQuery = query(
+      collection(db, 'notifications'),
+      where('toUserId', '==', user.uid),
+      where('type', '==', 'mention'),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
 
-    const initialLoadDone = { received: false, sent: false };
+    const initialLoadDone = { received: false, sent: false, mentions: false };
     const maybeDone = () => {
-      if (initialLoadDone.received && initialLoadDone.sent) setLoading(false);
+      if (initialLoadDone.received && initialLoadDone.sent && initialLoadDone.mentions) setLoading(false);
     };
 
     const unsubReceived = onSnapshot(receivedQuery, (snap) => {
@@ -187,7 +217,8 @@ export default function NotificacoesPage() {
           const sentItems = prev
             .filter((n): n is NotificationItem & { type: 'sent_challenge' } => n.type === 'sent_challenge')
             .map((n) => n.challenge);
-          return mergeAndSort(received, sentItems);
+          const mentionItems = prev.filter((n): n is MentionNotification => n.type === 'mention');
+          return mergeAllAndSort(mergeAndSort(received, sentItems), mentionItems);
         });
       });
     });
@@ -200,14 +231,41 @@ export default function NotificacoesPage() {
           const receivedItems = prev
             .filter((n): n is NotificationItem & { type: 'received_challenge' } => n.type === 'received_challenge')
             .map((n) => n.challenge);
-          return mergeAndSort(receivedItems, sent);
+          const mentionItems = prev.filter((n): n is MentionNotification => n.type === 'mention');
+          return mergeAllAndSort(mergeAndSort(receivedItems, sent), mentionItems);
         });
+      });
+    });
+
+    const unsubMentions = onSnapshot(mentionQuery, (snap) => {
+      const mentionItems: MentionNotification[] = snap.docs.map((d) => {
+        const data = d.data();
+        const createdAt = data.createdAt?.toDate?.() ?? new Date();
+        return {
+          type: 'mention',
+          id: d.id,
+          createdAt,
+          createdAtLabel: formatTimeAgo(createdAt),
+          fromUserId: data.fromUserId ?? '',
+          fromUserName: data.fromUserName ?? 'Jogador',
+          postId: data.postId ?? '',
+          commentId: data.commentId ?? undefined,
+        };
+      });
+      initialLoadDone.mentions = true;
+      maybeDone();
+      setNotifications((prev) => {
+        const challengeItems = prev.filter(
+          (n) => n.type === 'received_challenge' || n.type === 'sent_challenge'
+        );
+        return mergeAllAndSort(challengeItems, mentionItems);
       });
     });
 
     return () => {
       unsubReceived();
       unsubSent();
+      unsubMentions();
     };
   }, []);
 
@@ -322,8 +380,17 @@ export default function NotificacoesPage() {
         hiddenByUserIds: arrayUnion(user.uid),
       });
       setNotifications((prev) =>
-        prev.filter((n) => n.challenge.id !== challengeId)
+        prev.filter((n) => (n.type === 'received_challenge' || n.type === 'sent_challenge') && n.challenge.id !== challengeId)
       );
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteMentionNotification = async (notificationId: string) => {
+    try {
+      await deleteDoc(doc(db, 'notifications', notificationId));
+      setNotifications((prev) => prev.filter((n) => n.type !== 'mention' || n.id !== notificationId));
     } catch (e) {
       console.error(e);
     }
@@ -345,18 +412,44 @@ export default function NotificacoesPage() {
         <div className="space-y-3">
           {notifications.map((item) => (
             <div
-              key={`${item.type}-${item.id}`}
+              key={`${item.type}-${item.type === 'mention' ? item.id : item.challenge.id}`}
               className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm relative"
             >
               <button
                 type="button"
-                onClick={() => handleDeleteNotification(item.challenge.id)}
+                onClick={() =>
+                  item.type === 'mention'
+                    ? handleDeleteMentionNotification(item.id)
+                    : handleDeleteNotification(item.challenge.id)
+                }
                 className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                 title="Apagar notificação"
                 aria-label="Apagar notificação"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
+              {item.type === 'mention' && (
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 flex-shrink-0">
+                    <AtSign className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900">
+                      <Link href={`/perfil/${item.fromUserId}`} className="font-semibold hover:underline">
+                        {item.fromUserName}
+                      </Link>
+                      <span className="text-gray-600"> te mencionou em um post</span>
+                    </p>
+                    <span className="text-xs text-gray-500 block">{item.createdAtLabel}</span>
+                    <Link
+                      href={`/social?postId=${encodeURIComponent(item.postId)}`}
+                      className="inline-block mt-2 text-sm font-medium text-emerald-600 hover:text-emerald-700 hover:underline"
+                    >
+                      Ver post
+                    </Link>
+                  </div>
+                </div>
+              )}
               {item.type === 'received_challenge' && (
                 <>
                   <div className="flex items-start gap-3 mb-3">

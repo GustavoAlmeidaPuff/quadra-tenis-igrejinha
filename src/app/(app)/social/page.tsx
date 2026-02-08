@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useSearchParams } from 'next/navigation';
 import {
   collection,
   query,
@@ -25,8 +26,20 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getRandomColor } from '@/lib/utils';
 import { getTotalHoursForUser, getRecommendedPartners } from '@/lib/queries/stats';
+import { MENTION_REGEX } from '@/components/social/MentionTextarea';
 import { MentionTextarea } from '@/components/social/MentionTextarea';
 import { PostContent } from '@/components/social/PostContent';
+
+/** Retorna IDs únicos de usuários mencionados no texto (formato @[Nome](userId)) */
+function getMentionedUserIds(content: string): string[] {
+  const ids = new Set<string>();
+  const re = new RegExp(MENTION_REGEX.source, 'g');
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(content)) !== null) {
+    if (m[2]) ids.add(m[2]);
+  }
+  return [...ids];
+}
 
 interface PostAuthor {
   id: string;
@@ -93,6 +106,7 @@ function formatTimeAgo(date: Date): string {
 type Tab = 'feed' | 'ranking';
 
 export default function SocialPage() {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>('feed');
   const [newPost, setNewPost] = useState('');
   const [posts, setPosts] = useState<PostItem[]>([]);
@@ -140,6 +154,15 @@ export default function SocialPage() {
       }
     });
   }, []);
+
+  // Abrir o post quando vier da notificação de menção (?postId=xxx)
+  useEffect(() => {
+    const postId = searchParams.get('postId');
+    if (postId) {
+      setActiveTab('feed');
+      setExpandedCommentsPostId(postId);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -369,13 +392,35 @@ export default function SocialPage() {
         const data = await res.json();
         imageUrl = data?.url ?? null;
       }
+      const contentTrimmed = newPost.trim();
       const postData: Record<string, unknown> = {
         authorId: auth.currentUser.uid,
-        content: newPost.trim(),
+        content: contentTrimmed,
         createdAt: serverTimestamp(),
       };
       if (imageUrl) postData.imageUrl = imageUrl;
-      await addDoc(collection(db, 'posts'), postData);
+      const postRef = await addDoc(collection(db, 'posts'), postData);
+      const postId = postRef.id;
+      const mentionedIds = getMentionedUserIds(contentTrimmed).filter((id) => id !== auth.currentUser!.uid);
+      if (mentionedIds.length > 0) {
+        const userSnap = await getDoc(doc(db, 'users', auth.currentUser.uid));
+        const userData = userSnap.exists() ? userSnap.data() : {};
+        const fromUserName = `${userData.firstName ?? ''} ${userData.lastName ?? ''}`.trim() || 'Jogador';
+        for (const toUserId of mentionedIds) {
+          try {
+            await addDoc(collection(db, 'notifications'), {
+              type: 'mention',
+              fromUserId: auth.currentUser.uid,
+              fromUserName,
+              toUserId,
+              postId,
+              createdAt: serverTimestamp(),
+            });
+          } catch (err) {
+            console.error('Erro ao criar notificação de menção:', err);
+          }
+        }
+      }
       setNewPost('');
       setSelectedImage(null);
       setImagePreviewUrl(null);
@@ -453,12 +498,33 @@ export default function SocialPage() {
     if (!content || !auth.currentUser || submittingCommentPostId !== null) return;
     setSubmittingCommentPostId(postId);
     try {
-      await addDoc(collection(db, 'posts', postId, 'comments'), {
+      const commentRef = await addDoc(collection(db, 'posts', postId, 'comments'), {
         authorId: auth.currentUser.uid,
         content,
         createdAt: serverTimestamp(),
       });
       await updateDoc(doc(db, 'posts', postId), { commentCount: increment(1) });
+      const mentionedIds = getMentionedUserIds(content).filter((id) => id !== auth.currentUser!.uid);
+      if (mentionedIds.length > 0) {
+        const userSnap = await getDoc(doc(db, 'users', auth.currentUser.uid));
+        const userData = userSnap.exists() ? userSnap.data() : {};
+        const fromUserName = `${userData.firstName ?? ''} ${userData.lastName ?? ''}`.trim() || 'Jogador';
+        for (const toUserId of mentionedIds) {
+          try {
+            await addDoc(collection(db, 'notifications'), {
+              type: 'mention',
+              fromUserId: auth.currentUser.uid,
+              fromUserName,
+              toUserId,
+              postId,
+              commentId: commentRef.id,
+              createdAt: serverTimestamp(),
+            });
+          } catch (err) {
+            console.error('Erro ao criar notificação de menção:', err);
+          }
+        }
+      }
       setNewCommentByPost((prev) => ({ ...prev, [postId]: '' }));
     } catch (e) {
       console.error(e);
