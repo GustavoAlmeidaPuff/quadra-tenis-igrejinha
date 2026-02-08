@@ -551,7 +551,7 @@ export default function PerfilUserIdPage({ params }: PageProps) {
 
       {(!user.isPrivate || isMe) && (
         <>
-          {/* Cards de estatísticas: Horas jogadas, Total reservas, Semanas streak */}
+          {/* Cards de estatísticas: Horas jogadas, Total reservas, Semanas consecutivas */}
           <div className="grid grid-cols-3 gap-3 px-4 py-6">
             <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100">
               <div className="text-2xl font-bold text-gray-900">
@@ -569,7 +569,7 @@ export default function PerfilUserIdPage({ params }: PageProps) {
               <div className="text-2xl font-bold text-gray-900">
                 {stats?.weekStreak ?? 0}
               </div>
-              <div className="text-xs text-gray-500 mt-1">Semanas streak</div>
+              <div className="text-xs text-gray-500 mt-1">Semanas consecutivas</div>
             </div>
           </div>
 

@@ -125,7 +125,7 @@ export default function HomePage() {
           <div className="text-2xl font-bold text-gray-900">
             {stats?.weekStreak ?? 0}
           </div>
-          <div className="text-xs text-gray-600">Semanas streak</div>
+          <div className="text-xs text-gray-600">Semanas consecutivas</div>
         </div>
       </div>
 
