@@ -35,15 +35,16 @@ export default function CourtStatus({ showLabel = true, className = '' }: CourtS
       const now = Date.now();
       let currentReservation: Reservation | null = null;
 
-      snapshot.docs.forEach((doc) => {
-        const data = doc.data() as Reservation;
+      for (const d of snapshot.docs) {
+        const data = d.data() as Reservation;
         const start = data.startAt.toMillis();
         const end = data.endAt.toMillis();
 
         if (now >= start && now < end) {
-          currentReservation = { ...data, id: doc.id };
+          currentReservation = { ...data, id: d.id };
+          break;
         }
-      });
+      }
 
       if (currentReservation) {
         const reservationId = currentReservation.id;
