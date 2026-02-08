@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
@@ -161,7 +162,7 @@ export default function HomePage() {
         {(stats?.topPartners?.length ?? 0) > 0 ? (
           <div className="space-y-3">
             {(stats?.topPartners ?? []).map((partner: PartnerStat) => (
-              <a
+              <Link
                 key={partner.userId}
                 href={`/perfil/${partner.userId}`}
                 className="flex items-center justify-between hover:bg-gray-50 rounded-lg p-1 -m-1 transition-colors"
@@ -179,7 +180,7 @@ export default function HomePage() {
                 <span className="text-xs text-gray-600">
                   {partner.count} {partner.count === 1 ? 'jogo' : 'jogos'}
                 </span>
-              </a>
+              </Link>
             ))}
           </div>
         ) : (
