@@ -29,7 +29,20 @@ export interface PartnerStat {
   userId: string;
   name: string;
   initials: string;
+  pictureUrl?: string;
   count: number;
+}
+
+export interface MonthlyHours {
+  monthKey: string;
+  monthLabel: string;
+  hours: number;
+}
+
+export interface WeeklyHours {
+  weekKey: string;
+  weekLabel: string;
+  hours: number;
 }
 
 export interface ReservationListItem {
@@ -44,6 +57,8 @@ export interface UserStats {
   totalReservations: number;
   weekStreak: number;
   dayStats: DayStat[];
+  monthlyHours: MonthlyHours[];
+  weeklyHours: WeeklyHours[];
   topPartners: PartnerStat[];
   nextReservation: NextReservationInfo | null;
   upcomingReservations: ReservationListItem[];
@@ -236,9 +251,38 @@ export async function getUserStats(userId: string): Promise<UserStats> {
         userId: uid,
         name,
         initials: `${(firstName || 'J')[0]}${(lastName || '?')[0]}`.toUpperCase(),
+        pictureUrl: u?.pictureUrl,
         count,
       });
     }
+  }
+
+  const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  const monthlyHours: MonthlyHours[] = [];
+  for (let i = 4; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const count = pastReservations.filter(
+      (r) => r.startAt.getFullYear() === year && r.startAt.getMonth() === month
+    ).length;
+    const hours = Math.round(count * RESERVATION_DURATION_HOURS * 10) / 10;
+    monthlyHours.push({
+      monthKey: `${year}-${String(month + 1).padStart(2, '0')}`,
+      monthLabel: monthNames[month],
+      hours,
+    });
+  }
+
+  const weeklyHours: WeeklyHours[] = [];
+  for (let i = 4; i >= 0; i--) {
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay() - i * 7);
+    const weekKey = getWeekKey(weekStart);
+    const count = pastReservations.filter((r) => getWeekKey(r.startAt) === weekKey).length;
+    const hours = Math.round(count * RESERVATION_DURATION_HOURS * 10) / 10;
+    const weekLabel = weekStart.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    weeklyHours.push({ weekKey, weekLabel, hours });
   }
 
   let nextReservation: NextReservationInfo | null = null;
@@ -296,6 +340,8 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     totalReservations,
     weekStreak,
     dayStats,
+    monthlyHours,
+    weeklyHours,
     topPartners,
     nextReservation,
     upcomingReservations,
