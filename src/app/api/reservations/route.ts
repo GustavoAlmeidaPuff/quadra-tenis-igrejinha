@@ -16,10 +16,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { userId, date, hour, minute, participantIds } = body;
-
-    const hourNum = typeof hour === 'number' ? hour : parseInt(String(hour), 10);
-    const minuteNum = typeof minute === 'number' ? minute : parseInt(String(minute), 10);
+    const { userId, startAtISO, participantIds } = body;
 
     if (!userId || typeof userId !== 'string' || !userId.trim()) {
       return NextResponse.json(
@@ -27,37 +24,22 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (!date || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date.trim())) {
+    if (!startAtISO || typeof startAtISO !== 'string') {
       return NextResponse.json(
-        { error: 'Data inválida. Selecione uma data no formato ano-mês-dia.' },
-        { status: 400 }
-      );
-    }
-    if (Number.isNaN(hourNum) || hourNum < 0 || hourNum > 23) {
-      return NextResponse.json(
-        { error: 'Horário inválido. Hora deve ser entre 0 e 23.' },
-        { status: 400 }
-      );
-    }
-    if (Number.isNaN(minuteNum) || minuteNum < 0 || minuteNum > 59) {
-      return NextResponse.json(
-        { error: 'Minuto inválido. Deve ser entre 0 e 59.' },
+        { error: 'Horário de início inválido. Envie startAtISO (ISO 8601).' },
         { status: 400 }
       );
     }
 
-    // Construir datas no fuso local (evita UTC que mudava o dia)
-    const [y, m, d] = date.trim().split('-').map(Number);
-    const startAt = new Date(y, m - 1, d, hourNum, minuteNum, 0, 0);
-    const endAt = new Date(startAt);
-    endAt.setMinutes(endAt.getMinutes() + 90);
-
+    const startAt = new Date(startAtISO);
     if (Number.isNaN(startAt.getTime())) {
       return NextResponse.json(
-        { error: 'Data/horário resultante inválido.' },
+        { error: 'Data/horário de início inválido.' },
         { status: 400 }
       );
     }
+
+    const endAt = new Date(startAt.getTime() + 90 * 60 * 1000);
 
     // Validar reserva
     const validation = await validateReservation(userId, startAt, endAt);

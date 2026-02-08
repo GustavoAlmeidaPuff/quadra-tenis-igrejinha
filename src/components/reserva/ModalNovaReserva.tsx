@@ -171,15 +171,18 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
       return;
     }
 
+    // Horário de início no fuso do usuário (evita erro no servidor em UTC)
+    const [y, mo, d] = date.trim().split('-').map(Number);
+    const startAtLocal = new Date(y, mo - 1, d, hourNum, minuteNum, 0, 0);
+    const startAtISO = startAtLocal.toISOString();
+
     try {
       const response = await fetch('/api/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: uid,
-          date: date.trim(),
-          hour: hourNum,
-          minute: minuteNum,
+          startAtISO,
           participantIds: selectedParticipants.map((p) => p.id),
         }),
       });
