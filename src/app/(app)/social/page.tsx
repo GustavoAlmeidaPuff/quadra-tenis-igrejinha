@@ -371,7 +371,7 @@ export default function SocialPage() {
               </button>
             );
           })}
-          <div className="relative flex-shrink-0 border-b-2 border-transparent py-3">
+          <div className="relative flex-shrink-0 border-b-2 border-transparent py-3 pl-2 pr-6">
             <button
               type="button"
               onClick={() => setSearchOpen(!searchOpen)}
