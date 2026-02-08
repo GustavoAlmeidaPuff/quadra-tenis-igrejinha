@@ -76,19 +76,33 @@ export default function ReservarPage() {
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(selectedDate);
       endOfDay.setHours(23, 59, 59, 999);
+      const startOfPrevDay = new Date(selectedDate);
+      startOfPrevDay.setDate(selectedDate.getDate() - 1);
+      startOfPrevDay.setHours(0, 0, 0, 0);
+      const startOfNextDay = new Date(selectedDate);
+      startOfNextDay.setDate(selectedDate.getDate() + 1);
+      startOfNextDay.setHours(0, 0, 0, 0);
 
+      // Busca reservas que podem sobrepor o dia: início até 1 dia antes OU até 1 dia depois
       const q = query(
         collection(db, 'reservations'),
-        where('startAt', '>=', Timestamp.fromDate(startOfDay)),
-        where('startAt', '<=', Timestamp.fromDate(endOfDay)),
+        where('startAt', '>=', Timestamp.fromDate(startOfPrevDay)),
+        where('startAt', '<', Timestamp.fromDate(startOfNextDay)),
         orderBy('startAt', 'asc')
       );
 
       const snapshot = await getDocs(q);
       const reservationsData: ReservationWithParticipants[] = [];
+      const dayStartMs = startOfDay.getTime();
+      const dayEndMs = endOfDay.getTime() + 1;
 
       for (const d of snapshot.docs) {
         const data = d.data();
+        const resStart = data.startAt?.toDate?.()?.getTime?.() ?? 0;
+        const resEnd = data.endAt?.toDate?.()?.getTime?.() ?? 0;
+        // Só inclui se a reserva sobrepõe o dia selecionado
+        if (resEnd <= dayStartMs || resStart > dayEndMs) continue;
+
         const participantsSnap = await getDocs(
           query(
             collection(db, 'reservationParticipants'),
@@ -137,20 +151,20 @@ export default function ReservarPage() {
     }
   };
 
-  // Gerar horários de 06:00 até 23:00
-  const timeSlots = [];
-  for (let hour = 6; hour <= 23; hour++) {
+  // Horários de 00:00 até 23:00 (inclui 00:00 para reservas que atravessam a meia-noite)
+  const timeSlots: string[] = [];
+  for (let hour = 0; hour <= 23; hour++) {
     timeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
   }
 
   const ROW_HEIGHT_PX = 64; // h-16
   const isSelectedToday =
     selectedDate && now && selectedDate.toDateString() === now.toDateString();
-  const hoursFrom6 =
-    now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600 - 6;
+  const hoursFromMidnight =
+    now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
   const nowLineTop =
-    isSelectedToday && hoursFrom6 >= 0 && hoursFrom6 <= 18
-      ? Math.max(0, hoursFrom6 * ROW_HEIGHT_PX)
+    isSelectedToday && hoursFromMidnight >= 0 && hoursFromMidnight < 24
+      ? Math.max(0, hoursFromMidnight * ROW_HEIGHT_PX)
       : null;
 
   return (
@@ -215,11 +229,16 @@ export default function ReservarPage() {
           )}
           {timeSlots.map((time) => {
             const [hour] = time.split(':').map(Number);
-            
-            // Verificar se há reserva neste horário (qualquer minuto no mesmo bloco de hora)
+            const slotStart = new Date(selectedDate);
+            slotStart.setHours(hour, 0, 0, 0);
+            const slotEnd = new Date(selectedDate);
+            slotEnd.setHours(hour + 1, 0, 0, 0); // hora 23 → 24:00 = 00:00 do dia seguinte
+
+            // Reserva aparece no slot se sobrepõe o intervalo [slotStart, slotEnd)
             const reservation = reservations.find((res) => {
               const resStart = res.startAt.toDate();
-              return resStart.getHours() === hour;
+              const resEnd = res.endAt.toDate();
+              return resStart < slotEnd && resEnd > slotStart;
             });
 
             return (

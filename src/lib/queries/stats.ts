@@ -174,8 +174,9 @@ export async function getUserStats(userId: string): Promise<UserStats> {
 
   const now = new Date();
   const pastReservations = allReservations.filter((r) => r.endAt <= now);
+  // Inclui reservas futuras e em andamento (que ainda não terminaram)
   const futureReservations = allReservations
-    .filter((r) => r.startAt >= now)
+    .filter((r) => r.endAt > now)
     .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
 
   const totalReservations = allReservations.length;

@@ -152,6 +152,10 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
     const endMinutes = startMinutes + 90;
     const endHour = Math.floor(endMinutes / 60);
     const endMinute = endMinutes % 60;
+    if (endHour >= 24) {
+      const h = endHour % 24;
+      return `${h.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')} (dia seguinte)`;
+    }
     return `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
   };
 

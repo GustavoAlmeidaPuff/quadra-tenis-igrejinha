@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot, getDocs, getDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, getDocs, getDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { Reservation } from '@/lib/types';
 
@@ -16,15 +16,19 @@ export default function CourtStatus({ showLabel = true, className = '' }: CourtS
 
   useEffect(() => {
     const now = new Date();
-    const startOfDay = new Date(now);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(now);
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfPrevDay = new Date(now);
+    startOfPrevDay.setDate(now.getDate() - 1);
+    startOfPrevDay.setHours(0, 0, 0, 0);
+    const startOfNextDay = new Date(now);
+    startOfNextDay.setDate(now.getDate() + 1);
+    startOfNextDay.setHours(0, 0, 0, 0);
 
+    // Inclui reservas que iniciaram ontem ou hoje (para pegar 23:00→00:30 em andamento)
     const reservationsQuery = query(
       collection(db, 'reservations'),
-      where('startAt', '>=', Timestamp.fromDate(startOfDay)),
-      where('startAt', '<=', Timestamp.fromDate(endOfDay))
+      where('startAt', '>=', Timestamp.fromDate(startOfPrevDay)),
+      where('startAt', '<', Timestamp.fromDate(startOfNextDay)),
+      orderBy('startAt', 'asc')
     );
 
     const unsubscribe = onSnapshot(reservationsQuery, async (snapshot) => {
