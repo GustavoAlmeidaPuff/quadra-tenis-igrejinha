@@ -39,8 +39,9 @@ export interface Challenge {
   fromUserId: string;
   toUserId: string;
   message?: string;
-  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
+  status: 'pending' | 'pending_schedule' | 'accepted' | 'declined' | 'cancelled';
   createdAt: Timestamp;
+  reservationId?: string;
 }
 
 export interface CourtStatus {

@@ -37,11 +37,19 @@ export default function ReservarPage() {
     return () => clearInterval(interval);
   }, []);
 
+  const [challengeId, setChallengeId] = useState<string | null>(null);
+
   useEffect(() => {
     const adicionarJogador = searchParams.get('adicionarJogador');
+    const challenge = searchParams.get('challengeId');
     if (adicionarJogador?.trim()) {
       setInitialParticipantIds([adicionarJogador.trim()]);
       setShowModal(true);
+    }
+    if (challenge?.trim()) {
+      setChallengeId(challenge.trim());
+    }
+    if (adicionarJogador?.trim() || challenge?.trim()) {
       window.history.replaceState({}, '', '/reservar');
     }
   }, [searchParams]);
@@ -292,10 +300,12 @@ export default function ReservarPage() {
           onClose={() => {
             setShowModal(false);
             setInitialParticipantIds([]);
+            setChallengeId(null);
           }}
           onSuccess={() => setReservationsRefreshKey((k) => k + 1)}
           selectedDate={selectedDate}
           initialParticipantIds={initialParticipantIds}
+          challengeId={challengeId ?? undefined}
         />
       )}
     </div>

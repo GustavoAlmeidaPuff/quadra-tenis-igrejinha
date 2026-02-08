@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { X, Search, UserPlus } from 'lucide-react';
-import { collection, getDocs, getDoc, doc, query, where } from 'firebase/firestore';
+import { collection, getDocs, getDoc, doc, query, where, updateDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
 
@@ -21,9 +21,11 @@ interface ModalNovaReservaProps {
   onSuccess?: () => void;
   selectedDate?: Date;
   initialParticipantIds?: string[];
+  /** Quando preenchido (aceite de desafio), ao criar a reserva o desafio é marcado como aceito. */
+  challengeId?: string;
 }
 
-export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedDate, initialParticipantIds = [] }: ModalNovaReservaProps) {
+export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedDate, initialParticipantIds = [], challengeId }: ModalNovaReservaProps) {
   const [date, setDate] = useState('');
   const [hour, setHour] = useState('19');
   const [minute, setMinute] = useState('00');
@@ -198,6 +200,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
           userId: uid,
           startAtISO,
           participantIds: selectedParticipants.map((p) => p.id),
+          challengeId: challengeId ?? undefined,
         }),
       });
 
@@ -207,6 +210,17 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
         setError(data.error ?? 'Erro ao criar reserva. Tente novamente.');
         setLoading(false);
         return;
+      }
+
+      if (challengeId && data.reservationId) {
+        try {
+          await updateDoc(doc(db, 'challenges', challengeId), {
+            status: 'accepted',
+            reservationId: data.reservationId,
+          });
+        } catch (e) {
+          console.error('Erro ao marcar desafio como aceito:', e);
+        }
       }
 
       onSuccess?.();

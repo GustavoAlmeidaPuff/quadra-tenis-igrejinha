@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, hasAdminCredentials } from '@/lib/firebase/admin';
 import { validateReservation } from '@/lib/validators/reservationValidator';
-import { sendReservationConfirmationEmail, sendParticipantAddedEmail } from '@/lib/brevo';
+import { sendReservationConfirmationEmail, sendParticipantAddedEmail, sendChallengeAcceptedEmail } from '@/lib/brevo';
 import { Timestamp } from 'firebase-admin/firestore';
 
 const APP_BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://teniscreas.vercel.app';
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { userId, startAtISO, date, hour, minute, participantIds } = body;
+    const { userId, startAtISO, date, hour, minute, participantIds, challengeId } = body;
 
     if (!userId || typeof userId !== 'string' || !userId.trim()) {
       return NextResponse.json(
@@ -95,6 +95,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Quando é aceite de desafio, quem desafiou (fromUserId) recebe "desafio aceito", não "te adicionou"
+    let challengerUserId: string | null = null;
+    if (challengeId && typeof challengeId === 'string' && challengeId.trim()) {
+      const challengeSnap = await adminDb.collection('challenges').doc(challengeId.trim()).get();
+      if (challengeSnap.exists) {
+        challengerUserId = challengeSnap.data()?.fromUserId ?? null;
+      }
+    }
+
     // Enviar email de confirmação ao criador (não bloqueia a resposta em caso de falha)
     const userSnap = await adminDb.collection('users').doc(userId).get();
     const userData = userSnap.data();
@@ -109,10 +118,11 @@ export async function POST(request: NextRequest) {
       }).catch((err) => console.error('Erro ao enviar email de confirmação da reserva:', err));
     }
 
-    // Enviar email aos participantes adicionados
+    // Enviar email aos participantes adicionados (exceto quem desafiou em caso de aceite de desafio)
     if (participantIds && Array.isArray(participantIds)) {
       const reservarUrl = `${APP_BASE_URL}/reservar`;
       for (const pId of participantIds) {
+        if (challengerUserId && pId === challengerUserId) continue; // já recebe "desafio aceito"
         const pSnap = await adminDb.collection('users').doc(pId).get();
         const pData = pSnap.data();
         const pEmail = typeof pData?.email === 'string' ? pData.email.trim() : '';
@@ -126,6 +136,23 @@ export async function POST(request: NextRequest) {
             reservarUrl,
           }).catch((err) => console.error('Erro ao enviar email para participante:', err));
         }
+      }
+    }
+
+    // Enviar email para quem desafiou quando adversário aceita e marca horário
+    if (challengerUserId) {
+      const challengerSnap = await adminDb.collection('users').doc(challengerUserId).get();
+      const challengerData = challengerSnap.data();
+      const challengerEmail = typeof challengerData?.email === 'string' ? challengerData.email.trim() : '';
+      if (challengerEmail) {
+        const challengerName = `${challengerData?.firstName ?? ''} ${challengerData?.lastName ?? ''}`.trim() || 'Jogador';
+        sendChallengeAcceptedEmail({
+          toEmail: challengerEmail,
+          toName: challengerName,
+          accepterName: creatorName,
+          startAt,
+          reservarUrl: `${APP_BASE_URL}/reservar`,
+        }).catch((err) => console.error('Erro ao enviar email de desafio aceito:', err));
       }
     }
 

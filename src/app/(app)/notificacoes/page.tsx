@@ -194,7 +194,7 @@ export default function NotificacoesPage() {
       const q = query(
         collection(db, 'challenges'),
         where('toUserId', '==', user.uid),
-        where('status', '==', 'pending')
+        where('status', 'in', ['pending', 'pending_schedule'])
       );
       const snap = await getDocs(q);
       const batch = snap.docs.filter((d) => d.data().viewed !== true);
@@ -213,14 +213,11 @@ export default function NotificacoesPage() {
   const handleAccept = async (challengeId: string, fromUserId: string) => {
     try {
       await updateDoc(doc(db, 'challenges', challengeId), {
-        status: 'accepted',
+        status: 'pending_schedule',
       });
-      setNotifications((prev) =>
-        prev.filter(
-          (n) => !(n.type === 'received_challenge' && n.challenge.id === challengeId)
-        )
+      router.push(
+        `/reservar?adicionarJogador=${encodeURIComponent(fromUserId)}&challengeId=${encodeURIComponent(challengeId)}`
       );
-      router.push(`/reservar?adicionarJogador=${encodeURIComponent(fromUserId)}`);
     } catch (e) {
       console.error(e);
     }
@@ -346,6 +343,20 @@ export default function NotificacoesPage() {
                       </button>
                     </div>
                   )}
+                  {item.challenge.status === 'pending_schedule' && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-emerald-700 flex items-center gap-1.5">
+                        <Check className="w-4 h-4 flex-shrink-0" />
+                        Você aceitou. Marque o horário do duelo.
+                      </p>
+                      <Link
+                        href={`/reservar?adicionarJogador=${encodeURIComponent(item.challenge.fromUserId)}&challengeId=${encodeURIComponent(item.challenge.id)}`}
+                        className="block w-full text-center bg-emerald-600 text-white rounded-xl px-4 py-2 font-medium hover:bg-emerald-700 transition-colors"
+                      >
+                        Marcar horário
+                      </Link>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -360,19 +371,23 @@ export default function NotificacoesPage() {
                         ? 'bg-emerald-100 text-emerald-700'
                         : item.challenge.status === 'declined'
                           ? 'bg-red-100 text-red-700'
-                          : 'bg-gray-100 text-gray-600'
+                          : item.challenge.status === 'pending_schedule'
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-gray-100 text-gray-600'
                     }`}
                   >
                     {item.challenge.status === 'pending'
                       ? 'Pendente'
-                      : item.challenge.status === 'accepted'
-                        ? 'Aceito'
-                        : 'Recusado'}
+                      : item.challenge.status === 'pending_schedule'
+                        ? 'Aguardando horário'
+                        : item.challenge.status === 'accepted'
+                          ? 'Aceito'
+                          : 'Recusado'}
                   </span>
                   <span className="text-xs text-gray-500">
                     {item.createdAtLabel}
                   </span>
-                  {item.challenge.status === 'pending' && (
+                  {(item.challenge.status === 'pending' || item.challenge.status === 'pending_schedule') && (
                     <button
                       type="button"
                       onClick={() => handleCancelSent(item.challenge.id)}

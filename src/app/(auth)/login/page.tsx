@@ -10,7 +10,7 @@ import {
   signInWithEmailAndPassword,
   AuthErrorCodes,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
 import CourtStatus from '@/components/layout/CourtStatus';
 import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
@@ -34,10 +34,16 @@ async function ensureUserDocAndRedirect(
       createdAt: serverTimestamp(),
     });
     router.push('/onboarding');
-  } else if (!userDoc.data().firstName) {
-    router.push('/onboarding');
   } else {
-    router.push('/home');
+    const data = userDoc.data();
+    if (email && typeof email === 'string' && email.trim() && (!data?.email || data.email !== email.trim())) {
+      await updateDoc(doc(db, 'users', uid), { email: email.trim() });
+    }
+    if (!data?.firstName) {
+      router.push('/onboarding');
+    } else {
+      router.push('/home');
+    }
   }
 }
 
