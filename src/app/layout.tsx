@@ -10,13 +10,28 @@ export const viewport: Viewport = {
   themeColor: '#10b981',
 };
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://teniscreas.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "Quadra de Tênis - Igrejinha",
   description: "Agenda comunitária da quadra de tênis em Igrejinha, RS",
   manifest: "/manifest.json",
   icons: {
     icon: "/images/logo-white.svg",
     apple: "/images/logo-white.svg",
+  },
+  openGraph: {
+    title: "Quadra de Tênis - Igrejinha",
+    description: "Agenda comunitária da quadra de tênis em Igrejinha, RS",
+    images: ["/images/Ad.png"],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Quadra de Tênis - Igrejinha",
+    description: "Agenda comunitária da quadra de tênis em Igrejinha, RS",
+    images: ["/images/Ad.png"],
   },
 };
 

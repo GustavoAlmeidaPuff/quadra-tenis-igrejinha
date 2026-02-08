@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Copy, Check } from 'lucide-react';
+import Link from 'next/link';
+import { Copy, Check, User } from 'lucide-react';
 
 const PIX_KEY_DISPLAY = '64.523.312/0001-62';
 const PIX_KEY_COPY = '64523312000162';
@@ -89,6 +90,49 @@ export default function CafePage() {
             </div>
           </div>
         </div>
+
+        {/* Pra quem vai o café? */}
+        <section className="w-full max-w-md mt-6 sm:mt-8">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-800 text-center mb-4 px-2">
+            Pra quem vai o café?
+          </h2>
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start">
+              <div
+                className="shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gray-200 flex items-center justify-center"
+                aria-hidden
+              >
+                <User className="w-12 h-12 sm:w-14 sm:h-14 text-gray-400" />
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
+                  Olá, me chamo Gustavo Almeida!
+                  <br />
+                  Sou um desenvolvedor de software que gosta bastante de projetos de final de semana como esse! Fundador do{' '}
+                  <Link
+                    href="https://bibliotech.tech"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-600 hover:text-emerald-700 underline font-medium"
+                  >
+                    bibliotech.tech
+                  </Link>
+                  , e estudante antes de tudo. Sempre aberto a um bom feedback!
+                </p>
+                <p className="mt-3 text-sm">
+                  <a
+                    href="https://www.linkedin.com/in/gustavo-almeida-bb1088264/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-600 hover:text-emerald-700 underline font-medium"
+                  >
+                    Meu LinkedIn
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
