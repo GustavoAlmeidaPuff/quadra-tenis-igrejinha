@@ -32,6 +32,7 @@ import Avatar from '@/components/layout/Avatar';
 import { User } from '@/lib/types';
 import {
   getUserStats,
+  type UserStats,
   type ReservationListItem,
 } from '@/lib/queries/stats';
 

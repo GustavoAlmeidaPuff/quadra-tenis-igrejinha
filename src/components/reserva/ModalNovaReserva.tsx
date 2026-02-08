@@ -36,8 +36,10 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
 
   useEffect(() => {
     if (selectedDate) {
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      setDate(dateStr);
+      const y = selectedDate.getFullYear();
+      const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const d = String(selectedDate.getDate()).padStart(2, '0');
+      setDate(`${y}-${m}-${d}`);
     }
   }, [selectedDate]);
 
@@ -162,15 +164,22 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
     setLoading(true);
     setError('');
 
+    const hourNum = parseInt(hour, 10);
+    const minuteNum = parseInt(minute, 10);
+    if (Number.isNaN(hourNum) || Number.isNaN(minuteNum)) {
+      setError('Horário inválido. Selecione hora e minuto.');
+      return;
+    }
+
     try {
       const response = await fetch('/api/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: uid,
-          date,
-          hour: parseInt(hour, 10),
-          minute: parseInt(minute, 10),
+          date: date.trim(),
+          hour: hourNum,
+          minute: minuteNum,
           participantIds: selectedParticipants.map((p) => p.id),
         }),
       });

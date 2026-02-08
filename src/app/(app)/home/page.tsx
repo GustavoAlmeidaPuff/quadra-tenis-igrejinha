@@ -47,6 +47,8 @@ export default function HomePage() {
           ],
           topPartners: [],
           nextReservation: null,
+          upcomingReservations: [],
+          pastReservations: [],
         });
       } finally {
         setLoading(false);

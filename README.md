@@ -40,6 +40,12 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
 NEXT_PUBLIC_FIREBASE_APP_ID=...
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=...
 
+# Para a API de reservas funcionar (criar/cancelar reservas), é obrigatório
+# configurar a chave de conta de serviço do Firebase Admin:
+# 1. Firebase Console → Configurações do projeto → Contas de serviço → Gerar nova chave privada
+# 2. Salve o .json na raiz do projeto (ex.: serviceAccountKey.json) e adicione ao .env.local:
+FIREBASE_SERVICE_ACCOUNT_PATH=./serviceAccountKey.json
+
 # Rodar em desenvolvimento
 npm run dev
 ```
