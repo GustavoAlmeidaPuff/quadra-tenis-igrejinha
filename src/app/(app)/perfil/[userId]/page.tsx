@@ -162,6 +162,14 @@ export default function PerfilUserIdPage({ params }: PageProps) {
         viewed: false,
         createdAt: serverTimestamp(),
       });
+      fetch('/api/notify-challenge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromUserId: auth.currentUser.uid,
+          toUserId: user.id,
+        }),
+      }).catch((err) => console.error('Erro ao enviar email de desafio:', err));
       router.push('/notificacoes');
     } catch (e) {
       console.error(e);

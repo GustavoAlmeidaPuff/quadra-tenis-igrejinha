@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { collection, query, where, getDocs, getDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { db, auth } from '@/lib/firebase/client';
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatTime } from '@/lib/utils';
 import { Reservation } from '@/lib/types';
@@ -18,6 +18,7 @@ interface DayTab {
 
 interface ReservationWithParticipants extends Reservation {
   participants: string[];
+  participantIds: string[];
 }
 
 export default function ReservarPage() {
@@ -95,9 +96,11 @@ export default function ReservarPage() {
           )
         );
         const names: string[] = [];
+        const ids: string[] = [];
         for (const pDoc of participantsSnap.docs) {
           const userId = pDoc.data().userId;
           if (userId) {
+            ids.push(userId);
             const userSnap = await getDoc(doc(db, 'users', userId));
             const u = userSnap.exists() ? userSnap.data() : {};
             names.push(`${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim() || 'Jogador');
@@ -110,6 +113,7 @@ export default function ReservarPage() {
           createdById: data.createdById,
           createdAt: data.createdAt,
           participants: names.length > 0 ? names : ['—'],
+          participantIds: ids,
         });
       }
 
@@ -226,7 +230,13 @@ export default function ReservarPage() {
                 <div className="flex-1 relative">
                   {reservation && (
                     <div className="absolute inset-x-0 top-1 bottom-1">
-                      <div className="h-full bg-gradient-to-r from-yellow-100 to-yellow-50 border-l-4 border-yellow-500 rounded-r-lg p-2 shadow-sm">
+                      <div
+                        className={`h-full rounded-r-lg p-2 shadow-sm border-l-4 ${
+                          auth.currentUser && reservation.participantIds.includes(auth.currentUser.uid)
+                            ? 'bg-gradient-to-r from-emerald-100 to-emerald-50 border-emerald-500'
+                            : 'bg-gradient-to-r from-yellow-100 to-yellow-50 border-yellow-500'
+                        }`}
+                      >
                         <div className="font-medium text-sm text-gray-900 truncate">
                           {reservation.participants.join(', ')}
                         </div>
