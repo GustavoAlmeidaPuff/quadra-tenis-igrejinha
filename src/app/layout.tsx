@@ -14,6 +14,10 @@ export const metadata: Metadata = {
   title: "Quadra de Tênis - Igrejinha",
   description: "Agenda comunitária da quadra de tênis em Igrejinha, RS",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/images/logo.png",
+    apple: "/images/logo.png",
+  },
 };
 
 export default function RootLayout({
