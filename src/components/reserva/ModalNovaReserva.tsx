@@ -172,8 +172,17 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
     }
 
     // Horário de início no fuso do usuário (evita erro no servidor em UTC)
-    const [y, mo, d] = date.trim().split('-').map(Number);
+    const dateStr = date.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      setError('Data inválida. Selecione uma data.');
+      return;
+    }
+    const [y, mo, d] = dateStr.split('-').map(Number);
     const startAtLocal = new Date(y, mo - 1, d, hourNum, minuteNum, 0, 0);
+    if (Number.isNaN(startAtLocal.getTime())) {
+      setError('Data/horário inválido.');
+      return;
+    }
     const startAtISO = startAtLocal.toISOString();
 
     try {

@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { userId, startAtISO, participantIds } = body;
+    const { userId, startAtISO, date, hour, minute, participantIds } = body;
 
     if (!userId || typeof userId !== 'string' || !userId.trim()) {
       return NextResponse.json(
@@ -24,14 +24,29 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (!startAtISO || typeof startAtISO !== 'string') {
+
+    let startAt: Date;
+
+    if (startAtISO && typeof startAtISO === 'string') {
+      startAt = new Date(startAtISO);
+    } else if (date && typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date.trim())) {
+      const hourNum = typeof hour === 'number' ? hour : parseInt(String(hour), 10);
+      const minuteNum = typeof minute === 'number' ? minute : parseInt(String(minute), 10);
+      if (Number.isNaN(hourNum) || hourNum < 0 || hourNum > 23 || Number.isNaN(minuteNum) || minuteNum < 0 || minuteNum > 59) {
+        return NextResponse.json(
+          { error: 'Horário inválido. Hora (0–23) e minuto (0–59) são obrigatórios.' },
+          { status: 400 }
+        );
+      }
+      const [y, m, d] = date.trim().split('-').map(Number);
+      startAt = new Date(y, m - 1, d, hourNum, minuteNum, 0, 0);
+    } else {
       return NextResponse.json(
-        { error: 'Horário de início inválido. Envie startAtISO (ISO 8601).' },
+        { error: 'Envie o horário de início: startAtISO (recomendado) ou date + hour + minute.' },
         { status: 400 }
       );
     }
 
-    const startAt = new Date(startAtISO);
     if (Number.isNaN(startAt.getTime())) {
       return NextResponse.json(
         { error: 'Data/horário de início inválido.' },
