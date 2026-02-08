@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { use, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -33,7 +33,9 @@ import {
   Coffee,
   BarChart2,
   Trophy,
+  ImagePlus,
 } from 'lucide-react';
+import Image from 'next/image';
 import Avatar from '@/components/layout/Avatar';
 import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
 import { User } from '@/lib/types';
@@ -60,6 +62,9 @@ export default function PerfilUserIdPage({ params }: PageProps) {
   const [editing, setEditing] = useState(false);
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [challenging, setChallenging] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -139,25 +144,63 @@ export default function PerfilUserIdPage({ params }: PageProps) {
     if (!auth.currentUser || !user) return;
     setSaving(true);
     try {
-      await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+      let pictureUrl: string | undefined = undefined;
+      if (selectedImage) {
+        const fd = new FormData();
+        fd.append('image', selectedImage);
+        const res = await fetch('/api/upload-image', { method: 'POST', body: fd });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.error ?? 'Erro ao enviar foto.');
+        }
+        const data = await res.json();
+        pictureUrl = data?.url ?? undefined;
+      }
+      const updates: Record<string, string> = {
         firstName: editFirstName.trim(),
         lastName: editLastName.trim(),
-      });
+      };
+      if (pictureUrl !== undefined) updates.pictureUrl = pictureUrl;
+      await updateDoc(doc(db, 'users', auth.currentUser.uid), updates);
       setUser((prev) =>
         prev
           ? {
               ...prev,
               firstName: editFirstName.trim(),
               lastName: editLastName.trim(),
+              ...(pictureUrl !== undefined && { pictureUrl }),
             }
           : null
       );
+      setSelectedImage(null);
+      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+      setImagePreviewUrl(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       setEditing(false);
     } catch (e) {
       console.error(e);
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowed.includes(file.type)) return;
+    if (file.size > 5 * 1024 * 1024) return; // 5MB
+    setSelectedImage(file);
+    const url = URL.createObjectURL(file);
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    setImagePreviewUrl(url);
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    setImagePreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   useEffect(() => {
@@ -373,7 +416,61 @@ export default function PerfilUserIdPage({ params }: PageProps) {
 
       {/* Cabeçalho do perfil: avatar, nome, email */}
       <div className="bg-white px-4 pt-8 pb-6 text-center border-b border-gray-200">
-        <Avatar user={user} size="lg" className="mx-auto mb-4" />
+        {editing ? (
+          <div className="mb-4 flex flex-col items-center">
+            <div className="relative w-20 h-20 rounded-full overflow-hidden bg-gray-100 mx-auto mb-2 flex-shrink-0">
+              {imagePreviewUrl ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={imagePreviewUrl}
+                    alt="Nova foto"
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="absolute top-0 right-0 p-1 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                    aria-label="Remover foto"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </>
+              ) : user.pictureUrl ? (
+                <Image
+                  src={user.pictureUrl}
+                  alt=""
+                  width={80}
+                  height={80}
+                  className="object-cover w-full h-full"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-2xl font-semibold text-gray-400 bg-gray-200">
+                  {user.firstName?.[0] ?? '?'}{user.lastName?.[0] ?? '?'}
+                </div>
+              )}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              onChange={handleImageSelect}
+              className="hidden"
+              aria-hidden
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 hover:text-emerald-700"
+              aria-label="Alterar foto"
+            >
+              <ImagePlus className="w-4 h-4" />
+              {imagePreviewUrl ? 'Trocar foto' : 'Alterar foto'}
+            </button>
+          </div>
+        ) : (
+          <Avatar user={user} size="lg" className="mx-auto mb-4" />
+        )}
         {editing ? (
           <div className="space-y-2 max-w-xs mx-auto">
             <input
@@ -399,7 +496,13 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                 {saving ? 'Salvando...' : 'Salvar'}
               </button>
               <button
-                onClick={() => setEditing(false)}
+                onClick={() => {
+                  setEditing(false);
+                  setSelectedImage(null);
+                  if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+                  setImagePreviewUrl(null);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }}
                 className="bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium"
               >
                 Cancelar
