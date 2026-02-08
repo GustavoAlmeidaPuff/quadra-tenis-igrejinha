@@ -12,7 +12,7 @@ interface ErrorWithSupportLinkProps {
 }
 
 /**
- * Exibe a mensagem de erro e, abaixo, texto: "! se esse erro não fizer sentido [entre em contato com o suporte]",
+ * Exibe a mensagem de erro e, abaixo, texto: "Se esse erro não fizer sentido [entre em contato com o suporte]",
  * onde o texto entre colchetes é link para WhatsApp do suporte com a mesma mensagem de erro.
  */
 export default function ErrorWithSupportLink({
@@ -30,7 +30,7 @@ export default function ErrorWithSupportLink({
     >
       <p>{message}</p>
       <p className="mt-2 text-sm">
-        ! se esse erro não fizer sentido{' '}
+        Se esse erro não fizer sentido{' '}
         {showSupportLink ? (
           <a
             href={supportUrl}
