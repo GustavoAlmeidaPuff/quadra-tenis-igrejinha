@@ -481,6 +481,23 @@ export default function SocialPage() {
         await updateDoc(ref, { likedBy: arrayRemove(auth.currentUser.uid) });
       } else {
         await updateDoc(ref, { likedBy: arrayUnion(auth.currentUser.uid) });
+        if (post.authorId !== auth.currentUser.uid) {
+          try {
+            const userSnap = await getDoc(doc(db, 'users', auth.currentUser.uid));
+            const userData = userSnap.exists() ? userSnap.data() : {};
+            const fromUserName = `${userData.firstName ?? ''} ${userData.lastName ?? ''}`.trim() || 'Jogador';
+            await addDoc(collection(db, 'notifications'), {
+              type: 'like',
+              fromUserId: auth.currentUser.uid,
+              fromUserName,
+              toUserId: post.authorId,
+              postId: post.id,
+              createdAt: serverTimestamp(),
+            });
+          } catch (err) {
+            console.error('Erro ao criar notificação de curtida:', err);
+          }
+        }
       }
     } catch (e) {
       console.error(e);

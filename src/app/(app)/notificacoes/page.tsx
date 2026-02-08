@@ -16,7 +16,7 @@ import {
   arrayUnion,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
-import { Check, X, Swords, XCircle, Trash2, AtSign } from 'lucide-react';
+import { Check, X, Swords, XCircle, Trash2, AtSign, Heart } from 'lucide-react';
 import Link from 'next/link';
 
 interface ChallengeWithAuthor {
@@ -45,6 +45,16 @@ interface MentionNotification {
   commentId?: string;
 }
 
+interface LikeNotification {
+  type: 'like';
+  id: string;
+  createdAt: Date;
+  createdAtLabel: string;
+  fromUserId: string;
+  fromUserName: string;
+  postId: string;
+}
+
 type NotificationItem =
   | {
       type: 'received_challenge';
@@ -60,7 +70,8 @@ type NotificationItem =
       createdAtLabel: string;
       challenge: ChallengeWithAuthor;
     }
-  | MentionNotification;
+  | MentionNotification
+  | LikeNotification;
 
 function formatTimeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -177,9 +188,10 @@ export default function NotificacoesPage() {
 
   const mergeAllAndSort = (
     challengeItems: NotificationItem[],
-    mentionItems: MentionNotification[]
+    mentionItems: MentionNotification[],
+    likeItems: LikeNotification[] = []
   ): NotificationItem[] => {
-    const all = [...challengeItems, ...mentionItems];
+    const all = [...challengeItems, ...mentionItems, ...likeItems];
     all.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     return all;
   };
@@ -203,10 +215,17 @@ export default function NotificacoesPage() {
       orderBy('createdAt', 'desc'),
       limit(50)
     );
+    const likeQuery = query(
+      collection(db, 'notifications'),
+      where('toUserId', '==', user.uid),
+      where('type', '==', 'like'),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
 
-    const initialLoadDone = { received: false, sent: false, mentions: false };
+    const initialLoadDone = { received: false, sent: false, mentions: false, likes: false };
     const maybeDone = () => {
-      if (initialLoadDone.received && initialLoadDone.sent && initialLoadDone.mentions) setLoading(false);
+      if (initialLoadDone.received && initialLoadDone.sent && initialLoadDone.mentions && initialLoadDone.likes) setLoading(false);
     };
 
     const unsubReceived = onSnapshot(receivedQuery, (snap) => {
@@ -218,7 +237,8 @@ export default function NotificacoesPage() {
             .filter((n): n is NotificationItem & { type: 'sent_challenge' } => n.type === 'sent_challenge')
             .map((n) => n.challenge);
           const mentionItems = prev.filter((n): n is MentionNotification => n.type === 'mention');
-          return mergeAllAndSort(mergeAndSort(received, sentItems), mentionItems);
+          const likeItems = prev.filter((n): n is LikeNotification => n.type === 'like');
+          return mergeAllAndSort(mergeAndSort(received, sentItems), mentionItems, likeItems);
         });
       });
     });
@@ -232,7 +252,8 @@ export default function NotificacoesPage() {
             .filter((n): n is NotificationItem & { type: 'received_challenge' } => n.type === 'received_challenge')
             .map((n) => n.challenge);
           const mentionItems = prev.filter((n): n is MentionNotification => n.type === 'mention');
-          return mergeAllAndSort(mergeAndSort(receivedItems, sent), mentionItems);
+          const likeItems = prev.filter((n): n is LikeNotification => n.type === 'like');
+          return mergeAllAndSort(mergeAndSort(receivedItems, sent), mentionItems, likeItems);
         });
       });
     });
@@ -258,7 +279,33 @@ export default function NotificacoesPage() {
         const challengeItems = prev.filter(
           (n) => n.type === 'received_challenge' || n.type === 'sent_challenge'
         );
-        return mergeAllAndSort(challengeItems, mentionItems);
+        const likeItems = prev.filter((n): n is LikeNotification => n.type === 'like');
+        return mergeAllAndSort(challengeItems, mentionItems, likeItems);
+      });
+    });
+
+    const unsubLikes = onSnapshot(likeQuery, (snap) => {
+      const likeItems: LikeNotification[] = snap.docs.map((d) => {
+        const data = d.data();
+        const createdAt = data.createdAt?.toDate?.() ?? new Date();
+        return {
+          type: 'like',
+          id: d.id,
+          createdAt,
+          createdAtLabel: formatTimeAgo(createdAt),
+          fromUserId: data.fromUserId ?? '',
+          fromUserName: data.fromUserName ?? 'Jogador',
+          postId: data.postId ?? '',
+        };
+      });
+      initialLoadDone.likes = true;
+      maybeDone();
+      setNotifications((prev) => {
+        const challengeItems = prev.filter(
+          (n) => n.type === 'received_challenge' || n.type === 'sent_challenge'
+        );
+        const mentionItems = prev.filter((n): n is MentionNotification => n.type === 'mention');
+        return mergeAllAndSort(challengeItems, mentionItems, likeItems);
       });
     });
 
@@ -266,6 +313,7 @@ export default function NotificacoesPage() {
       unsubReceived();
       unsubSent();
       unsubMentions();
+      unsubLikes();
     };
   }, []);
 
@@ -387,10 +435,12 @@ export default function NotificacoesPage() {
     }
   };
 
-  const handleDeleteMentionNotification = async (notificationId: string) => {
+  const handleDeleteAppNotification = async (notificationId: string) => {
     try {
       await deleteDoc(doc(db, 'notifications', notificationId));
-      setNotifications((prev) => prev.filter((n) => n.type !== 'mention' || n.id !== notificationId));
+      setNotifications((prev) =>
+        prev.filter((n) => (n.type !== 'mention' && n.type !== 'like') || n.id !== notificationId)
+      );
     } catch (e) {
       console.error(e);
     }
@@ -412,14 +462,14 @@ export default function NotificacoesPage() {
         <div className="space-y-3">
           {notifications.map((item) => (
             <div
-              key={`${item.type}-${item.type === 'mention' ? item.id : item.challenge.id}`}
+              key={`${item.type}-${item.type === 'mention' || item.type === 'like' ? item.id : item.challenge.id}`}
               className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm relative"
             >
               <button
                 type="button"
                 onClick={() =>
-                  item.type === 'mention'
-                    ? handleDeleteMentionNotification(item.id)
+                  item.type === 'mention' || item.type === 'like'
+                    ? handleDeleteAppNotification(item.id)
                     : handleDeleteNotification(item.challenge.id)
                 }
                 className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
@@ -439,6 +489,28 @@ export default function NotificacoesPage() {
                         {item.fromUserName}
                       </Link>
                       <span className="text-gray-600"> te mencionou em um post</span>
+                    </p>
+                    <span className="text-xs text-gray-500 block">{item.createdAtLabel}</span>
+                    <Link
+                      href={`/social?postId=${encodeURIComponent(item.postId)}`}
+                      className="inline-block mt-2 text-sm font-medium text-emerald-600 hover:text-emerald-700 hover:underline"
+                    >
+                      Ver post
+                    </Link>
+                  </div>
+                </div>
+              )}
+              {item.type === 'like' && (
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-red-600 flex-shrink-0">
+                    <Heart className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900">
+                      <Link href={`/perfil/${item.fromUserId}`} className="font-semibold hover:underline">
+                        {item.fromUserName}
+                      </Link>
+                      <span className="text-gray-600"> curtiu seu post</span>
                     </p>
                     <span className="text-xs text-gray-500 block">{item.createdAtLabel}</span>
                     <Link
