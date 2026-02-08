@@ -46,11 +46,12 @@ export default function CourtStatus({ showLabel = true, className = '' }: CourtS
       });
 
       if (currentReservation) {
+        const reservationId = currentReservation.id;
         setIsOccupied(true);
         const participantsSnap = await getDocs(
           query(
             collection(db, 'reservationParticipants'),
-            where('reservationId', '==', currentReservation.id)
+            where('reservationId', '==', reservationId)
           )
         );
         const names: string[] = [];
