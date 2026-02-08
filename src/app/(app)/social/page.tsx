@@ -43,6 +43,13 @@ interface PostItem {
   createdAtLabel: string;
   likeCount: number;
   likedByMe: boolean;
+  likedByUserIds: string[];
+}
+
+interface LikedByProfile {
+  pictureUrl?: string | null;
+  name: string;
+  initials: string;
 }
 
 interface SearchableUser {
@@ -94,6 +101,7 @@ export default function SocialPage() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [likingPostId, setLikingPostId] = useState<string | null>(null);
+  const [likedByProfilesCache, setLikedByProfilesCache] = useState<Record<string, LikedByProfile>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -176,6 +184,7 @@ export default function SocialPage() {
           createdAtLabel: formatTimeAgo(createdAt),
           likeCount,
           likedByMe,
+          likedByUserIds: likedBy,
         });
       }
       setPosts(list);
@@ -184,6 +193,38 @@ export default function SocialPage() {
 
     return () => unsubscribe();
   }, []);
+
+  // Carrega perfis (foto, nome) de quem curtiu para exibir avatares
+  useEffect(() => {
+    const ids = new Set<string>();
+    posts.forEach((p) => p.likedByUserIds.slice(0, 5).forEach((id) => ids.add(id)));
+    const toFetch = [...ids].filter((id) => !likedByProfilesCache[id]).slice(0, 30);
+    if (toFetch.length === 0) return;
+
+    let cancelled = false;
+    Promise.all(
+      toFetch.map(async (userId) => {
+        const snap = await getDoc(doc(db, 'users', userId));
+        if (!snap.exists()) return null;
+        const d = snap.data();
+        const firstName = d.firstName ?? '';
+        const lastName = d.lastName ?? '';
+        const name = `${firstName} ${lastName}`.trim() || 'Jogador';
+        const initials = `${(firstName || '?')[0]}${(lastName || '?')[0]}`.toUpperCase();
+        return { userId, profile: { pictureUrl: d.pictureUrl ?? null, name, initials } as LikedByProfile };
+      })
+    ).then((results) => {
+      if (cancelled) return;
+      const next: Record<string, LikedByProfile> = {};
+      results.forEach((r) => {
+        if (r) next[r.userId] = r.profile;
+      });
+      setLikedByProfilesCache((prev) => ({ ...prev, ...next }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [posts, likedByProfilesCache]);
 
   useEffect(() => {
     if (!searchOpen || !auth.currentUser) return;
@@ -774,7 +815,7 @@ export default function SocialPage() {
                             />
                           </div>
                         )}
-                        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1">
+                        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
                             onClick={() => handleLike(post)}
@@ -795,6 +836,50 @@ export default function SocialPage() {
                               <span className="tabular-nums">{post.likeCount}</span>
                             )}
                           </button>
+                          {post.likeCount > 0 && (
+                            <>
+                              <div className="flex items-center -space-x-2" aria-hidden>
+                                {post.likedByUserIds.slice(0, 3).map((userId, i) => {
+                                  const profile = likedByProfilesCache[userId];
+                                  const z = i === 0 ? 'z-0' : i === 1 ? 'z-10' : 'z-20';
+                                  return (
+                                    <Link
+                                      key={userId}
+                                      href={`/perfil/${userId}`}
+                                      className={`relative flex-shrink-0 w-6 h-6 rounded-full border-2 border-white bg-gray-200 overflow-hidden ring-1 ring-gray-200 ${z}`}
+                                      title={profile?.name}
+                                    >
+                                      {profile?.pictureUrl ? (
+                                        <Image
+                                          src={profile.pictureUrl}
+                                          alt={profile.name}
+                                          width={24}
+                                          height={24}
+                                          className="object-cover w-full h-full"
+                                        />
+                                      ) : (
+                                        <span
+                                          className={`w-full h-full flex items-center justify-center text-[10px] font-semibold text-white ${getRandomColor(userId)}`}
+                                        >
+                                          {profile?.initials ?? '?'}
+                                        </span>
+                                      )}
+                                    </Link>
+                                  );
+                                })}
+                              </div>
+                              <p className="text-xs text-gray-500 min-w-0">
+                                {(() => {
+                                  const first = post.likedByUserIds.slice(0, 2).map((id) => likedByProfilesCache[id]?.name || 'Alguém');
+                                  const rest = post.likeCount - first.length;
+                                  if (first.length === 0) return `${post.likeCount} ${post.likeCount === 1 ? 'curtida' : 'curtidas'}`;
+                                  if (rest <= 0) return `Curtido por ${first.join(' e ')}`;
+                                  if (rest === 1) return `Curtido por ${first.join(', ')} e outra pessoa`;
+                                  return `Curtido por ${first.join(', ')} e outras ${rest} pessoas`;
+                                })()}
+                              </p>
+                            </>
+                          )}
                         </div>
                       </>
                     )}
