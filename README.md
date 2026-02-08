@@ -55,12 +55,12 @@ Acesse http://localhost:3000
 ## 🚀 Deploy na Vercel
 
 1. Conecte o repositório à Vercel e configure as variáveis de ambiente do Firebase (NEXT_PUBLIC_*).
-2. **Obrigatório para a API de reservas**: em "Environment Variables", adicione:
-   - **Nome:** `FIREBASE_SERVICE_ACCOUNT_KEY` (ou `FIREBASE_SERVICE_ACCOUNT_JSON`)
-   - **Valor:** o conteúdo completo do JSON da chave de conta de serviço (minificado em uma linha)
+2. **Obrigatório para a API de reservas**: em **Settings → Environment Variables**, adicione:
+   - **Name:** `FIREBASE_SERVICE_ACCOUNT_KEY`
+   - **Value:** o conteúdo completo do arquivo `.json` da chave de conta de serviço, **em uma única linha** (minifique: remova quebras de linha e espaços extras, ou use um “JSON minify” online).
 
-   O arquivo `serviceAccountKey.json` não funciona na Vercel — use a variável com o JSON.  
-   Firebase Console → Contas de serviço → Gerar nova chave privada → copie o JSON.
+   Na Vercel não use `FIREBASE_SERVICE_ACCOUNT_PATH` — o arquivo não é enviado no deploy. Use sempre `FIREBASE_SERVICE_ACCOUNT_KEY` com o JSON colado.  
+   Firebase Console → Configurações do projeto → Contas de serviço → Gerar nova chave privada → abra o `.json`, copie todo o conteúdo e minifique em uma linha.
 
 3. Redeploy após adicionar a variável.
 
