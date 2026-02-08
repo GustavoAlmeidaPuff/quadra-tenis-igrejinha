@@ -14,9 +14,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Construir datas
-    const startAt = new Date(date);
-    startAt.setHours(hour, minute, 0, 0);
+    // Construir datas no fuso local (evita UTC que mudava o dia)
+    const [y, m, d] = date.split('-').map(Number);
+    const startAt = new Date(y, m - 1, d, hour, minute, 0, 0);
     const endAt = new Date(startAt);
     endAt.setMinutes(endAt.getMinutes() + 90);
 

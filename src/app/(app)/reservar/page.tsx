@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
+import { useSearchParams } from 'next/navigation';
+import { collection, query, where, getDocs, getDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatTime } from '@/lib/utils';
@@ -20,11 +21,29 @@ interface ReservationWithParticipants extends Reservation {
 }
 
 export default function ReservarPage() {
+  const searchParams = useSearchParams();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [days, setDays] = useState<DayTab[]>([]);
   const [reservations, setReservations] = useState<ReservationWithParticipants[]>([]);
   const [scrollIndex, setScrollIndex] = useState(0);
   const [showModal, setShowModal] = useState(false);
+  const [reservationsRefreshKey, setReservationsRefreshKey] = useState(0);
+  const [initialParticipantIds, setInitialParticipantIds] = useState<string[]>([]);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const adicionarJogador = searchParams.get('adicionarJogador');
+    if (adicionarJogador?.trim()) {
+      setInitialParticipantIds([adicionarJogador.trim()]);
+      setShowModal(true);
+      window.history.replaceState({}, '', '/reservar');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     // Gerar próximos 7 dias
@@ -65,23 +84,40 @@ export default function ReservarPage() {
       );
 
       const snapshot = await getDocs(q);
-      const reservationsData: ReservationWithParticipants[] = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
+      const reservationsData: ReservationWithParticipants[] = [];
+
+      for (const d of snapshot.docs) {
+        const data = d.data();
+        const participantsSnap = await getDocs(
+          query(
+            collection(db, 'reservationParticipants'),
+            where('reservationId', '==', d.id)
+          )
+        );
+        const names: string[] = [];
+        for (const pDoc of participantsSnap.docs) {
+          const userId = pDoc.data().userId;
+          if (userId) {
+            const userSnap = await getDoc(doc(db, 'users', userId));
+            const u = userSnap.exists() ? userSnap.data() : {};
+            names.push(`${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim() || 'Jogador');
+          }
+        }
+        reservationsData.push({
+          id: d.id,
           startAt: data.startAt,
           endAt: data.endAt,
           createdById: data.createdById,
           createdAt: data.createdAt,
-          participants: ['Gustavo', 'Ana'], // TODO: buscar participantes reais
-        };
-      });
+          participants: names.length > 0 ? names : ['—'],
+        });
+      }
 
       setReservations(reservationsData);
     };
 
     fetchReservations();
-  }, [selectedDate]);
+  }, [selectedDate, reservationsRefreshKey]);
 
   const visibleDays = days.slice(scrollIndex, scrollIndex + 6);
 
@@ -102,6 +138,16 @@ export default function ReservarPage() {
   for (let hour = 6; hour <= 23; hour++) {
     timeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
   }
+
+  const ROW_HEIGHT_PX = 64; // h-16
+  const isSelectedToday =
+    selectedDate && now && selectedDate.toDateString() === now.toDateString();
+  const hoursFrom6 =
+    now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600 - 6;
+  const nowLineTop =
+    isSelectedToday && hoursFrom6 >= 0 && hoursFrom6 <= 18
+      ? Math.max(0, hoursFrom6 * ROW_HEIGHT_PX)
+      : null;
 
   return (
     <div className="max-w-md mx-auto h-[calc(100vh-8rem)] flex flex-col">
@@ -149,16 +195,27 @@ export default function ReservarPage() {
       {/* Timeline */}
       <div className="flex-1 overflow-y-auto px-4 py-4 relative">
         <div className="relative">
+          {nowLineTop !== null && (
+            <div
+              className="absolute left-0 right-0 flex items-center pointer-events-none z-10 -translate-y-1/2"
+              style={{ top: nowLineTop }}
+              aria-hidden
+            >
+              <div className="w-14 flex-shrink-0 flex justify-center">
+                <span className="text-xs font-semibold text-red-600 tabular-nums bg-white px-1.5 py-0.5 rounded border border-red-200 shadow-sm">
+                  {`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`}
+                </span>
+              </div>
+              <div className="flex-1 h-0.5 bg-red-500" />
+            </div>
+          )}
           {timeSlots.map((time) => {
             const [hour] = time.split(':').map(Number);
             
-            // Verificar se há reserva neste horário
+            // Verificar se há reserva neste horário (qualquer minuto no mesmo bloco de hora)
             const reservation = reservations.find((res) => {
               const resStart = res.startAt.toDate();
-              const resHour = resStart.getHours();
-              const resMinute = resStart.getMinutes();
-              
-              return resHour === hour && resMinute === 0;
+              return resStart.getHours() === hour;
             });
 
             return (
@@ -198,8 +255,13 @@ export default function ReservarPage() {
       {showModal && (
         <ModalNovaReserva
           isOpen={showModal}
-          onClose={() => setShowModal(false)}
+          onClose={() => {
+            setShowModal(false);
+            setInitialParticipantIds([]);
+          }}
+          onSuccess={() => setReservationsRefreshKey((k) => k + 1)}
           selectedDate={selectedDate}
+          initialParticipantIds={initialParticipantIds}
         />
       )}
     </div>

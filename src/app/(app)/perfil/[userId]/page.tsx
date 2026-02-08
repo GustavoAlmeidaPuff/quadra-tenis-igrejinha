@@ -26,6 +26,7 @@ import {
   KeyRound,
   Shield,
   ChevronRight,
+  MessageCircle,
 } from 'lucide-react';
 import Avatar from '@/components/layout/Avatar';
 import { User } from '@/lib/types';
@@ -474,6 +475,15 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                     className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 h-5 w-5"
                   />
                 </label>
+                <a
+                  href="https://wa.me/5551997188572?text=Ol%C3%A1%21%20preciso%20de%20ajuda%20no%20app%20de%20reservar%20horarios%20na%20quadra%2C%20por%20favor%21"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 py-4 text-emerald-600 hover:bg-emerald-50 transition-colors border-t border-gray-100"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Falar com suporte
+                </a>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center justify-center gap-2 py-4 text-red-600 hover:bg-red-50 transition-colors border-t border-gray-100"

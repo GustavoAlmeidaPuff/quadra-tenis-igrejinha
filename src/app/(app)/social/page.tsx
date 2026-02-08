@@ -7,6 +7,7 @@ import {
   orderBy,
   limit,
   getDoc,
+  getDocs,
   doc,
   addDoc,
   updateDoc,
@@ -36,6 +37,14 @@ interface PostItem {
   createdAtLabel: string;
 }
 
+interface SearchableUser {
+  id: string;
+  name: string;
+  initials: string;
+  pictureUrl?: string | null;
+  email?: string;
+}
+
 function formatTimeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
   if (seconds < 60) return 'agora';
@@ -56,6 +65,7 @@ export default function SocialPage() {
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [searchableUsers, setSearchableUsers] = useState<SearchableUser[]>([]);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -70,6 +80,31 @@ export default function SocialPage() {
           pictureUrl: u.pictureUrl ?? null,
         });
       }
+    });
+  }, []);
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    getDocs(collection(db, 'users')).then((snap) => {
+      const list: SearchableUser[] = [];
+      snap.docs.forEach((d) => {
+        if (d.id === user.uid) return;
+        const data = d.data();
+        if (data.isAnonymous === true) return;
+        const firstName = data.firstName ?? '';
+        const lastName = data.lastName ?? '';
+        const name = `${firstName} ${lastName}`.trim() || 'Jogador';
+        list.push({
+          id: d.id,
+          name,
+          initials: `${(firstName || '?')[0]}${(lastName || '?')[0]}`.toUpperCase(),
+          pictureUrl: data.pictureUrl ?? null,
+          email: data.email ?? undefined,
+        });
+      });
+      setSearchableUsers(list.slice(0, 200));
     });
   }, []);
 
@@ -171,13 +206,22 @@ export default function SocialPage() {
     }
   };
 
-  const filteredPosts = searchTerm
+  const term = searchTerm.trim().toLowerCase();
+  const filteredPosts = term
     ? posts.filter(
         (post) =>
-          post.author.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          post.content.toLowerCase().includes(searchTerm.toLowerCase())
+          post.author.name.toLowerCase().includes(term) ||
+          post.content.toLowerCase().includes(term)
       )
     : posts;
+
+  const filteredUsersForSearch = term
+    ? searchableUsers.filter(
+        (u) =>
+          u.name.toLowerCase().includes(term) ||
+          (u.email?.toLowerCase().includes(term) ?? false)
+      )
+    : [];
 
   if (loading && posts.length === 0) {
     return (
@@ -239,9 +283,61 @@ export default function SocialPage() {
       </div>
 
       <div className="space-y-4">
-        {filteredPosts.length === 0 ? (
+        {searchTerm.trim() && (
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 border-b border-gray-100">
+              Jogadores
+            </h3>
+            {filteredUsersForSearch.length === 0 ? (
+              <p className="text-sm text-gray-500 px-4 py-4">
+                Nenhum jogador encontrado para &quot;{searchTerm.trim()}&quot;
+              </p>
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {filteredUsersForSearch.map((u) => (
+                  <li key={u.id}>
+                    <Link
+                      href={`/perfil/${u.id}`}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                    >
+                      {u.pictureUrl ? (
+                        <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                          <Image
+                            src={u.pictureUrl}
+                            alt={u.name}
+                            width={40}
+                            height={40}
+                            className="object-cover w-full h-full"
+                          />
+                        </div>
+                      ) : (
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ${getRandomColor(u.id)}`}
+                        >
+                          {u.initials}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{u.name}</p>
+                        {u.email && (
+                          <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                        )}
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {filteredPosts.length === 0 && !searchTerm.trim() ? (
           <p className="text-sm text-gray-500 text-center py-8">
             Nenhum post ainda. Seja o primeiro a publicar!
+          </p>
+        ) : searchTerm.trim() && filteredPosts.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center py-8">
+            Nenhum post encontrado para &quot;{searchTerm.trim()}&quot;
           </p>
         ) : (
           filteredPosts.map((post) => {

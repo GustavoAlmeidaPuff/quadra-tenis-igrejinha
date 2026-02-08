@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { X, Search, UserPlus } from 'lucide-react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, getDoc, doc, query, where } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 
 interface User {
@@ -17,10 +17,12 @@ interface User {
 interface ModalNovaReservaProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   selectedDate?: Date;
+  initialParticipantIds?: string[];
 }
 
-export default function ModalNovaReserva({ isOpen, onClose, selectedDate }: ModalNovaReservaProps) {
+export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedDate, initialParticipantIds = [] }: ModalNovaReservaProps) {
   const [date, setDate] = useState('');
   const [hour, setHour] = useState('19');
   const [minute, setMinute] = useState('00');
@@ -84,6 +86,39 @@ export default function ModalNovaReserva({ isOpen, onClose, selectedDate }: Moda
   }, [isOpen]);
 
   useEffect(() => {
+    if (!isOpen || initialParticipantIds.length === 0) {
+      if (!isOpen) setSelectedParticipants([]);
+      return;
+    }
+    const loadInitialParticipants = async () => {
+      const users: User[] = [];
+      for (const userId of initialParticipantIds) {
+        try {
+          const snap = await getDoc(doc(db, 'users', userId));
+          if (snap.exists()) {
+            const d = snap.data();
+            users.push({
+              id: snap.id,
+              firstName: d.firstName ?? '',
+              lastName: d.lastName ?? '',
+              email: d.email ?? '',
+              pictureUrl: d.pictureUrl,
+            });
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      setSelectedParticipants((prev) => {
+        const ids = new Set(prev.map((u) => u.id));
+        const newUsers = users.filter((u) => !ids.has(u.id));
+        return [...prev, ...newUsers];
+      });
+    };
+    loadInitialParticipants();
+  }, [isOpen, initialParticipantIds.join(',')]);
+
+  useEffect(() => {
     if (searchTerm.trim() === '') {
       setFilteredUsers(allUsers);
     } else {
@@ -119,37 +154,41 @@ export default function ModalNovaReserva({ isOpen, onClose, selectedDate }: Moda
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      setError('Faça login para reservar.');
+      return;
+    }
     setLoading(true);
     setError('');
 
     try {
-      // TODO: Chamar API para criar reserva com validações
-      // const response = await fetch('/api/reservations', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     date,
-      //     hour: parseInt(hour),
-      //     minute: parseInt(minute),
-      //     participantIds: selectedParticipants.map(p => p.id),
-      //   }),
-      // });
-
-      console.log('Criar reserva:', {
-        date,
-        startTime: `${hour}:${minute}`,
-        endTime: calculateEndTime(),
-        participants: [currentUser, ...selectedParticipants],
+      const response = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: uid,
+          date,
+          hour: parseInt(hour, 10),
+          minute: parseInt(minute, 10),
+          participantIds: selectedParticipants.map((p) => p.id),
+        }),
       });
 
-      // Simular sucesso
-      setTimeout(() => {
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(data.error ?? 'Erro ao criar reserva. Tente novamente.');
         setLoading(false);
-        onClose();
-      }, 1000);
+        return;
+      }
+
+      onSuccess?.();
+      onClose();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erro ao criar reserva';
       setError(message);
+    } finally {
       setLoading(false);
     }
   };
@@ -238,8 +277,11 @@ export default function ModalNovaReserva({ isOpen, onClose, selectedDate }: Moda
           {/* Participantes */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              PARTICIPANTES
+              PARTICIPANTES (você + um ou mais jogadores)
             </label>
+            <p className="text-xs text-gray-500 mb-2">
+              A reserva aparecerá no seu perfil e no de cada jogador adicionado.
+            </p>
             
             {/* Current User */}
             {currentUser && (
@@ -311,7 +353,7 @@ export default function ModalNovaReserva({ isOpen, onClose, selectedDate }: Moda
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Adicionar jogador..."
+                placeholder="Adicionar um ou mais jogadores..."
                 className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
               />
             </div>

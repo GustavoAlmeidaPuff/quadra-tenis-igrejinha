@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   collection,
   query,
@@ -35,6 +36,7 @@ function formatTimeAgo(date: Date): string {
 }
 
 export default function NotificacoesPage() {
+  const router = useRouter();
   const [receivedChallenges, setReceivedChallenges] = useState<
     ChallengeWithAuthor[]
   >([]);
@@ -208,8 +210,8 @@ export default function NotificacoesPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => handleAccept(challenge.id)}
+<button
+                      onClick={() => handleAccept(challenge.id, challenge.fromUserId)}
                     className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white rounded-xl px-4 py-2 font-medium hover:bg-emerald-700 transition-colors"
                   >
                     <Check className="w-4 h-4" />
