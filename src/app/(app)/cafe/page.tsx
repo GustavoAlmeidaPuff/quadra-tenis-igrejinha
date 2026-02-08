@@ -51,8 +51,8 @@ export default function CafePage() {
       </div>
 
       {/* Conteúdo */}
-      <div className="flex-1 flex flex-col items-center px-4 -mt-16 relative z-20 py-4">
-        <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-gray-200 p-6 sm:p-8">
+      <div className="flex-1 flex flex-col items-center px-4 -mt-32 sm:-mt-40 relative z-20 py-4">
+        <div className="w-full max-w-md bg-white/40 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 p-6 sm:p-8">
           <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 text-center mb-2">
             Obrigado pela boa vontade!
           </h1>
@@ -96,7 +96,7 @@ export default function CafePage() {
           <h2 className="text-lg sm:text-xl font-semibold text-gray-800 text-center mb-4 px-2">
             Pra quem vai o café?
           </h2>
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 p-6 sm:p-8">
+          <div className="bg-white/40 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start">
               <div
                 className="shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center"
