@@ -125,6 +125,59 @@ export async function getTotalHoursForUser(userId: string): Promise<number> {
   return Math.round(pastReservations.length * RESERVATION_DURATION_HOURS * 10) / 10;
 }
 
+/** Retorna jogadores com quem o usuário já jogou (parceiros de quadra), ordenados por frequência. */
+export async function getRecommendedPartners(
+  userId: string,
+  limit = 10
+): Promise<PartnerStat[]> {
+  const reservationIds = await getReservationIdsForUser(userId);
+  const allReservations = await getReservationsByIds(Array.from(reservationIds));
+  const now = new Date();
+  const pastReservations = allReservations.filter((r) => r.endAt <= now);
+
+  const partnerCounts = new Map<string, number>();
+  for (const res of pastReservations) {
+    const participantsSnap = await getDocs(
+      query(
+        collection(db, 'reservationParticipants'),
+        where('reservationId', '==', res.id)
+      )
+    );
+    participantsSnap.docs.forEach((d) => {
+      const data = d.data();
+      const uid = data.userId;
+      if (uid && uid !== userId) {
+        partnerCounts.set(uid, (partnerCounts.get(uid) ?? 0) + 1);
+      }
+    });
+  }
+
+  const topPartnerIds = Array.from(partnerCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit);
+
+  const topPartners: PartnerStat[] = [];
+  for (let i = 0; i < topPartnerIds.length; i++) {
+    const [uid, count] = topPartnerIds[i];
+    const userSnap = await getDoc(doc(db, 'users', uid));
+    if (userSnap.exists()) {
+      const u = userSnap.data();
+      if (u?.isAnonymous === true) continue;
+      const firstName = u?.firstName ?? '';
+      const lastName = u?.lastName ?? '';
+      const name = `${firstName} ${lastName}`.trim() || 'Jogador';
+      topPartners.push({
+        userId: uid,
+        name,
+        initials: `${(firstName || 'J')[0]}${(lastName || '?')[0]}`.toUpperCase(),
+        pictureUrl: u?.pictureUrl,
+        count,
+      });
+    }
+  }
+  return topPartners;
+}
+
 async function getParticipantNamesForReservation(
   reservationId: string
 ): Promise<string[]> {

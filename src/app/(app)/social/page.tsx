@@ -20,7 +20,7 @@ import { Search, MoreVertical, Pencil, Trash2, LayoutList, Trophy, Clock, ImageP
 import Link from 'next/link';
 import Image from 'next/image';
 import { getRandomColor } from '@/lib/utils';
-import { getTotalHoursForUser } from '@/lib/queries/stats';
+import { getTotalHoursForUser, getRecommendedPartners } from '@/lib/queries/stats';
 
 interface PostAuthor {
   id: string;
@@ -83,6 +83,8 @@ export default function SocialPage() {
   const [rankingLoading, setRankingLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [peopleSearchTerm, setPeopleSearchTerm] = useState('');
+  const [recommendedPartners, setRecommendedPartners] = useState<SearchableUser[]>([]);
+  const [recommendedLoading, setRecommendedLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -169,6 +171,25 @@ export default function SocialPage() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!searchOpen || !auth.currentUser) return;
+
+    setRecommendedLoading(true);
+    getRecommendedPartners(auth.currentUser.uid, 10)
+      .then((partners) => {
+        const mapped: SearchableUser[] = partners.map((p) => ({
+          id: p.userId,
+          name: p.name,
+          initials: p.initials,
+          pictureUrl: p.pictureUrl ?? null,
+          email: undefined,
+        }));
+        setRecommendedPartners(mapped);
+      })
+      .catch(() => setRecommendedPartners([]))
+      .finally(() => setRecommendedLoading(false));
+  }, [searchOpen]);
 
   useEffect(() => {
     if (activeTab !== 'ranking') return;
@@ -370,7 +391,7 @@ export default function SocialPage() {
                     setPeopleSearchTerm('');
                   }}
                 />
-                <div className="absolute right-0 top-full mt-1 z-50 w-80 max-w-[calc(100vw-2rem)] bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                <div className="absolute right-0 top-full mt-1 z-50 w-[min(420px,calc(100vw-2rem))] bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
                   <div className="p-3 border-b border-gray-100">
                     <input
                       type="text"
@@ -381,50 +402,116 @@ export default function SocialPage() {
                       autoFocus
                     />
                   </div>
-                  <ul className="max-h-64 overflow-y-auto">
-                    {filteredUsersForSearch.length === 0 ? (
-                      <li className="px-4 py-6 text-center text-sm text-gray-500">
-                        {peopleTerm ? `Nenhum jogador encontrado para "${peopleSearchTerm.trim()}"` : 'Digite para buscar jogadores'}
-                      </li>
+                  <div className="max-h-[min(400px,70vh)] overflow-y-auto">
+                    {peopleTerm ? (
+                      <>
+                        <h3 className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide sticky top-0 bg-white">
+                          Resultados
+                        </h3>
+                        {filteredUsersForSearch.length === 0 ? (
+                          <p className="px-4 py-6 text-center text-sm text-gray-500">
+                            Nenhum jogador encontrado para &quot;{peopleSearchTerm.trim()}&quot;
+                          </p>
+                        ) : (
+                          <ul>
+                            {filteredUsersForSearch.map((u) => (
+                              <li key={u.id}>
+                                <Link
+                                  href={`/perfil/${u.id}`}
+                                  onClick={() => {
+                                    setSearchOpen(false);
+                                    setPeopleSearchTerm('');
+                                  }}
+                                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                                >
+                                  {u.pictureUrl ? (
+                                    <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                                      <Image
+                                        src={u.pictureUrl}
+                                        alt={u.name}
+                                        width={40}
+                                        height={40}
+                                        className="object-cover w-full h-full"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div
+                                      className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ${getRandomColor(u.id)}`}
+                                    >
+                                      {u.initials}
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-gray-900 truncate">{u.name}</p>
+                                    {u.email && (
+                                      <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                                    )}
+                                  </div>
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
                     ) : (
-                      filteredUsersForSearch.map((u) => (
-                        <li key={u.id}>
-                          <Link
-                            href={`/perfil/${u.id}`}
-                            onClick={() => {
-                              setSearchOpen(false);
-                              setPeopleSearchTerm('');
-                            }}
-                            className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                          >
-                            {u.pictureUrl ? (
-                              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                                <Image
-                                  src={u.pictureUrl}
-                                  alt={u.name}
-                                  width={40}
-                                  height={40}
-                                  className="object-cover w-full h-full"
-                                />
-                              </div>
-                            ) : (
-                              <div
-                                className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ${getRandomColor(u.id)}`}
-                              >
-                                {u.initials}
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-900 truncate">{u.name}</p>
-                              {u.email && (
-                                <p className="text-xs text-gray-500 truncate">{u.email}</p>
-                              )}
-                            </div>
-                          </Link>
-                        </li>
-                      ))
+                      <>
+                        <h3 className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide sticky top-0 bg-white">
+                          Recomendações
+                        </h3>
+                        <p className="px-4 py-1 text-xs text-gray-400">
+                          Pessoas com quem você já jogou
+                        </p>
+                        {recommendedLoading ? (
+                          <div className="flex justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-2 border-emerald-600 border-t-transparent" />
+                          </div>
+                        ) : recommendedPartners.length === 0 ? (
+                          <p className="px-4 py-6 text-center text-sm text-gray-500">
+                            Jogue partidas para ver recomendações
+                          </p>
+                        ) : (
+                          <ul>
+                            {recommendedPartners.map((u) => (
+                              <li key={u.id}>
+                                <Link
+                                  href={`/perfil/${u.id}`}
+                                  onClick={() => {
+                                    setSearchOpen(false);
+                                    setPeopleSearchTerm('');
+                                  }}
+                                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                                >
+                                  {u.pictureUrl ? (
+                                    <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                                      <Image
+                                        src={u.pictureUrl}
+                                        alt={u.name}
+                                        width={40}
+                                        height={40}
+                                        className="object-cover w-full h-full"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div
+                                      className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ${getRandomColor(u.id)}`}
+                                    >
+                                      {u.initials}
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-gray-900 truncate">{u.name}</p>
+                                    {u.email && (
+                                      <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                                    )}
+                                  </div>
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
                     )}
-                  </ul>
+                  </div>
                 </div>
               </>
             )}
