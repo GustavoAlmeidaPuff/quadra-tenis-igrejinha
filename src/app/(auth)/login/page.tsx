@@ -310,11 +310,6 @@ export default function LoginPage() {
               {mode === 'login' ? 'Não tem conta? Criar conta' : 'Já tem conta? Entrar'}
             </button>
           </form>
-
-          {/* Terms */}
-          <p className="text-xs text-center text-gray-500 leading-relaxed">
-            Ao entrar, você aceita os termos de uso da quadra
-          </p>
         </div>
       </div>
     </div>
