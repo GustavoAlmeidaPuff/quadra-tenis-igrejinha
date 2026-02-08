@@ -26,6 +26,8 @@ interface ChallengeWithAuthor {
   status: string;
   createdAt: Date;
   createdAtLabel: string;
+  proposedStartAt?: Date;
+  proposedStartAtLabel?: string;
 }
 
 type NotificationItem =
@@ -58,6 +60,8 @@ export default function NotificacoesPage() {
   const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [acceptError, setAcceptError] = useState<string | null>(null);
 
   const buildReceivedFromSnap = async (
     docs: { id: string; data: () => Record<string, unknown> }[],
@@ -65,12 +69,17 @@ export default function NotificacoesPage() {
   ): Promise<ChallengeWithAuthor[]> => {
     const received: ChallengeWithAuthor[] = [];
     for (const d of docs) {
-      const data = d.data() as { fromUserId: string; message?: string; status?: string; createdAt?: { toDate: () => Date }; hiddenByUserIds?: string[] };
+      const data = d.data() as { fromUserId: string; message?: string; status?: string; createdAt?: { toDate: () => Date }; proposedStartAt?: { toDate: () => Date }; hiddenByUserIds?: string[] };
       if (data.status === 'cancelled') continue;
       if ((data.hiddenByUserIds ?? []).includes(currentUserId)) continue;
       const fromSnap = await getDoc(doc(db, 'users', data.fromUserId));
       const fromUser = fromSnap.exists() ? fromSnap.data() : {};
       const createdAt = data.createdAt?.toDate?.() ?? new Date();
+      const proposedStartAt = data.proposedStartAt?.toDate?.();
+      const proposedStartAtLabel =
+        proposedStartAt && !Number.isNaN(proposedStartAt.getTime())
+          ? `${proposedStartAt.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })} às ${proposedStartAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+          : undefined;
       received.push({
         id: d.id,
         fromUserId: data.fromUserId,
@@ -80,6 +89,8 @@ export default function NotificacoesPage() {
         status: data.status ?? 'pending',
         createdAt,
         createdAtLabel: formatTimeAgo(createdAt),
+        proposedStartAt,
+        proposedStartAtLabel,
       });
     }
     return received;
@@ -91,12 +102,20 @@ export default function NotificacoesPage() {
   ): Promise<ChallengeWithAuthor[]> => {
     const sent: ChallengeWithAuthor[] = [];
     for (const d of docs) {
-      const data = d.data() as { toUserId: string; message?: string; status?: string; createdAt?: { toDate: () => Date }; hiddenByUserIds?: string[] };
+      const data = d.data() as {
+        toUserId: string;
+        message?: string;
+        status?: string;
+        createdAt?: { toDate: () => Date };
+        proposedStartAt?: { toDate: () => Date };
+        hiddenByUserIds?: string[];
+      };
       if (data.status === 'cancelled') continue;
       if ((data.hiddenByUserIds ?? []).includes(userId)) continue;
       const toSnap = await getDoc(doc(db, 'users', data.toUserId));
       const toUser = toSnap.exists() ? toSnap.data() : {};
       const createdAt = data.createdAt?.toDate?.() ?? new Date();
+      const proposedStartAt = data.proposedStartAt?.toDate?.() ?? null;
       sent.push({
         id: d.id,
         fromUserId: userId,
@@ -106,6 +125,10 @@ export default function NotificacoesPage() {
         status: data.status ?? 'pending',
         createdAt,
         createdAtLabel: formatTimeAgo(createdAt),
+        proposedStartAt,
+        proposedStartAtLabel: proposedStartAt
+          ? `${proposedStartAt.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })} às ${proposedStartAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+          : undefined,
       });
     }
     return sent;
@@ -194,7 +217,7 @@ export default function NotificacoesPage() {
       const q = query(
         collection(db, 'challenges'),
         where('toUserId', '==', user.uid),
-        where('status', 'in', ['pending', 'pending_schedule'])
+        where('status', '==', 'pending')
       );
       const snap = await getDocs(q);
       const batch = snap.docs.filter((d) => d.data().viewed !== true);
@@ -210,16 +233,44 @@ export default function NotificacoesPage() {
     markReceivedPendingAsViewed();
   }, []);
 
-  const handleAccept = async (challengeId: string, fromUserId: string) => {
+  const handleAccept = async (challenge: ChallengeWithAuthor) => {
+    const { id: challengeId, fromUserId, proposedStartAt } = challenge;
+    if (!proposedStartAt || Number.isNaN(proposedStartAt.getTime())) {
+      setAcceptError('Este desafio não tem horário definido.');
+      return;
+    }
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+
+    setAcceptingId(challengeId);
+    setAcceptError(null);
     try {
-      await updateDoc(doc(db, 'challenges', challengeId), {
-        status: 'pending_schedule',
+      const res = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: uid,
+          startAtISO: proposedStartAt.toISOString(),
+          participantIds: [fromUserId],
+          challengeId,
+        }),
       });
-      router.push(
-        `/reservar?adicionarJogador=${encodeURIComponent(fromUserId)}&challengeId=${encodeURIComponent(challengeId)}`
-      );
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setAcceptError(data.error ?? 'Não foi possível criar a reserva. Tente novamente.');
+        return;
+      }
+
+      await updateDoc(doc(db, 'challenges', challengeId), {
+        status: 'accepted',
+        reservationId: data.reservationId,
+      });
     } catch (e) {
       console.error(e);
+      setAcceptError('Erro ao aceitar. Verifique sua conexão.');
+    } finally {
+      setAcceptingId(null);
     }
   };
 
@@ -315,6 +366,11 @@ export default function NotificacoesPage() {
                         </Link>
                         <span className="text-gray-500">te desafiou</span>
                       </div>
+                      {item.challenge.proposedStartAtLabel && (
+                        <p className="text-sm font-medium text-emerald-700 mb-1">
+                          para {item.challenge.proposedStartAtLabel}
+                        </p>
+                      )}
                       {item.challenge.message && (
                         <p className="text-sm text-gray-700 mb-1">
                           &quot;{item.challenge.message}&quot;
@@ -361,10 +417,14 @@ export default function NotificacoesPage() {
               )}
 
               {item.type === 'sent_challenge' && (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-col gap-1.5">
                   <span className="text-sm text-gray-700">
                     Desafio enviado para <strong>{item.challenge.fromUserName}</strong>
+                    {item.challenge.proposedStartAtLabel && (
+                      <span className="text-emerald-700 font-medium"> · {item.challenge.proposedStartAtLabel}</span>
+                    )}
                   </span>
+                  <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full ${
                       item.challenge.status === 'accepted'
@@ -387,11 +447,12 @@ export default function NotificacoesPage() {
                   <span className="text-xs text-gray-500">
                     {item.createdAtLabel}
                   </span>
+                  </div>
                   {(item.challenge.status === 'pending' || item.challenge.status === 'pending_schedule') && (
                     <button
                       type="button"
                       onClick={() => handleCancelSent(item.challenge.id)}
-                      className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-600 transition-colors mt-1"
+                      className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-600 transition-colors mt-1 self-start"
                     >
                       <XCircle className="w-4 h-4" />
                       Cancelar desafio

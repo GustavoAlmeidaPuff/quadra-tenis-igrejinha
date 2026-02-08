@@ -14,6 +14,7 @@ import {
   collection,
   addDoc,
   serverTimestamp,
+  Timestamp,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
 import {
@@ -66,6 +67,10 @@ export default function PerfilUserIdPage({ params }: PageProps) {
   const [linkingPassword, setLinkingPassword] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<ReservationListItem | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [showDesafioModal, setShowDesafioModal] = useState(false);
+  const [desafioDate, setDesafioDate] = useState('');
+  const [desafioHour, setDesafioHour] = useState('19');
+  const [desafioMinute, setDesafioMinute] = useState('00');
 
   useEffect(() => {
     const uid =
@@ -151,16 +156,37 @@ export default function PerfilUserIdPage({ params }: PageProps) {
     }
   };
 
-  const handleDesafiar = async () => {
+  useEffect(() => {
+    if (showDesafioModal) {
+      const today = new Date();
+      const y = today.getFullYear();
+      const m = String(today.getMonth() + 1).padStart(2, '0');
+      const d = String(today.getDate()).padStart(2, '0');
+      setDesafioDate(`${y}-${m}-${d}`);
+    }
+  }, [showDesafioModal]);
+
+  const handleSubmitDesafio = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!auth.currentUser || !user || user.id === auth.currentUser.uid) return;
+    const dateStr = desafioDate.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return;
+    const [y, mo, d] = dateStr.split('-').map(Number);
+    const hourNum = parseInt(desafioHour, 10);
+    const minuteNum = parseInt(desafioMinute, 10);
+    if (Number.isNaN(hourNum) || Number.isNaN(minuteNum)) return;
+    const startAt = new Date(y, mo - 1, d, hourNum, minuteNum, 0, 0);
+    if (Number.isNaN(startAt.getTime())) return;
+
     setChallenging(true);
     try {
-      await addDoc(collection(db, 'challenges'), {
+      const challengeRef = await addDoc(collection(db, 'challenges'), {
         fromUserId: auth.currentUser.uid,
         toUserId: user.id,
         message: '',
         status: 'pending',
         viewed: false,
+        proposedStartAt: Timestamp.fromDate(startAt),
         createdAt: serverTimestamp(),
       });
       fetch('/api/notify-challenge', {
@@ -169,8 +195,10 @@ export default function PerfilUserIdPage({ params }: PageProps) {
         body: JSON.stringify({
           fromUserId: auth.currentUser.uid,
           toUserId: user.id,
+          proposedStartAtISO: startAt.toISOString(),
         }),
       }).catch((err) => console.error('Erro ao enviar email de desafio:', err));
+      setShowDesafioModal(false);
       router.push('/notificacoes');
     } catch (e) {
       console.error(e);
@@ -384,12 +412,12 @@ export default function PerfilUserIdPage({ params }: PageProps) {
             )}
             {showDesafiar && (
               <button
-                onClick={handleDesafiar}
+                onClick={() => setShowDesafioModal(true)}
                 disabled={challenging}
                 className="flex items-center justify-center gap-2 bg-emerald-600 text-white rounded-xl px-6 py-2 font-medium hover:bg-emerald-700 transition-colors mx-auto mt-2 disabled:opacity-50"
               >
                 <Swords className="w-4 h-4" />
-                {challenging ? 'Enviando...' : 'Desafiar'}
+                Desafiar
               </button>
             )}
           </>
@@ -586,6 +614,119 @@ export default function PerfilUserIdPage({ params }: PageProps) {
             />
           )}
         </>
+      )}
+
+      {/* Modal de desafio: escolher data e hora */}
+      {showDesafioModal && user && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center sm:justify-center p-0 sm:p-4 bg-black/50">
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-sm shadow-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Desafiar {user.firstName} {user.lastName}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowDesafioModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Escolha o dia e horário para o duelo. O desafiado poderá aceitar ou recusar.
+            </p>
+            <form onSubmit={handleSubmitDesafio} className="space-y-4">
+              <div>
+                <label htmlFor="desafio-date" className="block text-sm font-medium text-gray-700 mb-2">
+                  Data
+                </label>
+                <input
+                  type="date"
+                  id="desafio-date"
+                  value={desafioDate}
+                  onChange={(e) => setDesafioDate(e.target.value)}
+                  min={(() => {
+                    const d = new Date();
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                  })()}
+                  max={(() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 6);
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                  })()}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
+                  required
+                />
+                {desafioDate && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    {new Date(desafioDate + 'T00:00:00').toLocaleDateString('pt-BR', {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                    })}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Horário de início
+                </label>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={desafioHour}
+                    onChange={(e) => setDesafioHour(e.target.value)}
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i.toString().padStart(2, '0')}>
+                        {i.toString().padStart(2, '0')}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-gray-500 font-medium">:</span>
+                  <select
+                    value={desafioMinute}
+                    onChange={(e) => setDesafioMinute(e.target.value)}
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
+                  >
+                    {['00', '15', '30', '45'].map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="text-xs text-gray-600 mt-2">
+                  Término: {(() => {
+                    const start = parseInt(desafioHour) * 60 + parseInt(desafioMinute);
+                    const end = start + 90;
+                    const h = Math.floor(end / 60) % 24;
+                    const m = end % 60;
+                    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                  })()} (1h30)
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDesafioModal(false)}
+                  className="flex-1 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={challenging || !desafioDate}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  <Swords className="w-4 h-4" />
+                  {challenging ? 'Enviando...' : 'Enviar desafio'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { fromUserId, toUserId } = body;
+    const { fromUserId, toUserId, proposedStartAtISO } = body;
 
     if (!fromUserId || typeof fromUserId !== 'string' || !fromUserId.trim()) {
       return NextResponse.json(
@@ -69,12 +69,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const proposedStartAt =
+      proposedStartAtISO && typeof proposedStartAtISO === 'string'
+        ? new Date(proposedStartAtISO)
+        : null;
+
     const result = await sendChallengeNotificationEmail({
       toEmail,
       toName,
       fromUserName,
       fromUserPictureUrl,
       notificationsUrl: NOTIFICATIONS_URL,
+      proposedStartAt,
     });
 
     if (!result.success) {

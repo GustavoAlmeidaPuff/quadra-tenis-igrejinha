@@ -11,10 +11,31 @@ export interface ChallengeEmailParams {
   fromUserName: string;
   fromUserPictureUrl: string | null;
   notificationsUrl: string;
+  proposedStartAt?: Date | null;
 }
 
 function buildChallengeEmailHtml(params: ChallengeEmailParams): string {
-  const { fromUserName, fromUserPictureUrl, notificationsUrl } = params;
+  const { fromUserName, fromUserPictureUrl, notificationsUrl, proposedStartAt } = params;
+  const dateTimeHtml =
+    proposedStartAt && !Number.isNaN(proposedStartAt.getTime())
+      ? `
+              <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;">${escapeHtml(
+                proposedStartAt
+                  .toLocaleDateString('pt-BR', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })
+                  .replace(/^\w/, (c) => c.toUpperCase())
+              )}</p>
+              <p style="margin:0 0 24px;font-size:20px;font-weight:700;color:#059669;">às ${escapeHtml(
+                proposedStartAt.toLocaleTimeString('pt-BR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+              )}</p>`
+      : '';
   const initial = escapeHtml(fromUserName.charAt(0).toUpperCase());
   const avatarHtml = fromUserPictureUrl
     ? `<table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin:0 auto 16px;"><tr><td align="center"><img src="${escapeHtml(fromUserPictureUrl)}" alt="" width="80" height="80" border="0" style="width:80px;height:80px;max-width:80px;border-radius:50%;object-fit:cover;display:block;border:2px solid #e5e7eb;" /></td></tr></table>`
@@ -39,7 +60,8 @@ function buildChallengeEmailHtml(params: ChallengeEmailParams): string {
               <h1 style="margin:0 0 24px;font-size:22px;font-weight:700;color:#111827;">Você recebeu um desafio!</h1>
               ${avatarHtml}
               <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;">${escapeHtml(fromUserName)}</p>
-              <p style="margin:0 0 24px;font-size:15px;color:#6b7280;">te desafiou para um jogo na quadra.</p>
+              <p style="margin:0 0 16px;font-size:15px;color:#6b7280;">te desafiou para um jogo na quadra.</p>
+              ${dateTimeHtml}
               <a href="${escapeHtml(notificationsUrl)}" style="display:inline-block;background:#059669;color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:14px 28px;border-radius:12px;margin-top:8px;">Ver notificação e aceitar</a>
             </td>
           </tr>

@@ -42,6 +42,7 @@ export interface Challenge {
   status: 'pending' | 'pending_schedule' | 'accepted' | 'declined' | 'cancelled';
   createdAt: Timestamp;
   reservationId?: string;
+  proposedStartAt?: Timestamp;
 }
 
 export interface CourtStatus {
