@@ -24,7 +24,6 @@ import {
   Pencil,
   LogOut,
   KeyRound,
-  Shield,
   ChevronRight,
   MessageCircle,
   X,
@@ -148,18 +147,6 @@ export default function PerfilUserIdPage({ params }: PageProps) {
       console.error(e);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleTogglePrivate = async () => {
-    if (!auth.currentUser || !user) return;
-    try {
-      await updateDoc(doc(db, 'users', auth.currentUser.uid), {
-        isPrivate: !user.isPrivate,
-      });
-      setUser((prev) => (prev ? { ...prev, isPrivate: !prev.isPrivate } : null));
-    } catch (e) {
-      console.error(e);
     }
   };
 
@@ -498,28 +485,13 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                 </>
               )}
 
-              {/* Perfil privado + Sair da conta */}
+              {/* Suporte + Sair da conta */}
               <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                <label className="flex items-center gap-3 px-4 py-4 cursor-pointer hover:bg-gray-50/50 transition-colors">
-                  <Shield className="w-5 h-5 text-gray-600 shrink-0" />
-                  <div className="flex-1 text-left">
-                    <div className="font-medium text-gray-900">Perfil privado</div>
-                    <div className="text-xs text-gray-500">
-                      Aparecer como anônimo nas reservas
-                    </div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={user.isPrivate ?? false}
-                    onChange={handleTogglePrivate}
-                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 h-5 w-5"
-                  />
-                </label>
                 <a
                   href="https://wa.me/5551997188572?text=Ol%C3%A1%21%20preciso%20de%20ajuda%20no%20app%20de%20reservar%20horarios%20na%20quadra%2C%20por%20favor%21"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 py-4 text-emerald-600 hover:bg-emerald-50 transition-colors border-t border-gray-100"
+                  className="w-full flex items-center justify-center gap-2 py-4 text-emerald-600 hover:bg-emerald-50 transition-colors"
                 >
                   <MessageCircle className="w-4 h-4" />
                   Falar com suporte
