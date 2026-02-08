@@ -28,6 +28,8 @@ interface ChallengeWithAuthor {
   createdAtLabel: string;
   proposedStartAt?: Date;
   proposedStartAtLabel?: string;
+  acceptAttemptFailed?: boolean;
+  acceptAttemptError?: string;
 }
 
 type NotificationItem =
@@ -62,6 +64,7 @@ export default function NotificacoesPage() {
   const [loading, setLoading] = useState(true);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [acceptError, setAcceptError] = useState<string | null>(null);
+  const [acceptErrorChallengeId, setAcceptErrorChallengeId] = useState<string | null>(null);
 
   const buildReceivedFromSnap = async (
     docs: { id: string; data: () => Record<string, unknown> }[],
@@ -69,7 +72,7 @@ export default function NotificacoesPage() {
   ): Promise<ChallengeWithAuthor[]> => {
     const received: ChallengeWithAuthor[] = [];
     for (const d of docs) {
-      const data = d.data() as { fromUserId: string; message?: string; status?: string; createdAt?: { toDate: () => Date }; proposedStartAt?: { toDate: () => Date }; hiddenByUserIds?: string[] };
+      const data = d.data() as { fromUserId: string; message?: string; status?: string; createdAt?: { toDate: () => Date }; proposedStartAt?: { toDate: () => Date }; hiddenByUserIds?: string[]; acceptAttemptFailed?: boolean; acceptAttemptError?: string };
       if (data.status === 'cancelled') continue;
       if ((data.hiddenByUserIds ?? []).includes(currentUserId)) continue;
       const fromSnap = await getDoc(doc(db, 'users', data.fromUserId));
@@ -91,6 +94,8 @@ export default function NotificacoesPage() {
         createdAtLabel: formatTimeAgo(createdAt),
         proposedStartAt,
         proposedStartAtLabel,
+        acceptAttemptFailed: data.acceptAttemptFailed ?? false,
+        acceptAttemptError: data.acceptAttemptError,
       });
     }
     return received;
@@ -244,6 +249,7 @@ export default function NotificacoesPage() {
 
     setAcceptingId(challengeId);
     setAcceptError(null);
+    setAcceptErrorChallengeId(null);
     try {
       const res = await fetch('/api/reservations', {
         method: 'POST',
@@ -258,7 +264,13 @@ export default function NotificacoesPage() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setAcceptError(data.error ?? 'Não foi possível criar a reserva. Tente novamente.');
+        const errMsg = (typeof data?.error === 'string' ? data.error : null) ?? 'Não foi possível criar a reserva. Tente novamente.';
+        setAcceptError(errMsg);
+        setAcceptErrorChallengeId(challengeId);
+        await updateDoc(doc(db, 'challenges', challengeId), {
+          acceptAttemptFailed: true,
+          acceptAttemptError: errMsg,
+        });
         return;
       }
 
@@ -382,21 +394,31 @@ export default function NotificacoesPage() {
                     </div>
                   </div>
                   {item.challenge.status === 'pending' && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleAccept(item.challenge.id, item.challenge.fromUserId)}
-                        className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white rounded-xl px-4 py-2 font-medium hover:bg-emerald-700 transition-colors"
-                      >
-                        <Check className="w-4 h-4" />
-                        Aceitar
-                      </button>
-                      <button
-                        onClick={() => handleDecline(item.challenge.id)}
-                        className="flex-1 flex items-center justify-center gap-2 bg-gray-100 text-gray-700 rounded-xl px-4 py-2 font-medium hover:bg-gray-200 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                        Recusar
-                      </button>
+                    <div className="space-y-2">
+                      {(item.challenge.acceptAttemptFailed || (acceptErrorChallengeId === item.challenge.id && acceptError)) && (
+                        <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl">
+                          {item.challenge.acceptAttemptError ?? acceptError ?? 'Horário indisponível.'}
+                        </p>
+                      )}
+                      <div className={`flex gap-2 ${(item.challenge.acceptAttemptFailed || (acceptErrorChallengeId === item.challenge.id && acceptError)) ? 'justify-end' : ''}`}>
+                        {!item.challenge.acceptAttemptFailed && acceptErrorChallengeId !== item.challenge.id && (
+                          <button
+                            onClick={() => handleAccept(item.challenge)}
+                            disabled={acceptingId === item.challenge.id}
+                            className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white rounded-xl px-4 py-2 font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                          >
+                            <Check className="w-4 h-4" />
+                            {acceptingId === item.challenge.id ? 'Aceitando...' : 'Aceitar'}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDecline(item.challenge.id)}
+                          className={`flex items-center justify-center gap-2 bg-gray-100 text-gray-700 rounded-xl px-4 py-2 font-medium hover:bg-gray-200 transition-colors ${item.challenge.acceptAttemptFailed ? 'flex-1' : 'flex-1'}`}
+                        >
+                          <X className="w-4 h-4" />
+                          Recusar
+                        </button>
+                      </div>
                     </div>
                   )}
                   {item.challenge.status === 'pending_schedule' && (

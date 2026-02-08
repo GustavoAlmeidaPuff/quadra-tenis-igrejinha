@@ -71,6 +71,7 @@ export default function PerfilUserIdPage({ params }: PageProps) {
   const [desafioDate, setDesafioDate] = useState('');
   const [desafioHour, setDesafioHour] = useState('19');
   const [desafioMinute, setDesafioMinute] = useState('00');
+  const [desafioError, setDesafioError] = useState('');
 
   useEffect(() => {
     const uid =
@@ -163,6 +164,7 @@ export default function PerfilUserIdPage({ params }: PageProps) {
       const m = String(today.getMonth() + 1).padStart(2, '0');
       const d = String(today.getDate()).padStart(2, '0');
       setDesafioDate(`${y}-${m}-${d}`);
+      setDesafioError('');
     }
   }, [showDesafioModal]);
 
@@ -179,8 +181,19 @@ export default function PerfilUserIdPage({ params }: PageProps) {
     if (Number.isNaN(startAt.getTime())) return;
 
     setChallenging(true);
+    setDesafioError('');
     try {
-      const challengeRef = await addDoc(collection(db, 'challenges'), {
+      const checkRes = await fetch(
+        `/api/reservations/check-slot?startAtISO=${encodeURIComponent(startAt.toISOString())}`
+      );
+      const checkData = (await checkRes.json().catch(() => ({}))) as { available?: boolean; error?: string };
+      if (!checkData.available) {
+        setDesafioError(checkData.error ?? 'Este horário não está disponível.');
+        setChallenging(false);
+        return;
+      }
+
+      await addDoc(collection(db, 'challenges'), {
         fromUserId: auth.currentUser.uid,
         toUserId: user.id,
         message: '',
@@ -636,6 +649,11 @@ export default function PerfilUserIdPage({ params }: PageProps) {
             <p className="text-sm text-gray-600 mb-4">
               Escolha o dia e horário para o duelo. O desafiado poderá aceitar ou recusar.
             </p>
+            {desafioError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">
+                {desafioError}
+              </div>
+            )}
             <form onSubmit={handleSubmitDesafio} className="space-y-4">
               <div>
                 <label htmlFor="desafio-date" className="block text-sm font-medium text-gray-700 mb-2">
