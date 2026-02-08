@@ -16,7 +16,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
-import { Search, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Search, MoreVertical, Pencil, Trash2, LayoutList, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getRandomColor } from '@/lib/utils';
@@ -54,7 +54,10 @@ function formatTimeAgo(date: Date): string {
   return date.toLocaleDateString('pt-BR');
 }
 
+type Tab = 'feed' | 'ranking';
+
 export default function SocialPage() {
+  const [activeTab, setActiveTab] = useState<Tab>('feed');
   const [searchTerm, setSearchTerm] = useState('');
   const [newPost, setNewPost] = useState('');
   const [posts, setPosts] = useState<PostItem[]>([]);
@@ -226,8 +229,40 @@ export default function SocialPage() {
     );
   }
 
+  const tabs = [
+    { id: 'feed' as const, label: 'Feed', icon: LayoutList },
+    { id: 'ranking' as const, label: 'Ranking', icon: Trophy },
+  ];
+
   return (
-    <div className="max-w-md mx-auto px-4 py-6 space-y-4">
+    <div className="max-w-md mx-auto">
+      <div className="sticky top-16 z-30 bg-gray-50 border-b border-gray-200 -mx-4 px-4">
+        <div className="flex gap-1">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'text-emerald-600 border-b-2 border-emerald-600'
+                    : 'text-gray-500 hover:text-gray-700 border-b-2 border-transparent'
+                }`}
+              >
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="px-4 py-6 space-y-4">
+        {activeTab === 'feed' && (
+          <>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
         <input
@@ -459,6 +494,16 @@ export default function SocialPage() {
               </div>
             );
           })
+        )}
+      </div>
+          </>
+        )}
+
+        {activeTab === 'ranking' && (
+          <div className="py-12 text-center">
+            <Trophy className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">Em breve: ranking dos jogadores.</p>
+          </div>
         )}
       </div>
     </div>

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, hasAdminCredentials } from '@/lib/firebase/admin';
 import { validateReservation } from '@/lib/validators/reservationValidator';
+import { sendReservationConfirmationEmail } from '@/lib/brevo';
 import { Timestamp } from 'firebase-admin/firestore';
+
+const APP_BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://teniscreas.vercel.app';
 
 export async function POST(request: NextRequest) {
   if (!hasAdminCredentials) {
@@ -90,6 +93,20 @@ export async function POST(request: NextRequest) {
           order: i + 1,
         });
       }
+    }
+
+    // Enviar email de confirmação (não bloqueia a resposta em caso de falha)
+    const userSnap = await adminDb.collection('users').doc(userId).get();
+    const userData = userSnap.data();
+    const userEmail = typeof userData?.email === 'string' ? userData.email.trim() : '';
+    if (userEmail) {
+      const userName = `${userData?.firstName ?? ''} ${userData?.lastName ?? ''}`.trim() || 'Jogador';
+      sendReservationConfirmationEmail({
+        toEmail: userEmail,
+        toName: userName,
+        startAt,
+        reservarUrl: `${APP_BASE_URL}/reservar`,
+      }).catch((err) => console.error('Erro ao enviar email de confirmação da reserva:', err));
     }
 
     return NextResponse.json({

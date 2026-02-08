@@ -62,7 +62,7 @@ Acesse http://localhost:3000
    Na Vercel não use `FIREBASE_SERVICE_ACCOUNT_PATH` — o arquivo não é enviado no deploy. Use sempre `FIREBASE_SERVICE_ACCOUNT_KEY` com o JSON colado.  
    Firebase Console → Configurações do projeto → Contas de serviço → Gerar nova chave privada → abra o `.json`, copie todo o conteúdo e minifique em uma linha.
 
-3. **Email de desafio (Brevo)**: para enviar email quando alguém for desafiado, adicione em `.env.local` (e na Vercel em Environment Variables):
+3. **Email (Brevo)**: para enviar email de desafio e de confirmação de reserva, adicione em `.env.local` (e na Vercel em Environment Variables):
    - `BREVO_API_KEY` — chave da API Brevo (ex.: `xkeysib-...`). Obtenha em [Brevo → Configurações → Chaves API](https://app.brevo.com/settings/keys/api).
    - Opcional: `BREVO_SENDER_EMAIL` e `BREVO_SENDER_NAME` — email e nome do remetente (o domínio do email deve estar verificado no Brevo).
 
