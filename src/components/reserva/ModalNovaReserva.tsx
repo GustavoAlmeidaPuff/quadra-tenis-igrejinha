@@ -141,9 +141,9 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
       const term = searchTerm.toLowerCase();
       const filtered = allUsers.filter(
         (user) =>
-          user.firstName.toLowerCase().includes(term) ||
-          user.lastName.toLowerCase().includes(term) ||
-          user.email.toLowerCase().includes(term)
+          (user.firstName ?? '').toLowerCase().includes(term) ||
+          (user.lastName ?? '').toLowerCase().includes(term) ||
+          (user.email ?? '').toLowerCase().includes(term)
       );
       setFilteredUsers(filtered);
     }
