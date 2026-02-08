@@ -16,9 +16,10 @@ import {
   serverTimestamp,
   arrayUnion,
   arrayRemove,
+  increment,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
-import { Search, MoreVertical, Pencil, Trash2, LayoutList, Trophy, Clock, ImagePlus, X, Heart } from 'lucide-react';
+import { Search, MoreVertical, Pencil, Trash2, LayoutList, Trophy, Clock, ImagePlus, X, Heart, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getRandomColor } from '@/lib/utils';
@@ -44,6 +45,16 @@ interface PostItem {
   likeCount: number;
   likedByMe: boolean;
   likedByUserIds: string[];
+  commentCount: number;
+}
+
+interface CommentItem {
+  id: string;
+  authorId: string;
+  author: PostAuthor;
+  content: string;
+  createdAt: Date;
+  createdAtLabel: string;
 }
 
 interface LikedByProfile {
@@ -102,6 +113,14 @@ export default function SocialPage() {
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [likingPostId, setLikingPostId] = useState<string | null>(null);
   const [likedByProfilesCache, setLikedByProfilesCache] = useState<Record<string, LikedByProfile>>({});
+  const [expandedCommentsPostId, setExpandedCommentsPostId] = useState<string | null>(null);
+  const [commentsByPost, setCommentsByPost] = useState<Record<string, CommentItem[]>>({});
+  const [newCommentByPost, setNewCommentByPost] = useState<Record<string, string>>({});
+  const [submittingCommentPostId, setSubmittingCommentPostId] = useState<string | null>(null);
+  const [openMenuCommentKey, setOpenMenuCommentKey] = useState<string | null>(null);
+  const [editingCommentKey, setEditingCommentKey] = useState<string | null>(null);
+  const [editCommentContent, setEditCommentContent] = useState('');
+  const [deletingCommentKey, setDeletingCommentKey] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -185,6 +204,7 @@ export default function SocialPage() {
           likeCount,
           likedByMe,
           likedByUserIds: likedBy,
+          commentCount: typeof data.commentCount === 'number' ? data.commentCount : 0,
         });
       }
       setPosts(list);
@@ -225,6 +245,44 @@ export default function SocialPage() {
       cancelled = true;
     };
   }, [posts, likedByProfilesCache]);
+
+  // Carrega comentários do post quando o usuário expande a seção
+  useEffect(() => {
+    const postId = expandedCommentsPostId;
+    if (!postId) return;
+
+    const commentsRef = collection(db, 'posts', postId, 'comments');
+    const q = query(commentsRef, orderBy('createdAt', 'asc'), limit(100));
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const list: CommentItem[] = [];
+      for (const d of snapshot.docs) {
+        const data = d.data();
+        const authorId = data.authorId ?? '';
+        const authorSnap = await getDoc(doc(db, 'users', authorId));
+        const authorData = authorSnap.exists() ? authorSnap.data() : {};
+        const firstName = authorData?.firstName ?? '';
+        const lastName = authorData?.lastName ?? '';
+        const createdAt = data.createdAt?.toDate?.() ?? new Date();
+        list.push({
+          id: d.id,
+          authorId,
+          author: {
+            id: authorId,
+            name: `${firstName} ${lastName}`.trim() || 'Jogador',
+            initials: `${(firstName || 'J')[0]}${(lastName || '?')[0]}`.toUpperCase(),
+            pictureUrl: authorData?.pictureUrl ?? null,
+          },
+          content: data.content ?? '',
+          createdAt,
+          createdAtLabel: formatTimeAgo(createdAt),
+        });
+      }
+      setCommentsByPost((prev) => ({ ...prev, [postId]: list }));
+    });
+
+    return () => unsubscribe();
+  }, [expandedCommentsPostId]);
 
   useEffect(() => {
     if (!searchOpen || !auth.currentUser) return;
@@ -381,6 +439,74 @@ export default function SocialPage() {
       console.error(e);
     } finally {
       setLikingPostId(null);
+    }
+  };
+
+  const toggleComments = (postId: string) => {
+    setExpandedCommentsPostId((prev) => (prev === postId ? null : postId));
+  };
+
+  const handleAddComment = async (postId: string) => {
+    const content = (newCommentByPost[postId] ?? '').trim();
+    if (!content || !auth.currentUser || submittingCommentPostId !== null) return;
+    setSubmittingCommentPostId(postId);
+    try {
+      await addDoc(collection(db, 'posts', postId, 'comments'), {
+        authorId: auth.currentUser.uid,
+        content,
+        createdAt: serverTimestamp(),
+      });
+      await updateDoc(doc(db, 'posts', postId), { commentCount: increment(1) });
+      setNewCommentByPost((prev) => ({ ...prev, [postId]: '' }));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSubmittingCommentPostId(null);
+    }
+  };
+
+  const commentKey = (postId: string, commentId: string) => `${postId}_${commentId}`;
+
+  const handleStartEditComment = (comment: CommentItem, postId: string) => {
+    setEditingCommentKey(commentKey(postId, comment.id));
+    setEditCommentContent(comment.content);
+    setOpenMenuCommentKey(null);
+  };
+
+  const handleSaveEditComment = async () => {
+    if (!editingCommentKey || !auth.currentUser) return;
+    const idx = editingCommentKey.indexOf('_');
+    const postId = editingCommentKey.slice(0, idx);
+    const commentId = editingCommentKey.slice(idx + 1);
+    if (!postId || !commentId) return;
+    try {
+      await updateDoc(doc(db, 'posts', postId, 'comments', commentId), {
+        content: editCommentContent.trim(),
+      });
+      setEditingCommentKey(null);
+      setEditCommentContent('');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCancelEditComment = () => {
+    setEditingCommentKey(null);
+    setEditCommentContent('');
+  };
+
+  const handleDeleteComment = async (postId: string, commentId: string) => {
+    if (!auth.currentUser) return;
+    const key = commentKey(postId, commentId);
+    setDeletingCommentKey(key);
+    setOpenMenuCommentKey(null);
+    try {
+      await deleteDoc(doc(db, 'posts', postId, 'comments', commentId));
+      await updateDoc(doc(db, 'posts', postId), { commentCount: increment(-1) });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDeletingCommentKey(null);
     }
   };
 
@@ -815,29 +941,43 @@ export default function SocialPage() {
                             />
                           </div>
                         )}
-                        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => handleLike(post)}
-                            disabled={likingPostId === post.id}
-                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                              post.likedByMe
-                                ? 'text-red-500 hover:bg-red-50'
-                                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-                            }`}
-                            aria-label={post.likedByMe ? 'Descurtir' : 'Curtir'}
-                          >
-                            <Heart
-                              className={`w-5 h-5 flex-shrink-0 ${
-                                post.likedByMe ? 'fill-red-500' : 'fill-none'
+                        <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => handleLike(post)}
+                              disabled={likingPostId === post.id}
+                              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                                post.likedByMe
+                                  ? 'text-red-500 hover:bg-red-50'
+                                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
                               }`}
-                            />
-                            {post.likeCount > 0 && (
-                              <span className="tabular-nums">{post.likeCount}</span>
-                            )}
-                          </button>
+                              aria-label={post.likedByMe ? 'Descurtir' : 'Curtir'}
+                            >
+                              <Heart
+                                className={`w-5 h-5 flex-shrink-0 ${
+                                  post.likedByMe ? 'fill-red-500' : 'fill-none'
+                                }`}
+                              />
+                              {post.likeCount > 0 && (
+                                <span className="tabular-nums">{post.likeCount}</span>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => toggleComments(post.id)}
+                              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                              aria-label={post.commentCount === 0 ? 'Comentar' : `${post.commentCount} comentários`}
+                            >
+                              <MessageCircle className="w-5 h-5 flex-shrink-0" />
+                              <span>Comentar</span>
+                              {post.commentCount > 0 && (
+                                <span className="tabular-nums text-gray-500">({post.commentCount})</span>
+                              )}
+                            </button>
+                          </div>
                           {post.likeCount > 0 && (
-                            <>
+                            <div className="flex items-center gap-2 flex-wrap">
                               <div className="flex items-center -space-x-2" aria-hidden>
                                 {post.likedByUserIds.slice(0, 3).map((userId, i) => {
                                   const profile = likedByProfilesCache[userId];
@@ -878,9 +1018,177 @@ export default function SocialPage() {
                                   return `Curtido por ${first.join(', ')} e outras ${rest} pessoas`;
                                 })()}
                               </p>
-                            </>
+                            </div>
                           )}
                         </div>
+                        {expandedCommentsPostId === post.id && (
+                          <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
+                            <ul className="space-y-3 max-h-64 overflow-y-auto">
+                              {(commentsByPost[post.id] ?? []).length === 0 ? (
+                                <p className="text-sm text-gray-500 py-2">Nenhum comentário ainda. Seja o primeiro!</p>
+                              ) : (
+                                (commentsByPost[post.id] ?? []).map((comment) => {
+                                  const isMyComment = comment.authorId === auth.currentUser?.uid;
+                                  const menuKey = commentKey(post.id, comment.id);
+                                  const isEditing = editingCommentKey === menuKey;
+                                  const isDeleting = deletingCommentKey === menuKey;
+                                  return (
+                                    <li key={comment.id} className="flex gap-2">
+                                      <Link href={`/perfil/${comment.authorId}`} className="flex-shrink-0">
+                                        {comment.author.pictureUrl ? (
+                                          <div className="w-8 h-8 rounded-full overflow-hidden">
+                                            <Image
+                                              src={comment.author.pictureUrl}
+                                              alt={comment.author.name}
+                                              width={32}
+                                              height={32}
+                                              className="object-cover w-full h-full"
+                                            />
+                                          </div>
+                                        ) : (
+                                          <div
+                                            className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold ${getRandomColor(comment.authorId)}`}
+                                          >
+                                            {comment.author.initials}
+                                          </div>
+                                        )}
+                                      </Link>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-baseline gap-2 flex-wrap">
+                                          <Link
+                                            href={`/perfil/${comment.authorId}`}
+                                            className="font-medium text-gray-900 text-sm hover:underline"
+                                          >
+                                            {comment.author.name}
+                                          </Link>
+                                          <span className="text-xs text-gray-500">{comment.createdAtLabel}</span>
+                                          {isMyComment && (
+                                            <div className="ml-auto relative">
+                                              <button
+                                                type="button"
+                                                onClick={() => setOpenMenuCommentKey(openMenuCommentKey === menuKey ? null : menuKey)}
+                                                className="p-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                                aria-label="Abrir menu do comentário"
+                                              >
+                                                <MoreVertical className="w-4 h-4" />
+                                              </button>
+                                              {openMenuCommentKey === menuKey && (
+                                                <>
+                                                  <div
+                                                    className="fixed inset-0 z-10"
+                                                    aria-hidden
+                                                    onClick={() => setOpenMenuCommentKey(null)}
+                                                  />
+                                                  <nav
+                                                    className="absolute right-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[120px]"
+                                                    role="menu"
+                                                  >
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => handleStartEditComment(comment, post.id)}
+                                                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left"
+                                                      role="menuitem"
+                                                    >
+                                                      <Pencil className="w-4 h-4 text-emerald-600" />
+                                                      Editar
+                                                    </button>
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => handleDeleteComment(post.id, comment.id)}
+                                                      disabled={isDeleting}
+                                                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 text-left disabled:opacity-50"
+                                                      role="menuitem"
+                                                    >
+                                                      <Trash2 className="w-4 h-4" />
+                                                      {isDeleting ? 'Excluindo...' : 'Excluir'}
+                                                    </button>
+                                                  </nav>
+                                                </>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                        {isEditing ? (
+                                          <div className="mt-1 space-y-2">
+                                            <MentionTextarea
+                                              value={editCommentContent}
+                                              onChange={setEditCommentContent}
+                                              users={searchableUsers}
+                                              className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                                              rows={2}
+                                              autoFocus
+                                            />
+                                            <div className="flex gap-2">
+                                              <button
+                                                type="button"
+                                                onClick={handleSaveEditComment}
+                                                disabled={!editCommentContent.trim()}
+                                                className="text-sm font-medium text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
+                                              >
+                                                Salvar
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={handleCancelEditComment}
+                                                className="text-sm font-medium text-gray-600 hover:text-gray-700"
+                                              >
+                                                Cancelar
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <PostContent
+                                            content={comment.content}
+                                            className="text-sm text-gray-700 mt-0.5 break-words"
+                                          />
+                                        )}
+                                      </div>
+                                    </li>
+                                  );
+                                })
+                              )}
+                            </ul>
+                            <div className="flex gap-2">
+                              {currentUser?.pictureUrl ? (
+                                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                                  <Image
+                                    src={currentUser.pictureUrl}
+                                    alt=""
+                                    width={32}
+                                    height={32}
+                                    className="object-cover w-full h-full"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+                                  {currentUser?.initials ?? '?'}
+                                </div>
+                              )}
+                              <div className="flex-1 flex gap-2 min-w-0 flex-wrap sm:flex-nowrap">
+                                <div className="flex-1 min-w-0 w-full sm:w-auto">
+                                  <MentionTextarea
+                                    value={newCommentByPost[post.id] ?? ''}
+                                    onChange={(v) => setNewCommentByPost((prev) => ({ ...prev, [post.id]: v }))}
+                                    users={searchableUsers}
+                                    placeholder="Escreva um comentário..."
+                                    className="min-h-[36px] w-full resize-none rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                                    rows={2}
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddComment(post.id)}
+                                  disabled={
+                                    !(newCommentByPost[post.id] ?? '').trim() || submittingCommentPostId === post.id
+                                  }
+                                  className="self-end px-3 py-2 rounded-lg bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                                >
+                                  {submittingCommentPostId === post.id ? 'Enviando...' : 'Comentar'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>

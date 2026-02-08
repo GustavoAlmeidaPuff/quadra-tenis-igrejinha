@@ -47,13 +47,21 @@ service cloud.firestore {
       allow read: if request.auth != null;
       // Apenas usuários autenticados podem criar
       allow create: if request.auth != null;
-      // Autor pode editar/deletar; qualquer autenticado pode atualizar só o campo likedBy (curtir/descurtir)
+      // Autor pode editar/deletar; qualquer autenticado pode atualizar só likedBy (curtir) ou commentCount (comentário)
       allow update: if request.auth != null && (
         request.auth.uid == resource.data.authorId
         || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy'])
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount'])
       );
       // Apenas o autor pode deletar
       allow delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+
+      // Comentários do post (subcoleção)
+      match /comments/{commentId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null;
+        allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+      }
     }
     
     // Desafios
@@ -77,5 +85,12 @@ service cloud.firestore {
 1. Acesse: https://console.firebase.google.com/
 2. Selecione seu projeto: **quadra-livre-igrejinha**
 3. Vá em **Firestore Database** → **Rules**
-4. Cole as regras acima
-5. Clique em **Publicar**
+4. **Substitua todo o conteúdo** do editor pelas regras do bloco acima (incluindo a parte de **Posts** com a subcoleção **comments** e a permissão de **commentCount**).
+5. Clique em **Publicar**.
+
+**Se aparecer "Missing or insufficient permissions" ao curtir ou comentar:**  
+As regras no Console estão desatualizadas. É obrigatório que o bloco **Posts** tenha:
+- `allow update` com `hasOnly(['likedBy'])` e `hasOnly(['commentCount'])`;
+- o bloco aninhado **match /comments/{commentId}** com `allow read, create` para usuário autenticado.
+
+Copie as regras completas deste arquivo e publique de novo no Firebase Console.
