@@ -15,7 +15,6 @@ import {
 import { auth, db } from '@/lib/firebase/client';
 import { Check, X, Swords, XCircle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 interface ChallengeWithAuthor {
   id: string;
@@ -59,7 +58,6 @@ function formatTimeAgo(date: Date): string {
 }
 
 export default function NotificacoesPage() {
-  const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
@@ -120,7 +118,7 @@ export default function NotificacoesPage() {
       const toSnap = await getDoc(doc(db, 'users', data.toUserId));
       const toUser = toSnap.exists() ? toSnap.data() : {};
       const createdAt = data.createdAt?.toDate?.() ?? new Date();
-      const proposedStartAt = data.proposedStartAt?.toDate?.() ?? null;
+      const proposedStartAt = data.proposedStartAt?.toDate?.() ?? undefined;
       sent.push({
         id: d.id,
         fromUserId: userId,

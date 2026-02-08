@@ -46,6 +46,8 @@ export default function HomePage() {
             { day: 'Sex', count: 0 },
             { day: 'Sáb', count: 0 },
           ],
+          monthlyHours: [],
+          weeklyHours: [],
           topPartners: [],
           nextReservation: null,
           upcomingReservations: [],
