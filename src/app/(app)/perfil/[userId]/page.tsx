@@ -279,17 +279,23 @@ export default function PerfilUserIdPage({ params }: PageProps) {
   }
 
   const memberSinceLabel = (() => {
-    const raw = user.createdAt;
-    if (raw == null) return null;
-    let date: Date | null = null;
-    if (typeof raw === 'object' && typeof (raw as { toDate?: () => Date }).toDate === 'function') {
-      date = (raw as { toDate: () => Date }).toDate();
-    } else if (typeof raw === 'object' && 'seconds' in raw && typeof (raw as { seconds: number }).seconds === 'number') {
-      date = new Date((raw as { seconds: number }).seconds * 1000);
-    } else if (typeof raw === 'string') {
-      date = new Date(raw);
-    } else if (typeof raw === 'number') {
-      date = new Date(raw);
+    function toDate(raw: unknown): Date | null {
+      if (raw == null) return null;
+      if (typeof raw === 'object' && typeof (raw as { toDate?: () => Date }).toDate === 'function') {
+        return (raw as { toDate: () => Date }).toDate();
+      }
+      if (typeof raw === 'object' && 'seconds' in raw && typeof (raw as { seconds: number }).seconds === 'number') {
+        return new Date((raw as { seconds: number }).seconds * 1000);
+      }
+      if (typeof raw === 'string' || typeof raw === 'number') {
+        const d = new Date(raw as string | number);
+        return Number.isNaN(d.getTime()) ? null : d;
+      }
+      return null;
+    }
+    let date = toDate(user.createdAt);
+    if (!date && isMe && auth.currentUser?.metadata?.creationTime) {
+      date = new Date(auth.currentUser.metadata.creationTime);
     }
     if (date && !Number.isNaN(date.getTime())) {
       return date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
