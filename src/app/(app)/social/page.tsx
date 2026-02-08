@@ -468,7 +468,7 @@ export default function SocialPage() {
               className="hidden"
               aria-hidden
             />
-            {imagePreviewUrl ? (
+            {imagePreviewUrl && (
               <div className="relative mt-2 rounded-xl overflow-hidden bg-gray-100 w-full max-w-[200px] aspect-video">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -485,17 +485,16 @@ export default function SocialPage() {
                   <X className="w-4 h-4" />
                 </button>
               </div>
-            ) : (
+            )}
+            <div className="flex justify-end items-center gap-2 mt-2">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="mt-2 p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
                 aria-label="Adicionar imagem"
               >
                 <ImagePlus className="w-5 h-5" />
               </button>
-            )}
-            <div className="flex justify-end mt-2">
               <button
                 onClick={handlePublish}
                 disabled={!newPost.trim() || publishing}
