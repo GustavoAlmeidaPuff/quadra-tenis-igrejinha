@@ -16,6 +16,10 @@ interface DayTab {
   isToday: boolean;
 }
 
+function toDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 interface ReservationWithParticipants extends Reservation {
   participants: string[];
   participantIds: string[];
@@ -38,6 +42,7 @@ export default function ReservarPage() {
   }, []);
 
   const [challengeId, setChallengeId] = useState<string | null>(null);
+  const [daysWithReservations, setDaysWithReservations] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const adicionarJogador = searchParams.get('adicionarJogador');
@@ -75,6 +80,50 @@ export default function ReservarPage() {
     setDays(daysArray);
     setSelectedDate(daysArray[0].date);
   }, []);
+
+  useEffect(() => {
+    if (days.length === 0) return;
+
+    const fetchDaysWithReservations = async () => {
+      const startOfFirst = new Date(days[0].date);
+      startOfFirst.setHours(0, 0, 0, 0);
+      const dayBeforeFirst = new Date(startOfFirst);
+      dayBeforeFirst.setDate(dayBeforeFirst.getDate() - 1);
+      const endOfLast = new Date(days[days.length - 1].date);
+      endOfLast.setHours(23, 59, 59, 999);
+
+      const q = query(
+        collection(db, 'reservations'),
+        where('startAt', '>=', Timestamp.fromDate(dayBeforeFirst)),
+        where('startAt', '<=', Timestamp.fromDate(endOfLast)),
+        orderBy('startAt', 'asc')
+      );
+
+      const snapshot = await getDocs(q);
+      const hasRes: Set<string> = new Set();
+
+      for (const d of snapshot.docs) {
+        const data = d.data();
+        const resStart = data.startAt?.toDate?.()?.getTime?.() ?? 0;
+        const resEnd = data.endAt?.toDate?.()?.getTime?.() ?? 0;
+
+        for (const day of days) {
+          const dayStart = new Date(day.date);
+          dayStart.setHours(0, 0, 0, 0);
+          const dayEnd = new Date(day.date);
+          dayEnd.setHours(23, 59, 59, 999);
+          const dayStartMs = dayStart.getTime();
+          const dayEndMs = dayEnd.getTime();
+          if (resEnd > dayStartMs && resStart <= dayEndMs) {
+            hasRes.add(toDateKey(day.date));
+          }
+        }
+      }
+      setDaysWithReservations(hasRes);
+    };
+
+    fetchDaysWithReservations();
+  }, [days, reservationsRefreshKey]);
 
   useEffect(() => {
     if (!selectedDate) return;
@@ -201,7 +250,7 @@ export default function ReservarPage() {
               >
                 <span className="text-xs font-medium">{day.dayName}</span>
                 <span className="text-lg font-bold">{day.dayNumber}</span>
-                {day.isToday && (
+                {daysWithReservations.has(toDateKey(day.date)) && (
                   <div className="w-1 h-1 rounded-full bg-current mt-0.5" />
                 )}
               </button>

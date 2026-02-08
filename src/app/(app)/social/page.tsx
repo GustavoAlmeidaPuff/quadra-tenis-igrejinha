@@ -21,6 +21,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getRandomColor } from '@/lib/utils';
 import { getTotalHoursForUser, getRecommendedPartners } from '@/lib/queries/stats';
+import { MentionTextarea } from '@/components/social/MentionTextarea';
+import { PostContent } from '@/components/social/PostContent';
 
 interface PostAuthor {
   id: string;
@@ -540,10 +542,11 @@ export default function SocialPage() {
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <textarea
+            <MentionTextarea
               value={newPost}
-              onChange={(e) => setNewPost(e.target.value)}
+              onChange={setNewPost}
               placeholder="O que está acontecendo na quadra?"
+              users={searchableUsers}
               className="w-full resize-none border-none focus:outline-none text-gray-900 placeholder-gray-400"
               rows={2}
             />
@@ -689,9 +692,10 @@ export default function SocialPage() {
                     </div>
                     {isEditing ? (
                       <div className="space-y-2 mb-3">
-                        <textarea
+                        <MentionTextarea
                           value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
+                          onChange={setEditContent}
+                          users={searchableUsers}
                           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none resize-none"
                           rows={3}
                           autoFocus
@@ -727,9 +731,10 @@ export default function SocialPage() {
                       </div>
                     ) : (
                       <>
-                        <p className="text-gray-700 text-sm leading-relaxed mb-3">
-                          {post.content}
-                        </p>
+                        <PostContent
+                          content={post.content}
+                          className="block text-gray-700 text-sm leading-relaxed mb-3"
+                        />
                         {post.imageUrl && (
                           <div className="relative w-full rounded-xl overflow-hidden bg-gray-100 aspect-video max-h-80">
                             <Image

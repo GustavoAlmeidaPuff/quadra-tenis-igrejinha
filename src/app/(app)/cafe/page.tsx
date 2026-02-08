@@ -112,9 +112,7 @@ export default function CafePage() {
               </div>
               <div className="flex-1 text-center sm:text-left">
                 <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
-                  Olá, me chamo Gustavo Almeida!
-                  <br />
-                  Sou um desenvolvedor de software que gosta bastante de projetos de final de semana como esse! Fundador do{' '}
+                  Sou um desenvolvedor de software júnior, gosto de projetos de final de semana como esse! Fundador do{' '}
                   <Link
                     href="https://bibliotech.tech"
                     target="_blank"
@@ -123,7 +121,7 @@ export default function CafePage() {
                   >
                     bibliotech.tech
                   </Link>
-                  , e estudante antes de tudo. Sempre aberto a um bom feedback!
+                  , e estudante antes de qualquer coisa. Sempre aberto a um bom feedback!
                 </p>
                 <p className="mt-3 text-sm">
                   <a
