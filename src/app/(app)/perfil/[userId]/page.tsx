@@ -202,16 +202,17 @@ export default function PerfilUserIdPage({ params }: PageProps) {
         `/api/reservations?id=${encodeURIComponent(reservationId)}&userId=${encodeURIComponent(auth.currentUser.uid)}`,
         { method: 'DELETE' }
       );
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error ?? 'Erro ao cancelar reserva');
+        const msg = (typeof data?.error === 'string' ? data.error : null) ?? 'Erro ao cancelar reserva';
+        alert(msg);
         return;
       }
       setSelectedReservation(null);
       await refreshStats();
     } catch (e) {
       console.error(e);
-      alert('Erro ao cancelar reserva');
+      alert('Erro ao cancelar reserva. Verifique sua conexão.');
     } finally {
       setCancelling(false);
     }

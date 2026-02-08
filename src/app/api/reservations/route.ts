@@ -107,6 +107,16 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  if (!hasAdminCredentials) {
+    return NextResponse.json(
+      {
+        error:
+          'Servidor não configurado: chave de conta de serviço do Firebase não definida.',
+      },
+      { status: 503 }
+    );
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const reservationId = searchParams.get('id');
@@ -128,7 +138,15 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Verificar se o usuário é participante (criador ou convidado)
+    const reservationData = reservationDoc.data();
+    if (!reservationData?.startAt || !reservationData?.endAt) {
+      return NextResponse.json(
+        { error: 'Reserva inválida' },
+        { status: 400 }
+      );
+    }
+
+    // Verificar permissão: participante OU criador (fallback para reservas antigas)
     const participantSnap = await adminDb
       .collection('reservationParticipants')
       .where('reservationId', '==', reservationId)
@@ -136,28 +154,21 @@ export async function DELETE(request: NextRequest) {
       .limit(1)
       .get();
 
-    if (participantSnap.empty) {
+    const isCreator = reservationData.createdById === userId;
+    if (participantSnap.empty && !isCreator) {
       return NextResponse.json(
         { error: 'Você não é participante desta reserva' },
         { status: 403 }
       );
     }
 
-    const reservationData = reservationDoc.data();
-    if (!reservationData?.startAt) {
-      return NextResponse.json(
-        { error: 'Reserva inválida' },
-        { status: 400 }
-      );
-    }
-
-    // Verificar se é futura
+    // Permitir cancelar se a reserva ainda não terminou (futuras ou em andamento)
     const now = new Date();
-    const startAt = reservationData.startAt.toDate();
-    
-    if (startAt < now) {
+    const endAt = reservationData.endAt.toDate();
+
+    if (endAt <= now) {
       return NextResponse.json(
-        { error: 'Não é possível cancelar reservas passadas' },
+        { error: 'Não é possível cancelar reservas que já terminaram' },
         { status: 400 }
       );
     }
