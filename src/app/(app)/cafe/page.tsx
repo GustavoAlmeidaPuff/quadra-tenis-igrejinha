@@ -29,23 +29,29 @@ export default function CafePage() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Imagem de fundo */}
-      <div className="absolute inset-0 z-0">
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      {/* Imagem só no topo */}
+      <div className="relative w-full h-64 overflow-hidden shrink-0">
         <Image
           src="/images/cafe-doacao-bg.png"
           alt=""
           fill
-          className="object-cover"
+          className="object-cover object-center"
           sizes="100vw"
           priority
         />
-        <div className="absolute inset-0 bg-black/50" aria-hidden />
+        <div
+          className="absolute inset-0 z-10 pointer-events-none"
+          style={{
+            background: 'linear-gradient(to bottom, transparent 0%, transparent 45%, rgb(249 250 251) 100%)',
+          }}
+          aria-hidden
+        />
       </div>
 
       {/* Conteúdo */}
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-8">
-        <div className="w-full max-w-md bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-gray-200 p-6 sm:p-8">
+      <div className="flex-1 flex flex-col items-center px-4 -mt-16 relative z-20 py-4">
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-gray-200 p-6 sm:p-8">
           <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 text-center mb-2">
             Obrigado pela boa vontade!
           </h1>
