@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, BarChart2, Users, Clock } from 'lucide-react';
+import { ArrowLeft, BarChart2, Users, Clock, TrendingUp } from 'lucide-react';
 import { getUserStats } from '@/lib/queries/stats';
 import type { UserStats, PartnerStat } from '@/lib/queries/stats';
 import { getRandomColor } from '@/lib/utils';
@@ -90,6 +90,11 @@ export default function EstatisticasPage({ params }: PageProps) {
     1,
     ...weeklyHours.map((w) => w.hours)
   );
+  const dayStats = stats?.dayStats ?? [];
+  const maxDayCount = Math.max(
+    1,
+    ...dayStats.map((d) => d.count)
+  );
 
   return (
     <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-6">
@@ -116,6 +121,35 @@ export default function EstatisticasPage({ params }: PageProps) {
               {stats?.totalHours ?? 0}
               <span className="text-2xl font-semibold text-gray-600 ml-0.5">h</span>
             </p>
+          </div>
+        </section>
+
+        {/* Frequência por dia */}
+        <section className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="w-5 h-5 text-primary-600" />
+            <h2 className="font-semibold text-gray-900">Frequência por dia</h2>
+          </div>
+          <div className="flex items-end justify-between gap-2 h-32">
+            {dayStats.map((stat) => (
+              <div
+                key={stat.day}
+                className="flex-1 flex flex-col items-center gap-2"
+              >
+                <div className="w-full flex items-end justify-center flex-1">
+                  {stat.count > 0 && (
+                    <div
+                      className="w-full bg-primary-500 rounded-t-lg transition-all"
+                      style={{
+                        height: `${(stat.count / maxDayCount) * 100}%`,
+                      }}
+                    />
+                  )}
+                </div>
+                <span className="text-xs font-medium text-gray-600">{stat.day}</span>
+                <span className="text-xs text-gray-500">{stat.count}</span>
+              </div>
+            ))}
           </div>
         </section>
 

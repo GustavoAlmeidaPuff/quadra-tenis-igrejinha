@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   collection,
   query,
@@ -16,7 +16,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
-import { Search, MoreVertical, Pencil, Trash2, LayoutList, Trophy, Clock } from 'lucide-react';
+import { Search, MoreVertical, Pencil, Trash2, LayoutList, Trophy, Clock, ImagePlus, X } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getRandomColor } from '@/lib/utils';
@@ -34,6 +34,7 @@ interface PostItem {
   authorId: string;
   author: PostAuthor;
   content: string;
+  imageUrl?: string | null;
   createdAt: Date;
   createdAtLabel: string;
 }
@@ -82,6 +83,9 @@ export default function SocialPage() {
   const [rankingLoading, setRankingLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [peopleSearchTerm, setPeopleSearchTerm] = useState('');
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -154,6 +158,7 @@ export default function SocialPage() {
             pictureUrl: authorData?.pictureUrl ?? null,
           },
           content: data.content ?? '',
+          imageUrl: data.imageUrl ?? null,
           createdAt,
           createdAtLabel: formatTimeAgo(createdAt),
         });
@@ -217,17 +222,52 @@ export default function SocialPage() {
     if (!newPost.trim() || !auth.currentUser) return;
     setPublishing(true);
     try {
-      await addDoc(collection(db, 'posts'), {
+      let imageUrl: string | null = null;
+      if (selectedImage) {
+        const fd = new FormData();
+        fd.append('image', selectedImage);
+        const res = await fetch('/api/upload-image', { method: 'POST', body: fd });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.error ?? 'Erro ao enviar imagem.');
+        }
+        const data = await res.json();
+        imageUrl = data?.url ?? null;
+      }
+      const postData: Record<string, unknown> = {
         authorId: auth.currentUser.uid,
         content: newPost.trim(),
         createdAt: serverTimestamp(),
-      });
+      };
+      if (imageUrl) postData.imageUrl = imageUrl;
+      await addDoc(collection(db, 'posts'), postData);
       setNewPost('');
+      setSelectedImage(null);
+      setImagePreviewUrl(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (e) {
       console.error(e);
     } finally {
       setPublishing(false);
     }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowed.includes(file.type)) return;
+    if (file.size > 5 * 1024 * 1024) return; // 5MB
+    setSelectedImage(file);
+    const url = URL.createObjectURL(file);
+    setImagePreviewUrl(url);
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    setImagePreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleStartEdit = (post: PostItem) => {
@@ -412,7 +452,7 @@ export default function SocialPage() {
               {currentUser?.initials ?? '?'}
             </div>
           )}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <textarea
               value={newPost}
               onChange={(e) => setNewPost(e.target.value)}
@@ -420,6 +460,41 @@ export default function SocialPage() {
               className="w-full resize-none border-none focus:outline-none text-gray-900 placeholder-gray-400"
               rows={2}
             />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              onChange={handleImageSelect}
+              className="hidden"
+              aria-hidden
+            />
+            {imagePreviewUrl ? (
+              <div className="relative mt-2 rounded-xl overflow-hidden bg-gray-100 w-full max-w-[200px] aspect-video">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imagePreviewUrl}
+                  alt="Preview"
+                  className="w-full h-full object-contain"
+                />
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="absolute top-1 right-1 p-1 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                  aria-label="Remover imagem"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="mt-2 p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                aria-label="Adicionar imagem"
+              >
+                <ImagePlus className="w-5 h-5" />
+              </button>
+            )}
             <div className="flex justify-end mt-2">
               <button
                 onClick={handlePublish}
@@ -535,6 +610,17 @@ export default function SocialPage() {
                           rows={3}
                           autoFocus
                         />
+                        {post.imageUrl && (
+                          <div className="relative w-full rounded-xl overflow-hidden bg-gray-100 aspect-video max-h-48">
+                            <Image
+                              src={post.imageUrl}
+                              alt=""
+                              fill
+                              className="object-contain"
+                              sizes="(max-width: 448px) 100vw, 448px"
+                            />
+                          </div>
+                        )}
                         <div className="flex gap-2">
                           <button
                             type="button"
@@ -554,9 +640,22 @@ export default function SocialPage() {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-gray-700 text-sm leading-relaxed mb-3">
-                        {post.content}
-                      </p>
+                      <>
+                        <p className="text-gray-700 text-sm leading-relaxed mb-3">
+                          {post.content}
+                        </p>
+                        {post.imageUrl && (
+                          <div className="relative w-full rounded-xl overflow-hidden bg-gray-100 aspect-video max-h-80">
+                            <Image
+                              src={post.imageUrl}
+                              alt=""
+                              fill
+                              className="object-contain"
+                              sizes="(max-width: 448px) 100vw, 448px"
+                            />
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
