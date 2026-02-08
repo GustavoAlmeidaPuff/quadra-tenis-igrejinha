@@ -75,13 +75,23 @@ export async function sendChallengeNotificationEmail(
     return { success: false, error: 'BREVO_API_KEY não configurada' };
   }
 
-  const senderEmail = process.env.BREVO_SENDER_EMAIL ?? 'noreply@example.com';
-  const senderName = process.env.BREVO_SENDER_NAME ?? 'Quadra Tênis - Igrejinha';
+  const senderEmail = (process.env.BREVO_SENDER_EMAIL ?? '').trim();
+  const senderName = (process.env.BREVO_SENDER_NAME ?? '').trim();
+  if (!senderEmail) {
+    return {
+      success: false,
+      error:
+        'BREVO_SENDER_EMAIL não configurado. Defina no .env.local um email de remetente verificado no Brevo (ex.: gustavo@matheus.digital).',
+    };
+  }
 
   const htmlContent = buildChallengeEmailHtml(params);
 
   const body = {
-    sender: { email: senderEmail, name: senderName },
+    sender: {
+      email: senderEmail,
+      name: senderName || 'Quadra Tênis - Igrejinha',
+    },
     to: [{ email: params.toEmail, name: params.toName }],
     subject: `${params.fromUserName} te desafiou! 🎾`,
     htmlContent,
