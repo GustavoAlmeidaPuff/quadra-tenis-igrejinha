@@ -28,6 +28,7 @@ import {
   MessageCircle,
   X,
   Trash2,
+  Coffee,
 } from 'lucide-react';
 import Avatar from '@/components/layout/Avatar';
 import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
@@ -504,6 +505,13 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                 >
                   <MessageCircle className="w-4 h-4" />
                   Falar com suporte
+                </a>
+                <a
+                  href="/cafe"
+                  className="w-full flex items-center justify-center gap-2 py-4 text-black hover:bg-gray-100 transition-colors border-t border-gray-100"
+                >
+                  <Coffee className="w-4 h-4" />
+                  Pague-me um café
                 </a>
                 <button
                   onClick={handleLogout}
