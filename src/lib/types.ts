@@ -9,6 +9,8 @@ export interface User {
   isAnonymous: boolean;
   isPrivate?: boolean;
   createdAt: Timestamp;
+  /** Quando true, o popup de boas-vindas não é mais exibido. */
+  welcomePopupSeen?: boolean;
 }
 
 export interface Reservation {

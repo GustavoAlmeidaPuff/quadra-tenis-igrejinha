@@ -11,7 +11,6 @@ export default function OnboardingPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,51 +42,13 @@ export default function OnboardingPage() {
         { merge: true }
       );
 
-      setShowWelcome(true);
-      setTimeout(() => {
-        router.push('/home');
-      }, 3000);
+      router.push('/home');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao salvar dados. Tente novamente.';
       setError(message);
       setLoading(false);
     }
   };
-
-  if (showWelcome) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-gradient-to-b from-emerald-50 to-white">
-        <div className="max-w-md text-center space-y-6 animate-fade-in">
-          <div className="text-6xl mb-4">👋</div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Bem-vindo, {firstName}!
-          </h1>
-          <div className="space-y-4 text-left bg-white rounded-2xl p-6 shadow-lg">
-            <h2 className="font-semibold text-lg text-gray-900">Regras da quadra:</h2>
-            <ul className="space-y-3 text-sm text-gray-700">
-              <li className="flex items-start gap-2">
-                <span className="text-emerald-600 font-bold">•</span>
-                <span>Cada partida tem duração de <strong>1h30</strong></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-emerald-600 font-bold">•</span>
-                <span>Máximo de <strong>1 reserva por dia</strong></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-emerald-600 font-bold">•</span>
-                <span>Máximo de <strong>4 reservas por semana</strong></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-emerald-600 font-bold">•</span>
-                <span>Reservas disponíveis para os <strong>próximos 7 dias</strong></span>
-              </li>
-            </ul>
-          </div>
-          <p className="text-sm text-gray-600">Redirecionando...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-gradient-to-b from-emerald-50 to-white">
