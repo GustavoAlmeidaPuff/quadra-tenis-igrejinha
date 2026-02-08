@@ -234,11 +234,16 @@ export default function ReservarPage() {
             const slotEnd = new Date(selectedDate);
             slotEnd.setHours(hour + 1, 0, 0, 0); // hora 23 → 24:00 = 00:00 do dia seguinte
 
-            // Reserva aparece no slot se sobrepõe o intervalo [slotStart, slotEnd)
+            // Reserva aparece apenas no PRIMEIRO slot em que começa (evita duplicação em 02:00-03:30)
             const reservation = reservations.find((res) => {
               const resStart = res.startAt.toDate();
               const resEnd = res.endAt.toDate();
-              return resStart < slotEnd && resEnd > slotStart;
+              if (resStart >= slotEnd || resEnd <= slotStart) return false; // não sobrepõe
+              const dayStart = new Date(selectedDate);
+              dayStart.setHours(0, 0, 0, 0);
+              const firstSlotHour =
+                resStart >= dayStart ? resStart.getHours() : 0; // se começou ontem, mostra em 00:00
+              return hour === firstSlotHour;
             });
 
             return (
