@@ -222,7 +222,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center sm:justify-center">
+    <div className="fixed inset-0 bg-black/50 z-[60] flex items-end sm:items-center sm:justify-center">
       <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Header */}

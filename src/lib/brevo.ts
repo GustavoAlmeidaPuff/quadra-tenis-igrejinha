@@ -163,7 +163,7 @@ function buildReservationConfirmationEmailHtml(
           <tr>
             <td style="padding:32px 24px;text-align:center;">
               <p style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#059669;font-weight:600;">Quadra de Tênis - Igrejinha</p>
-              <h1 style="margin:0 0 24px;font-size:22px;font-weight:700;color:#111827;">Seu horário tá marcado! 🎾</h1>
+              <h1 style="margin:0 0 24px;font-size:22px;font-weight:700;color:#111827;">Deu boa! 🎉<br> Seu horário está marcado! 🎾</h1>
               <div style="width:80px;height:80px;border-radius:50%;background:#059669;color:#fff;font-size:32px;line-height:80px;text-align:center;margin:0 auto 20px;">✓</div>
               <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;">${escapeHtml(
                 dateStr.charAt(0).toUpperCase() + dateStr.slice(1)

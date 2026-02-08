@@ -83,42 +83,33 @@ export default function SocialPage() {
   const [rankingLoading, setRankingLoading] = useState(false);
   const [showSearch, setShowSearch] = useState(true);
   const lastScrollY = useRef(0);
-  const lastToggleTime = useRef(0);
+  const lastDirection = useRef<'up' | 'down' | null>(null);
   const ticking = useRef(false);
 
   useEffect(() => {
-    const THRESHOLD = 60;
-    const COOLDOWN_MS = 400;
-    const MIN_SCROLL_FOR_HIDE = 120;
+    const THRESHOLD = 20;
 
     const update = () => {
       ticking.current = false;
-      const y = window.scrollY;
+      const y = window.scrollY ?? document.documentElement.scrollTop ?? 0;
       const delta = y - lastScrollY.current;
-      const now = Date.now();
 
-      if (y < 80) {
-        lastScrollY.current = y;
+      if (y < 50) {
         setShowSearch(true);
-        return;
-      }
-
-      if (now - lastToggleTime.current < COOLDOWN_MS) {
-        lastScrollY.current = y;
-        return;
-      }
-
-      if (delta > THRESHOLD && y > MIN_SCROLL_FOR_HIDE) {
-        lastScrollY.current = y;
-        lastToggleTime.current = now;
-        setShowSearch(false);
+        lastDirection.current = null;
+      } else if (delta > THRESHOLD) {
+        if (lastDirection.current !== 'down') {
+          lastDirection.current = 'down';
+          setShowSearch(false);
+        }
       } else if (delta < -THRESHOLD) {
-        lastScrollY.current = y;
-        lastToggleTime.current = now;
-        setShowSearch(true);
-      } else {
-        lastScrollY.current = y;
+        if (lastDirection.current !== 'up') {
+          lastDirection.current = 'up';
+          setShowSearch(true);
+        }
       }
+
+      lastScrollY.current = y;
     };
 
     const handleScroll = () => {
