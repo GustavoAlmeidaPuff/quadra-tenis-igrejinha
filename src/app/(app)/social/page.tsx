@@ -414,6 +414,7 @@ export default function SocialPage() {
               fromUserName,
               toUserId,
               postId,
+              read: false,
               createdAt: serverTimestamp(),
             });
           } catch (err) {
@@ -492,6 +493,7 @@ export default function SocialPage() {
               fromUserName,
               toUserId: post.authorId,
               postId: post.id,
+              read: false,
               createdAt: serverTimestamp(),
             });
           } catch (err) {
@@ -535,6 +537,7 @@ export default function SocialPage() {
               toUserId,
               postId,
               commentId: commentRef.id,
+              read: false,
               createdAt: serverTimestamp(),
             });
           } catch (err) {

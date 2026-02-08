@@ -64,13 +64,15 @@ service cloud.firestore {
       }
     }
     
-    // Notificações (ex.: menção em post/comentário)
+    // Notificações (ex.: menção em post/comentário, curtida)
     match /notifications/{notificationId} {
       // Só o destinatário pode ler e apagar
       allow read, delete: if request.auth != null && request.auth.uid == resource.data.toUserId;
-      // Qualquer autenticado pode criar (ao mencionar alguém)
+      // Qualquer autenticado pode criar (ao mencionar ou curtir)
       allow create: if request.auth != null;
-      allow update: if false;
+      // Só o destinatário pode atualizar, e apenas o campo read (marcar como lida)
+      allow update: if request.auth != null && request.auth.uid == resource.data.toUserId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
     }
 
     // Desafios
@@ -97,8 +99,9 @@ service cloud.firestore {
 4. **Substitua todo o conteúdo** do editor pelas regras do bloco acima (incluindo a parte de **Posts** com a subcoleção **comments** e a permissão de **commentCount**).
 5. Clique em **Publicar**.
 
-**Índice para notificações de menção:**  
-A página de notificações usa uma query em `notifications` com `toUserId`, `type == 'mention'` e `orderBy('createdAt', 'desc')`. Na primeira vez que a tela de notificações carregar, o Firestore pode pedir a criação de um **índice composto**. Use o link que aparecer no console do navegador para criar o índice no Firebase Console.
+**Índices para notificações:**  
+- Listar notificações: query com `toUserId`, `type` e `orderBy('createdAt', 'desc')` — use o link do console se o Firestore pedir o índice.
+- Badge e marcar como lida: query com `toUserId` e `read == false`. Se o Firestore pedir um índice composto para essa query, crie com coleção `notifications`, campos `toUserId` (Crescente) e `read` (Crescente), escopo Coleta.
 
 **Se aparecer "Missing or insufficient permissions" ao curtir ou comentar:**  
 As regras no Console estão desatualizadas. É obrigatório que o bloco **Posts** tenha:

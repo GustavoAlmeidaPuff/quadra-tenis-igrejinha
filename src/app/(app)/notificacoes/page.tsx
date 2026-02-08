@@ -342,6 +342,30 @@ export default function NotificacoesPage() {
     markReceivedPendingAsViewed();
   }, []);
 
+  // Marcar notificações de like/menção como lidas ao abrir a página
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const markAppNotificationsAsRead = async () => {
+      const q = query(
+        collection(db, 'notifications'),
+        where('toUserId', '==', user.uid),
+        where('read', '==', false)
+      );
+      const snap = await getDocs(q);
+      for (const d of snap.docs) {
+        try {
+          await updateDoc(doc(db, 'notifications', d.id), { read: true });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    };
+
+    markAppNotificationsAsRead();
+  }, []);
+
   const handleAccept = async (challenge: ChallengeWithAuthor) => {
     const { id: challengeId, fromUserId, proposedStartAt } = challenge;
     if (!proposedStartAt || Number.isNaN(proposedStartAt.getTime())) {
