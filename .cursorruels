@@ -1,0 +1,39 @@
+esse repositorio é um app para marcar horarios em uma quadra específica de tenis aqui em igrejinha, rio grande do sul...
+
+eu jogo tenis em uma quadra aqui, criaram um grupo pra marcar os horários, que é só literalmente digitar o horario que tu vai, dia, e nome(s). mas queria fazer um website simples pra marcar isso...
+
+vou te passar as regras:
+
+os tempos de jogo são 1:30... 
+cada pessoa pode marcar um horario por dia.
+da pra escolher os dias em um intervalo de uma semana no futuro... tipo, se hoje é sabado, eu não poderia marcar no domingo que vem no final de semana seguinte, por exemplo.
+
+um dia passa a ser outro assim que passa meia noite
+
+precisamos criar uma arquitetura boa que impessa pessoas de sair marcando tudo quer horario... pode ser algo como: a pessoa loga com o gmail dela, e uma pessoa só pode reservar 4 horarios por semana.
+
+so que temos o maior dos problemas, que eu não sei como resolver... acho que vai ter que ser tipo uma agenda, pois não vai ter os "chunks" de horas separadas por dia, tipo, começando meia noite, até 1;30 da madrugada, e depois das 1;30 até as 3... não, o usuario precisa ter como escolher algo personalizado, tipo, se eu quiser ir em algum horario quebrado, tipo, 19:15, e terminar 20:45... tem que ter como fazer isso... então acho que pode ser tipo um calendario, que a pessoa escolhe que hora o jogo dela vai começar, e em seguida, ja aparece pra todo mundo que esta vendo a agenda, que ja tem jogo marcado ali, ai as pessoas podem ver todo o intervalo de 7 dias, e ver quando foi marcado jogo, quem marcou e etc... como se fosse uma agenda comunitária mesmo.
+
+o usuario precisa ter como ver o historico de horarios marcados dele... os que ainda vão vir, e os passados, pra se acontecer algo, ele poder cancelar... e assim que o usuário entrar na tela de login do app, pode ter uma bolinha mostrando vermelho se é um horario que a quadra esta ocupada e os nomes.
+
+quero que de pra configurar o perfil pra ficar anonimo... ai quando a pessoa marca, aparece como anonimo, se tiver uma possivel rede social, e as pessoas poderem ver o historico de reserva das outras. ver o total de horas que a pessoa ja jogou, baseado no historico de reservas. ver com quem a pessoa mais joga.. etc
+
+na marcação de horarios
+da pra fazer assim... vou explicar um user case
+
+o usuario acessa o link do app, tem uma tela de login, e acima do form de login ta escrito (quadra livre) com uma bolinha verde. quando ele loga com a conta do google pela primeira vez, aparece um form pra ele colocar o primeiro e ultimo nome, pra ele ser mencionado nas partidas.
+assim que a pessoa submete, ela ve uma interface com uma mensagem de bem-vindo, explicando as regras... o site é mobile first, então parece um app... no cabeçalho tem a foto de perfil da pessoa na direita (retirada do gmail, ou se não tem, é só a primeira letra do nome com uma cor de fundo aleatoria), no meio, tem a mesma bolinha dizendo se a quadra ta livre ou não, e ele percebe que enquanto ele preenchia o nome, um jogo começou, e agora, a bolinha esta vermelha... ("quadra ocupada") e o nome de quem ta jogando em baixo, se não couber aparecece tipo: "gustavo e +3". e na direita tem um sininho de notificaçoes, se ele clicar, ele pode ver que um colega dele "desafiou" ele. (tem como desafiar, quando alguem entra pra ver o perfil de outra pessoa, ai tem um botão de desafiar)
+
+o menu na parte de baixo do celular, mostra um nav, onde ele pode ir pra "home",  no meio um botão destacado de reserva, e na direita um botão "social". ele ta na home, e clica no botão destacado com um icone de calendario, e nessa vizualização, ele consegue ver os proximos dete dias, como se tivesse em um agenda do goolge. consegue ver quando vai ter jogo e quando não vai ter, quem vai jogar, e se ele clicar em algum horario, pode ver detalhes da reserva, como o perfil de quem vai jogar. poder acessar o perfil deles, e etc, ele pode clicando em "+" da pra adicionar um horario, configurando dia e hora de inicio do jeito mais pratico, e com a area de participantes ja com voce adicionado, com um campo pra poder adicionar mais alguem.. assim que tu clica no input, ja recomenda toda a lista de cadastrados (menos os anonimos)... ai conforme voce vai digitando, ele vai filtrando por nome ou gmail... e se não achar, aparece no final da lista "+ convidar jogador" ai é como se compartilhasse um link pra utilizar o webapp, ai a pessoa escolhe onde ela quer convidar o amigo, e só manda a mensgaem pra ele, quando a pessoa volta pro app, tem como deixar só um nome genérico, só pra mostrar o nome da pessoa que vai jogar junto, mas deixar claro que ela não tem perfil no app.
+ai ele confirma, e houve um erro, alguem ja marcou esse horario antes dele, então, o erro fala isso: "[nome] e [nome] vão jogar das x até as x, tente outro horário".
+ai ele coloca no mesmo horario do final do jogo dos dois caras, e agora quando ele tenta reservar, da certo. logo, o form de reserva fecha, e agora ele pode ver na tela de agenda, a reserva bonitinha lá, marcando 1;30 de jogo, agora a quadra é dele por 1:30...
+
+clicando em social, ele pode ver um feed de posts feitos por todos cadastrados. pode acessar os perfis deles, pode desafiar eles, pode pesquisar por usuarios ou posts, pode também fazer posts. mas ainda não é possivel colocar imagens nos posts por o site aind anão ter infraestrutura pra isso ainda.
+
+no dashboard da home, ele tem alguams métricas dele mesmo, alguns graficos mostrando a frequencia dele, alguns graficos bem legais de olhar e compartilhar... o dash pode ter um streak semanal... tipo, ali da pra o usuario saber que ele esta indo por 3 semanas consecutivas á quadra. e ta com tantas horas de jogo. o dias da semana que ele mais vai, tipo uma contagem, viu que na terça ele tem 6 reservas totais e na quarta tem 18, no sabado 2, e 0 nos outros dias.
+pode ver amigos que ele mais joga, horarios que mais joga, separados por dia tarde e noite. e outras informaçoes legais de se ver
+
+clicando na bolinha de perfil dele ele consegue ver algumas estatisticas dele, e do perfil dele, da pra sair da conta (logoff) editar informaçoes, e dentre as opçoes, colocar o perfil como privado. 
+
+
+quero uma interface clean

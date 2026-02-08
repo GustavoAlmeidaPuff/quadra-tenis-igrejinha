@@ -1,0 +1,10 @@
+{
+  "name": "Quadra de Tênis - Igrejinha",
+  "short_name": "Quadra Igrejinha",
+  "description": "Agenda comunitária da quadra de tênis em Igrejinha, RS",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#10b981",
+  "orientation": "portrait"
+}
