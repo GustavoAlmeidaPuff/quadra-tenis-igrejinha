@@ -14,9 +14,11 @@ import {
   deleteDoc,
   onSnapshot,
   serverTimestamp,
+  arrayUnion,
+  arrayRemove,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
-import { Search, MoreVertical, Pencil, Trash2, LayoutList, Trophy, Clock, ImagePlus, X } from 'lucide-react';
+import { Search, MoreVertical, Pencil, Trash2, LayoutList, Trophy, Clock, ImagePlus, X, Heart } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getRandomColor } from '@/lib/utils';
@@ -39,6 +41,8 @@ interface PostItem {
   imageUrl?: string | null;
   createdAt: Date;
   createdAtLabel: string;
+  likeCount: number;
+  likedByMe: boolean;
 }
 
 interface SearchableUser {
@@ -89,6 +93,7 @@ export default function SocialPage() {
   const [recommendedLoading, setRecommendedLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [likingPostId, setLikingPostId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -143,6 +148,7 @@ export default function SocialPage() {
     );
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const currentUid = auth.currentUser?.uid ?? '';
       const list: PostItem[] = [];
       for (const d of snapshot.docs) {
         const data = d.data();
@@ -152,6 +158,9 @@ export default function SocialPage() {
         const firstName = authorData?.firstName ?? '';
         const lastName = authorData?.lastName ?? '';
         const createdAt = data.createdAt?.toDate?.() ?? new Date();
+        const likedBy: string[] = Array.isArray(data.likedBy) ? data.likedBy : [];
+        const likeCount = likedBy.length;
+        const likedByMe = currentUid ? likedBy.includes(currentUid) : false;
         list.push({
           id: d.id,
           authorId,
@@ -165,6 +174,8 @@ export default function SocialPage() {
           imageUrl: data.imageUrl ?? null,
           createdAt,
           createdAtLabel: formatTimeAgo(createdAt),
+          likeCount,
+          likedByMe,
         });
       }
       setPosts(list);
@@ -313,6 +324,23 @@ export default function SocialPage() {
   const handleCancelEdit = () => {
     setEditingPostId(null);
     setEditContent('');
+  };
+
+  const handleLike = async (post: PostItem) => {
+    if (!auth.currentUser || likingPostId !== null) return;
+    setLikingPostId(post.id);
+    try {
+      const ref = doc(db, 'posts', post.id);
+      if (post.likedByMe) {
+        await updateDoc(ref, { likedBy: arrayRemove(auth.currentUser.uid) });
+      } else {
+        await updateDoc(ref, { likedBy: arrayUnion(auth.currentUser.uid) });
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLikingPostId(null);
+    }
   };
 
   const handleDelete = async (postId: string) => {
@@ -746,6 +774,28 @@ export default function SocialPage() {
                             />
                           </div>
                         )}
+                        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleLike(post)}
+                            disabled={likingPostId === post.id}
+                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                              post.likedByMe
+                                ? 'text-red-500 hover:bg-red-50'
+                                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+                            }`}
+                            aria-label={post.likedByMe ? 'Descurtir' : 'Curtir'}
+                          >
+                            <Heart
+                              className={`w-5 h-5 flex-shrink-0 ${
+                                post.likedByMe ? 'fill-red-500' : 'fill-none'
+                              }`}
+                            />
+                            {post.likeCount > 0 && (
+                              <span className="tabular-nums">{post.likeCount}</span>
+                            )}
+                          </button>
+                        </div>
                       </>
                     )}
                   </div>

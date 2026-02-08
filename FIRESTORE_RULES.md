@@ -43,14 +43,17 @@ service cloud.firestore {
     
     // Posts
     match /posts/{postId} {
+      // Qualquer pessoa autenticada pode ler
       allow read: if request.auth != null;
+      // Apenas usuários autenticados podem criar
       allow create: if request.auth != null;
-      // Autor pode editar/deletar; qualquer um pode atualizar apenas likes (likesCount e likedBy)
-      allow update: if request.auth != null && 
-        (request.auth.uid == resource.data.authorId || 
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'likedBy']));
-      allow delete: if request.auth != null && 
-                      request.auth.uid == resource.data.authorId;
+      // Autor pode editar/deletar; qualquer autenticado pode atualizar só o campo likedBy (curtir/descurtir)
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.authorId
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy'])
+      );
+      // Apenas o autor pode deletar
+      allow delete: if request.auth != null && request.auth.uid == resource.data.authorId;
     }
     
     // Desafios
