@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   collection,
   query,
@@ -16,10 +16,11 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
-import { Search, MoreVertical, Pencil, Trash2, LayoutList, Trophy } from 'lucide-react';
+import { Search, MoreVertical, Pencil, Trash2, LayoutList, Trophy, Clock } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getRandomColor } from '@/lib/utils';
+import { getTotalHoursForUser } from '@/lib/queries/stats';
 
 interface PostAuthor {
   id: string;
@@ -43,6 +44,15 @@ interface SearchableUser {
   initials: string;
   pictureUrl?: string | null;
   email?: string;
+}
+
+interface RankingEntry {
+  id: string;
+  name: string;
+  initials: string;
+  pictureUrl?: string | null;
+  hours: number;
+  createdAt: Date;
 }
 
 function formatTimeAgo(date: Date): string {
@@ -69,6 +79,58 @@ export default function SocialPage() {
   const [editContent, setEditContent] = useState('');
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [searchableUsers, setSearchableUsers] = useState<SearchableUser[]>([]);
+  const [ranking, setRanking] = useState<RankingEntry[]>([]);
+  const [rankingLoading, setRankingLoading] = useState(false);
+  const [showSearch, setShowSearch] = useState(true);
+  const lastScrollY = useRef(0);
+  const lastToggleTime = useRef(0);
+  const ticking = useRef(false);
+
+  useEffect(() => {
+    const THRESHOLD = 60;
+    const COOLDOWN_MS = 400;
+    const MIN_SCROLL_FOR_HIDE = 120;
+
+    const update = () => {
+      ticking.current = false;
+      const y = window.scrollY;
+      const delta = y - lastScrollY.current;
+      const now = Date.now();
+
+      if (y < 80) {
+        lastScrollY.current = y;
+        setShowSearch(true);
+        return;
+      }
+
+      if (now - lastToggleTime.current < COOLDOWN_MS) {
+        lastScrollY.current = y;
+        return;
+      }
+
+      if (delta > THRESHOLD && y > MIN_SCROLL_FOR_HIDE) {
+        lastScrollY.current = y;
+        lastToggleTime.current = now;
+        setShowSearch(false);
+      } else if (delta < -THRESHOLD) {
+        lastScrollY.current = y;
+        lastToggleTime.current = now;
+        setShowSearch(true);
+      } else {
+        lastScrollY.current = y;
+      }
+    };
+
+    const handleScroll = () => {
+      if (!ticking.current) {
+        ticking.current = true;
+        requestAnimationFrame(update);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -151,6 +213,54 @@ export default function SocialPage() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'ranking') return;
+
+    setRankingLoading(true);
+    const loadRanking = async () => {
+      try {
+        const usersSnap = await getDocs(collection(db, 'users'));
+        const users: Array<{ id: string; name: string; initials: string; pictureUrl?: string | null; createdAt: Date }> = [];
+
+        for (const d of usersSnap.docs) {
+          const data = d.data();
+          if (data.isAnonymous === true) continue;
+          const firstName = data.firstName ?? '';
+          const lastName = data.lastName ?? '';
+          const name = `${firstName} ${lastName}`.trim() || 'Jogador';
+          const createdAt = data.createdAt?.toDate?.() ?? new Date(0);
+          users.push({
+            id: d.id,
+            name,
+            initials: `${(firstName || '?')[0]}${(lastName || '?')[0]}`.toUpperCase(),
+            pictureUrl: data.pictureUrl ?? null,
+            createdAt,
+          });
+        }
+
+        const entries: RankingEntry[] = [];
+        for (const u of users) {
+          const hours = await getTotalHoursForUser(u.id);
+          entries.push({ ...u, hours });
+        }
+
+        entries.sort((a, b) => {
+          if (b.hours !== a.hours) return b.hours - a.hours;
+          return a.createdAt.getTime() - b.createdAt.getTime();
+        });
+
+        setRanking(entries);
+      } catch (e) {
+        console.error(e);
+        setRanking([]);
+      } finally {
+        setRankingLoading(false);
+      }
+    };
+
+    loadRanking();
+  }, [activeTab]);
 
   const handlePublish = async () => {
     if (!newPost.trim() || !auth.currentUser) return;
@@ -236,7 +346,25 @@ export default function SocialPage() {
 
   return (
     <div className="max-w-md mx-auto">
-      <div className="sticky top-16 z-30 bg-white border-b border-gray-200 -mx-4 px-4">
+      <div className="sticky top-16 z-30 bg-white border-b border-gray-200 -mx-4 px-4 pb-0">
+        {activeTab === 'feed' && (
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-out ${
+              showSearch ? 'max-h-[60px] opacity-100 mb-3' : 'max-h-0 opacity-0 mb-0 pointer-events-none'
+            }`}
+          >
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Buscar posts ou jogadores..."
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none bg-white"
+                />
+              </div>
+          </div>
+        )}
         <div className="flex gap-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -263,17 +391,6 @@ export default function SocialPage() {
       <div className="px-4 py-6 space-y-4">
         {activeTab === 'feed' && (
           <>
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Buscar posts ou jogadores..."
-          className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none bg-white"
-        />
-      </div>
-
       <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
         <div className="flex items-start gap-3">
           {currentUser?.pictureUrl ? (
@@ -500,10 +617,59 @@ export default function SocialPage() {
         )}
 
         {activeTab === 'ranking' && (
-          <div className="py-12 text-center">
-            <Trophy className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">Em breve: ranking dos jogadores.</p>
-          </div>
+          <>
+            {rankingLoading ? (
+              <div className="py-12 flex justify-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-2 border-emerald-600 border-t-transparent" />
+              </div>
+            ) : ranking.length === 0 ? (
+              <div className="py-12 text-center">
+                <Trophy className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">Nenhum jogador no ranking.</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <ul className="divide-y divide-gray-100">
+                  {ranking.map((entry, index) => (
+                    <li key={entry.id}>
+                      <Link
+                        href={`/perfil/${entry.id}`}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                      >
+                        <span className="w-8 text-center font-bold text-gray-400 text-sm flex-shrink-0">
+                          #{index + 1}
+                        </span>
+                        {entry.pictureUrl ? (
+                          <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                            <Image
+                              src={entry.pictureUrl}
+                              alt={entry.name}
+                              width={40}
+                              height={40}
+                              className="object-cover w-full h-full"
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ${getRandomColor(entry.id)}`}
+                          >
+                            {entry.initials}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{entry.name}</p>
+                          <p className="text-xs text-gray-500 flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5" />
+                            {entry.hours} {entry.hours === 1 ? 'hora' : 'horas'}
+                          </p>
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

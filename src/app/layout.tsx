@@ -24,14 +24,24 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Quadra de Tênis - Igrejinha",
     description: "Agenda comunitária da quadra de tênis em Igrejinha, RS",
-    images: ["/images/Ad.png"],
+    url: siteUrl,
+    siteName: "Quadra de Tênis - Igrejinha",
+    images: [
+      {
+        url: new URL("/images/Ad-og.jpg", siteUrl).href,
+        width: 1200,
+        height: 630,
+        alt: "Faça sua reserva, Eleve seu nível, Desafie todos!",
+      },
+    ],
     type: "website",
+    locale: "pt_BR",
   },
   twitter: {
     card: "summary_large_image",
     title: "Quadra de Tênis - Igrejinha",
     description: "Agenda comunitária da quadra de tênis em Igrejinha, RS",
-    images: ["/images/Ad.png"],
+    images: [new URL("/images/Ad-og.jpg", siteUrl).href],
   },
 };
 

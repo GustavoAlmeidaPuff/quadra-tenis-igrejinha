@@ -101,6 +101,15 @@ async function getReservationsByIds(
   return reservations;
 }
 
+/** Retorna o total de horas jogadas (reservas passadas × 1,5h) para um usuário. */
+export async function getTotalHoursForUser(userId: string): Promise<number> {
+  const reservationIds = await getReservationIdsForUser(userId);
+  const allReservations = await getReservationsByIds(Array.from(reservationIds));
+  const now = new Date();
+  const pastReservations = allReservations.filter((r) => r.endAt <= now);
+  return Math.round(pastReservations.length * RESERVATION_DURATION_HOURS * 10) / 10;
+}
+
 async function getParticipantNamesForReservation(
   reservationId: string
 ): Promise<string[]> {
