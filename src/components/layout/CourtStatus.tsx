@@ -120,7 +120,7 @@ export default function CourtStatus({ showLabel = true, className = '' }: CourtS
             {displayText}
           </span>
         ) : !isOccupied && showLabel ? (
-          <span className="text-xs text-emerald-600 font-medium">Reserve agora!</span>
+          <span className="text-xs text-gray-600 font-medium">Reserve agora!</span>
         ) : null}
       </div>
     </div>
