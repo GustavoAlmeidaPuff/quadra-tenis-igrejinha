@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error:
-          'Servidor não configurado: chave de conta de serviço do Firebase não definida. Adicione FIREBASE_SERVICE_ACCOUNT_PATH ou FIREBASE_SERVICE_ACCOUNT_KEY no .env.local (veja o README).',
+          'Servidor não configurado: chave de conta de serviço do Firebase não definida. Adicione FIREBASE_SERVICE_ACCOUNT_KEY ou FIREBASE_SERVICE_ACCOUNT_PATH (local) nas variáveis de ambiente.',
       },
       { status: 503 }
     );

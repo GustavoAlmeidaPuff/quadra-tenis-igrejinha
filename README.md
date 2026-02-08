@@ -43,7 +43,7 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=...
 # Para a API de reservas funcionar (criar/cancelar reservas), é obrigatório
 # configurar a chave de conta de serviço do Firebase Admin:
 # 1. Firebase Console → Configurações do projeto → Contas de serviço → Gerar nova chave privada
-# 2. Salve o .json na raiz do projeto (ex.: serviceAccountKey.json) e adicione ao .env.local:
+# 2. Desenvolvimento local: salve o .json na raiz (ex.: serviceAccountKey.json) e adicione:
 FIREBASE_SERVICE_ACCOUNT_PATH=./serviceAccountKey.json
 
 # Rodar em desenvolvimento
@@ -51,6 +51,18 @@ npm run dev
 ```
 
 Acesse http://localhost:3000
+
+## 🚀 Deploy na Vercel
+
+1. Conecte o repositório à Vercel e configure as variáveis de ambiente do Firebase (NEXT_PUBLIC_*).
+2. **Obrigatório para a API de reservas**: em "Environment Variables", adicione:
+   - **Nome:** `FIREBASE_SERVICE_ACCOUNT_KEY` (ou `FIREBASE_SERVICE_ACCOUNT_JSON`)
+   - **Valor:** o conteúdo completo do JSON da chave de conta de serviço (minificado em uma linha)
+
+   O arquivo `serviceAccountKey.json` não funciona na Vercel — use a variável com o JSON.  
+   Firebase Console → Contas de serviço → Gerar nova chave privada → copie o JSON.
+
+3. Redeploy após adicionar a variável.
 
 ## 📱 Estrutura do Projeto
 

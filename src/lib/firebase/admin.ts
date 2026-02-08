@@ -4,7 +4,10 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 function getServiceAccount(): Record<string, unknown> | null {
-  const keyJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  // Preferir JSON em variável de ambiente (obrigatório na Vercel - arquivos locais não existem)
+  const keyJson =
+    process.env.FIREBASE_SERVICE_ACCOUNT_KEY ||
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (keyJson) {
     try {
       return JSON.parse(keyJson) as Record<string, unknown>;
@@ -12,8 +15,10 @@ function getServiceAccount(): Record<string, unknown> | null {
       return null;
     }
   }
+  // PATH só funciona em ambiente local (na Vercel não use - defina FIREBASE_SERVICE_ACCOUNT_KEY)
+  const isVercel = process.env.VERCEL === '1';
   const keyPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
-  if (keyPath) {
+  if (keyPath && !isVercel) {
     try {
       const absolutePath = resolve(process.cwd(), keyPath);
       const content = readFileSync(absolutePath, 'utf-8');
@@ -22,6 +27,11 @@ function getServiceAccount(): Record<string, unknown> | null {
       console.error('Firebase Admin: erro ao ler chave em FIREBASE_SERVICE_ACCOUNT_PATH:', e);
       return null;
     }
+  }
+  if (isVercel && keyPath) {
+    console.warn(
+      'Firebase Admin: FIREBASE_SERVICE_ACCOUNT_PATH não funciona na Vercel. Use FIREBASE_SERVICE_ACCOUNT_KEY ou FIREBASE_SERVICE_ACCOUNT_JSON com o JSON da chave.'
+    );
   }
   return null;
 }
@@ -41,7 +51,7 @@ if (getApps().length === 0) {
     });
   } else {
     console.warn(
-      'Firebase Admin: defina FIREBASE_SERVICE_ACCOUNT_KEY (JSON em uma linha) ou FIREBASE_SERVICE_ACCOUNT_PATH (caminho para o arquivo .json) no .env.local. Sem isso, a API de reservas não funciona em ambiente local.'
+      'Firebase Admin: defina FIREBASE_SERVICE_ACCOUNT_KEY (ou FIREBASE_SERVICE_ACCOUNT_JSON) com o JSON da chave, ou FIREBASE_SERVICE_ACCOUNT_PATH (caminho para o .json, só local). Sem isso, a API de reservas não funciona.'
     );
     if (!projectId) {
       console.warn(
