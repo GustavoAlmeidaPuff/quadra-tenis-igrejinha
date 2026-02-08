@@ -82,6 +82,8 @@ function parseMentionTrigger(text: string): { query: string; toReplace: string }
   if (lastAt === -1) return null;
   const afterAt = text.slice(lastAt + 1);
   if (/\s/.test(afterAt) || afterAt.includes('\n')) return null;
+  // No mobile, texto após uma menção já fechada (ex: "](") pode ser lido como novo trigger
+  if (afterAt.includes(']') || afterAt.includes('(')) return null;
   return { query: afterAt.toLowerCase(), toReplace: '@' + afterAt };
 }
 
@@ -100,6 +102,7 @@ export function MentionTextarea({
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const editableRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const lastEmittedValueRef = useRef<string>(value);
 
   const filteredUsers = mentionTrigger
     ? users.filter((u) => u.name.toLowerCase().includes(mentionTrigger.query))
@@ -120,6 +123,7 @@ export function MentionTextarea({
           : currentSerialized + replacement;
 
       el.innerHTML = valueToHtml(newValue);
+      lastEmittedValueRef.current = newValue;
       onChange(newValue);
 
       setShowDropdown(false);
@@ -144,6 +148,7 @@ export function MentionTextarea({
     if (!el) return;
 
     const serialized = serializeContent(el);
+    lastEmittedValueRef.current = serialized;
     onChange(serialized);
 
     const textBefore = getTextBeforeCursor(el);
@@ -200,6 +205,8 @@ export function MentionTextarea({
   useEffect(() => {
     const el = editableRef.current;
     if (!el) return;
+    if (value === lastEmittedValueRef.current) return;
+    lastEmittedValueRef.current = value;
     const currentSerialized = serializeContent(el);
     if (value !== currentSerialized) {
       el.innerHTML = valueToHtml(value) || '<br>';
@@ -218,6 +225,12 @@ export function MentionTextarea({
         ref={editableRef}
         contentEditable={!disabled}
         onInput={handleInput}
+        onBlur={() => {
+          setTimeout(() => {
+            setShowDropdown(false);
+            setMentionTrigger(null);
+          }, 200);
+        }}
         onKeyDown={handleKeyDown}
         data-placeholder={placeholder}
         className={`outline-none min-h-0 [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-gray-400 ${className}`}
