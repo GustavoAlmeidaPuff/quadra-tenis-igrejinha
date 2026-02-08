@@ -43,7 +43,25 @@ export default function CourtStatus({ showLabel = true, className = '' }: CourtS
 
       if (currentReservation) {
         setIsOccupied(true);
-        setParticipantNames(['Carregando...']);
+        const participantsSnap = await getDocs(
+          query(
+            collection(db, 'reservationParticipants'),
+            where('reservationId', '==', currentReservation.id)
+          )
+        );
+        const names: string[] = [];
+        for (const pDoc of participantsSnap.docs) {
+          const userId = pDoc.data().userId;
+          const guestName = pDoc.data().guestName;
+          if (guestName?.trim()) {
+            names.push(guestName.trim());
+          } else if (userId) {
+            const userSnap = await getDoc(doc(db, 'users', userId));
+            const u = userSnap.exists() ? userSnap.data() : {};
+            names.push(`${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim() || 'Jogador');
+          }
+        }
+        setParticipantNames(names.length > 0 ? names : ['—']);
       } else {
         setIsOccupied(false);
         setParticipantNames([]);
@@ -63,27 +81,27 @@ export default function CourtStatus({ showLabel = true, className = '' }: CourtS
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <div className="flex items-center gap-1.5">
+      <div
+        className="relative w-6 h-6 flex-shrink-0 animate-spin"
+        style={{ animationDuration: '3s' }}
+        aria-hidden
+      >
         <div
-          className="relative w-6 h-6 flex-shrink-0 animate-spin"
-          style={{ animationDuration: '3s' }}
-          aria-hidden
-        >
-          <div
-            className="absolute inset-0 rounded-full"
-            style={{
-              backgroundColor: statusColor === 'green' ? '#10b981' : '#ef4444',
-              maskImage: 'url(/images/logo.png)',
-              maskSize: 'contain',
-              maskRepeat: 'no-repeat',
-              maskPosition: 'center',
-              WebkitMaskImage: 'url(/images/logo.png)',
-              WebkitMaskSize: 'contain',
-              WebkitMaskRepeat: 'no-repeat',
-              WebkitMaskPosition: 'center',
-            }}
-          />
-        </div>
+          className="absolute inset-0 rounded-full"
+          style={{
+            backgroundColor: statusColor === 'green' ? '#10b981' : '#ef4444',
+            maskImage: 'url(/images/logo.png)',
+            maskSize: 'contain',
+            maskRepeat: 'no-repeat',
+            maskPosition: 'center',
+            WebkitMaskImage: 'url(/images/logo.png)',
+            WebkitMaskSize: 'contain',
+            WebkitMaskRepeat: 'no-repeat',
+            WebkitMaskPosition: 'center',
+          }}
+        />
+      </div>
+      <div className="flex flex-col min-w-0">
         {showLabel && (
           <span
             className={`text-sm font-medium ${
@@ -93,12 +111,14 @@ export default function CourtStatus({ showLabel = true, className = '' }: CourtS
             {isOccupied ? 'Quadra ocupada' : 'Quadra livre'}
           </span>
         )}
+        {isOccupied && displayText ? (
+          <span className="text-xs text-gray-600 truncate max-w-[120px]">
+            {displayText}
+          </span>
+        ) : !isOccupied && showLabel ? (
+          <span className="text-xs text-emerald-600 font-medium">Reserve agora!</span>
+        ) : null}
       </div>
-      {isOccupied && displayText && (
-        <span className="text-xs text-gray-600 truncate max-w-[120px]">
-          {displayText}
-        </span>
-      )}
     </div>
   );
 }
