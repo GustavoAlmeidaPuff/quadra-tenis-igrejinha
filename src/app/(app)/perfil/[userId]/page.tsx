@@ -361,13 +361,12 @@ export default function PerfilUserIdPage({ params }: PageProps) {
             <h2 className="text-2xl font-bold text-gray-900 mb-1">
               {user.firstName} {user.lastName}
             </h2>
-            {user.email ? (
-              <p className="text-sm text-gray-500 mb-4">{user.email}</p>
-            ) : (
-              <p className="text-sm text-gray-500 mb-4">
+            <div className="text-sm text-gray-500 mb-4 space-y-0.5">
+              {user.email && <p>{user.email}</p>}
+              <p>
                 {memberSinceLabel ? `Membro desde ${memberSinceLabel}` : 'Membro recente'}
               </p>
-            )}
+            </div>
             {isMe && (
               <button
                 onClick={() => setEditing(true)}

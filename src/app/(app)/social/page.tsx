@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   collection,
   query,
@@ -68,7 +68,6 @@ type Tab = 'feed' | 'ranking';
 
 export default function SocialPage() {
   const [activeTab, setActiveTab] = useState<Tab>('feed');
-  const [searchTerm, setSearchTerm] = useState('');
   const [newPost, setNewPost] = useState('');
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [currentUser, setCurrentUser] = useState<{ id: string; initials: string; pictureUrl?: string | null } | null>(null);
@@ -81,47 +80,8 @@ export default function SocialPage() {
   const [searchableUsers, setSearchableUsers] = useState<SearchableUser[]>([]);
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [rankingLoading, setRankingLoading] = useState(false);
-  const [showSearch, setShowSearch] = useState(true);
-  const lastScrollY = useRef(0);
-  const lastDirection = useRef<'up' | 'down' | null>(null);
-  const ticking = useRef(false);
-
-  useEffect(() => {
-    const THRESHOLD = 20;
-
-    const update = () => {
-      ticking.current = false;
-      const y = window.scrollY ?? document.documentElement.scrollTop ?? 0;
-      const delta = y - lastScrollY.current;
-
-      if (y < 50) {
-        setShowSearch(true);
-        lastDirection.current = null;
-      } else if (delta > THRESHOLD) {
-        if (lastDirection.current !== 'down') {
-          lastDirection.current = 'down';
-          setShowSearch(false);
-        }
-      } else if (delta < -THRESHOLD) {
-        if (lastDirection.current !== 'up') {
-          lastDirection.current = 'up';
-          setShowSearch(true);
-        }
-      }
-
-      lastScrollY.current = y;
-    };
-
-    const handleScroll = () => {
-      if (!ticking.current) {
-        ticking.current = true;
-        requestAnimationFrame(update);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [peopleSearchTerm, setPeopleSearchTerm] = useState('');
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -305,20 +265,12 @@ export default function SocialPage() {
     }
   };
 
-  const term = searchTerm.trim().toLowerCase();
-  const filteredPosts = term
-    ? posts.filter(
-        (post) =>
-          post.author.name.toLowerCase().includes(term) ||
-          post.content.toLowerCase().includes(term)
-      )
-    : posts;
-
-  const filteredUsersForSearch = term
+  const peopleTerm = peopleSearchTerm.trim().toLowerCase();
+  const filteredUsersForSearch = peopleTerm
     ? searchableUsers.filter(
         (u) =>
-          u.name.toLowerCase().includes(term) ||
-          (u.email?.toLowerCase().includes(term) ?? false)
+          u.name.toLowerCase().includes(peopleTerm) ||
+          (u.email?.toLowerCase().includes(peopleTerm) ?? false)
       )
     : [];
 
@@ -337,26 +289,8 @@ export default function SocialPage() {
 
   return (
     <div className="max-w-md mx-auto">
-      <div className="sticky top-16 z-30 bg-white border-b border-gray-200 -mx-4 px-4 pb-0">
-        {activeTab === 'feed' && (
-          <div
-            className={`overflow-hidden transition-all duration-300 ease-out ${
-              showSearch ? 'max-h-[60px] opacity-100 mb-3' : 'max-h-0 opacity-0 mb-0 pointer-events-none'
-            }`}
-          >
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Buscar posts ou jogadores..."
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none bg-white"
-                />
-              </div>
-          </div>
-        )}
-        <div className="flex gap-1">
+      <div className="sticky top-16 z-30 bg-white border-b border-gray-200 -mx-4 px-4">
+        <div className="flex items-center gap-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -376,6 +310,85 @@ export default function SocialPage() {
               </button>
             );
           })}
+          <div className="relative flex-shrink-0 border-b-2 border-transparent py-3">
+            <button
+              type="button"
+              onClick={() => setSearchOpen(!searchOpen)}
+              className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+              aria-label="Buscar jogadores"
+              aria-expanded={searchOpen}
+            >
+              <Search className="w-5 h-5" />
+            </button>
+            {searchOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  aria-hidden
+                  onClick={() => {
+                    setSearchOpen(false);
+                    setPeopleSearchTerm('');
+                  }}
+                />
+                <div className="absolute right-0 top-full mt-1 z-50 w-80 max-w-[calc(100vw-2rem)] bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                  <div className="p-3 border-b border-gray-100">
+                    <input
+                      type="text"
+                      value={peopleSearchTerm}
+                      onChange={(e) => setPeopleSearchTerm(e.target.value)}
+                      placeholder="Buscar jogadores..."
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none text-sm"
+                      autoFocus
+                    />
+                  </div>
+                  <ul className="max-h-64 overflow-y-auto">
+                    {filteredUsersForSearch.length === 0 ? (
+                      <li className="px-4 py-6 text-center text-sm text-gray-500">
+                        {peopleTerm ? `Nenhum jogador encontrado para "${peopleSearchTerm.trim()}"` : 'Digite para buscar jogadores'}
+                      </li>
+                    ) : (
+                      filteredUsersForSearch.map((u) => (
+                        <li key={u.id}>
+                          <Link
+                            href={`/perfil/${u.id}`}
+                            onClick={() => {
+                              setSearchOpen(false);
+                              setPeopleSearchTerm('');
+                            }}
+                            className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                          >
+                            {u.pictureUrl ? (
+                              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                                <Image
+                                  src={u.pictureUrl}
+                                  alt={u.name}
+                                  width={40}
+                                  height={40}
+                                  className="object-cover w-full h-full"
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ${getRandomColor(u.id)}`}
+                              >
+                                {u.initials}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 truncate">{u.name}</p>
+                              {u.email && (
+                                <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                              )}
+                            </div>
+                          </Link>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -421,64 +434,12 @@ export default function SocialPage() {
       </div>
 
       <div className="space-y-4">
-        {searchTerm.trim() && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 border-b border-gray-100">
-              Jogadores
-            </h3>
-            {filteredUsersForSearch.length === 0 ? (
-              <p className="text-sm text-gray-500 px-4 py-4">
-                Nenhum jogador encontrado para &quot;{searchTerm.trim()}&quot;
-              </p>
-            ) : (
-              <ul className="divide-y divide-gray-100">
-                {filteredUsersForSearch.map((u) => (
-                  <li key={u.id}>
-                    <Link
-                      href={`/perfil/${u.id}`}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                    >
-                      {u.pictureUrl ? (
-                        <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                          <Image
-                            src={u.pictureUrl}
-                            alt={u.name}
-                            width={40}
-                            height={40}
-                            className="object-cover w-full h-full"
-                          />
-                        </div>
-                      ) : (
-                        <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ${getRandomColor(u.id)}`}
-                        >
-                          {u.initials}
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{u.name}</p>
-                        {u.email && (
-                          <p className="text-xs text-gray-500 truncate">{u.email}</p>
-                        )}
-                      </div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-
-        {filteredPosts.length === 0 && !searchTerm.trim() ? (
+        {posts.length === 0 ? (
           <p className="text-sm text-gray-500 text-center py-8">
             Nenhum post ainda. Seja o primeiro a publicar!
           </p>
-        ) : searchTerm.trim() && filteredPosts.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-8">
-            Nenhum post encontrado para &quot;{searchTerm.trim()}&quot;
-          </p>
         ) : (
-          filteredPosts.map((post) => {
+          posts.map((post) => {
             const isMyPost = post.authorId === auth.currentUser?.uid;
             const isEditing = editingPostId === post.id;
             const isDeleting = deletingPostId === post.id;

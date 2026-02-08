@@ -75,10 +75,12 @@ export async function validateReservation(
       }
     }
 
+    const namesText = participantNames.join(' e ');
+    const verb = participantNames.length === 1 ? 'vai jogar' : 'vão jogar';
     return {
       valid: false,
       error: {
-        message: `${participantNames.join(' e ')} vão jogar das ${conflict.startAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} às ${conflict.endAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}, tente outro horário.`,
+        message: `${namesText} ${verb} das ${conflict.startAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} às ${conflict.endAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}, tente outro horário.`,
         conflictingReservation: {
           participants: participantNames,
           startTime: conflict.startAt.toDate().toLocaleTimeString('pt-BR', {

@@ -248,11 +248,22 @@ export interface ParticipantAddedEmailParams {
   toEmail: string;
   toName: string;
   creatorName: string;
+  startAt: Date;
   reservarUrl: string;
 }
 
 function buildParticipantAddedEmailHtml(params: ParticipantAddedEmailParams): string {
-  const { creatorName, reservarUrl } = params;
+  const { creatorName, startAt, reservarUrl } = params;
+  const dateStr = startAt.toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const timeStr = startAt.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
   return `
 <!DOCTYPE html>
@@ -271,6 +282,10 @@ function buildParticipantAddedEmailHtml(params: ParticipantAddedEmailParams): st
             <td style="padding:32px 24px;text-align:center;">
               <p style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#059669;font-weight:600;">Quadra de Tênis - Igrejinha</p>
               <h1 style="margin:0 0 24px;font-size:22px;font-weight:700;color:#111827;line-height:1.4;">Deu boa! 🎉<br><span style="font-weight:600;color:#059669;">${escapeHtml(creatorName)}</span> reservou a quadra pra vocês! 🤝</h1>
+              <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;">${escapeHtml(
+                dateStr.charAt(0).toUpperCase() + dateStr.slice(1)
+              )}</p>
+              <p style="margin:0 0 24px;font-size:20px;font-weight:700;color:#059669;">às ${escapeHtml(timeStr)}</p>
               <a href="${escapeHtml(reservarUrl)}" style="display:inline-block;background:#059669;color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:14px 28px;border-radius:12px;margin-top:8px;">Ver reserva</a>
             </td>
           </tr>

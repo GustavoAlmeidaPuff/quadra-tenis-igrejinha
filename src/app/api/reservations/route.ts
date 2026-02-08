@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
             toEmail: pEmail,
             toName: pName,
             creatorName,
+            startAt,
             reservarUrl,
           }).catch((err) => console.error('Erro ao enviar email para participante:', err));
         }
