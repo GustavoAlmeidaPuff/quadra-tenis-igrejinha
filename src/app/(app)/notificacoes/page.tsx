@@ -10,9 +10,10 @@ import {
   doc,
   updateDoc,
   onSnapshot,
+  arrayUnion,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
-import { Check, X, Swords, XCircle } from 'lucide-react';
+import { Check, X, Swords, XCircle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -59,12 +60,14 @@ export default function NotificacoesPage() {
   const [loading, setLoading] = useState(true);
 
   const buildReceivedFromSnap = async (
-    docs: { id: string; data: () => Record<string, unknown> }[]
+    docs: { id: string; data: () => Record<string, unknown> }[],
+    currentUserId: string
   ): Promise<ChallengeWithAuthor[]> => {
     const received: ChallengeWithAuthor[] = [];
     for (const d of docs) {
-      const data = d.data() as { fromUserId: string; message?: string; status?: string; createdAt?: { toDate: () => Date } };
+      const data = d.data() as { fromUserId: string; message?: string; status?: string; createdAt?: { toDate: () => Date }; hiddenByUserIds?: string[] };
       if (data.status === 'cancelled') continue;
+      if ((data.hiddenByUserIds ?? []).includes(currentUserId)) continue;
       const fromSnap = await getDoc(doc(db, 'users', data.fromUserId));
       const fromUser = fromSnap.exists() ? fromSnap.data() : {};
       const createdAt = data.createdAt?.toDate?.() ?? new Date();
@@ -88,8 +91,9 @@ export default function NotificacoesPage() {
   ): Promise<ChallengeWithAuthor[]> => {
     const sent: ChallengeWithAuthor[] = [];
     for (const d of docs) {
-      const data = d.data() as { toUserId: string; message?: string; status?: string; createdAt?: { toDate: () => Date } };
+      const data = d.data() as { toUserId: string; message?: string; status?: string; createdAt?: { toDate: () => Date }; hiddenByUserIds?: string[] };
       if (data.status === 'cancelled') continue;
+      if ((data.hiddenByUserIds ?? []).includes(userId)) continue;
       const toSnap = await getDoc(doc(db, 'users', data.toUserId));
       const toUser = toSnap.exists() ? toSnap.data() : {};
       const createdAt = data.createdAt?.toDate?.() ?? new Date();
@@ -150,7 +154,7 @@ export default function NotificacoesPage() {
     };
 
     const unsubReceived = onSnapshot(receivedQuery, (snap) => {
-      buildReceivedFromSnap(snap.docs).then((received) => {
+      buildReceivedFromSnap(snap.docs, user.uid).then((received) => {
         initialLoadDone.received = true;
         maybeDone();
         setNotifications((prev) => {
@@ -252,6 +256,21 @@ export default function NotificacoesPage() {
     }
   };
 
+  const handleDeleteNotification = async (challengeId: string) => {
+    const user = auth.currentUser;
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'challenges', challengeId), {
+        hiddenByUserIds: arrayUnion(user.uid),
+      });
+      setNotifications((prev) =>
+        prev.filter((n) => n.challenge.id !== challengeId)
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-md mx-auto px-4 py-12 flex justify-center">
@@ -269,8 +288,17 @@ export default function NotificacoesPage() {
           {notifications.map((item) => (
             <div
               key={`${item.type}-${item.id}`}
-              className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm"
+              className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm relative"
             >
+              <button
+                type="button"
+                onClick={() => handleDeleteNotification(item.challenge.id)}
+                className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                title="Apagar notificação"
+                aria-label="Apagar notificação"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
               {item.type === 'received_challenge' && (
                 <>
                   <div className="flex items-start gap-3 mb-3">

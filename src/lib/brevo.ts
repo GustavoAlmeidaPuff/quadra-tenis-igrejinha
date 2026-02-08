@@ -15,9 +15,10 @@ export interface ChallengeEmailParams {
 
 function buildChallengeEmailHtml(params: ChallengeEmailParams): string {
   const { fromUserName, fromUserPictureUrl, notificationsUrl } = params;
+  const initial = escapeHtml(fromUserName.charAt(0).toUpperCase());
   const avatarHtml = fromUserPictureUrl
-    ? `<img src="${escapeHtml(fromUserPictureUrl)}" alt="" width="80" height="80" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 16px;" />`
-    : `<div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">${escapeHtml(fromUserName.charAt(0).toUpperCase())}</div>`;
+    ? `<table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin:0 auto 16px;"><tr><td align="center"><img src="${escapeHtml(fromUserPictureUrl)}" alt="" width="80" height="80" border="0" style="width:80px;height:80px;max-width:80px;border-radius:50%;object-fit:cover;display:block;border:2px solid #e5e7eb;" /></td></tr></table>`
+    : `<table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin:0 auto 16px;"><tr><td align="center"><div style="width:80px;height:80px;border-radius:50%;background:#059669;color:#fff;font-size:28px;font-weight:700;line-height:80px;text-align:center;margin:0 auto;">${initial}</div></td></tr></table>`;
 
   return `
 <!DOCTYPE html>
