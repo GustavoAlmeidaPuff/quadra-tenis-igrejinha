@@ -236,7 +236,7 @@ export default function SocialPage() {
 
   return (
     <div className="max-w-md mx-auto">
-      <div className="sticky top-16 z-30 bg-gray-50 border-b border-gray-200 -mx-4 px-4">
+      <div className="sticky top-16 z-30 bg-white border-b border-gray-200 -mx-4 px-4">
         <div className="flex gap-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
