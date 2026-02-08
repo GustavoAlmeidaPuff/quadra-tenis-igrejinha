@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, hasAdminCredentials } from '@/lib/firebase/admin';
 import { validateReservation } from '@/lib/validators/reservationValidator';
-import { sendReservationConfirmationEmail } from '@/lib/brevo';
+import { sendReservationConfirmationEmail, sendParticipantAddedEmail } from '@/lib/brevo';
 import { Timestamp } from 'firebase-admin/firestore';
 
 const APP_BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://teniscreas.vercel.app';
@@ -95,18 +95,37 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Enviar email de confirmação (não bloqueia a resposta em caso de falha)
+    // Enviar email de confirmação ao criador (não bloqueia a resposta em caso de falha)
     const userSnap = await adminDb.collection('users').doc(userId).get();
     const userData = userSnap.data();
     const userEmail = typeof userData?.email === 'string' ? userData.email.trim() : '';
+    const creatorName = `${userData?.firstName ?? ''} ${userData?.lastName ?? ''}`.trim() || 'Jogador';
     if (userEmail) {
-      const userName = `${userData?.firstName ?? ''} ${userData?.lastName ?? ''}`.trim() || 'Jogador';
       sendReservationConfirmationEmail({
         toEmail: userEmail,
-        toName: userName,
+        toName: creatorName,
         startAt,
         reservarUrl: `${APP_BASE_URL}/reservar`,
       }).catch((err) => console.error('Erro ao enviar email de confirmação da reserva:', err));
+    }
+
+    // Enviar email aos participantes adicionados
+    if (participantIds && Array.isArray(participantIds)) {
+      const reservarUrl = `${APP_BASE_URL}/reservar`;
+      for (const pId of participantIds) {
+        const pSnap = await adminDb.collection('users').doc(pId).get();
+        const pData = pSnap.data();
+        const pEmail = typeof pData?.email === 'string' ? pData.email.trim() : '';
+        if (pEmail) {
+          const pName = `${pData?.firstName ?? ''} ${pData?.lastName ?? ''}`.trim() || 'Jogador';
+          sendParticipantAddedEmail({
+            toEmail: pEmail,
+            toName: pName,
+            creatorName,
+            reservarUrl,
+          }).catch((err) => console.error('Erro ao enviar email para participante:', err));
+        }
+      }
     }
 
     return NextResponse.json({

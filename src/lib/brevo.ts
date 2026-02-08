@@ -241,3 +241,104 @@ export async function sendReservationConfirmationEmail(
   const data = (await res.json()) as { messageId?: string };
   return { success: true, messageId: data.messageId ?? '' };
 }
+
+// --- Email para participantes adicionados à reserva ---
+
+export interface ParticipantAddedEmailParams {
+  toEmail: string;
+  toName: string;
+  creatorName: string;
+  reservarUrl: string;
+}
+
+function buildParticipantAddedEmailHtml(params: ParticipantAddedEmailParams): string {
+  const { creatorName, reservarUrl } = params;
+
+  return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Te adicionaram em uma reserva</title>
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;background-color:#f3f4f6;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;padding:24px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:400px;background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -2px rgba(0,0,0,0.1);overflow:hidden;">
+          <tr>
+            <td style="padding:32px 24px;text-align:center;">
+              <p style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#059669;font-weight:600;">Quadra de Tênis - Igrejinha</p>
+              <h1 style="margin:0 0 24px;font-size:22px;font-weight:700;color:#111827;line-height:1.4;">Deu boa! 🎉<br><span style="font-weight:600;color:#059669;">${escapeHtml(creatorName)}</span> reservou a quadra pra vocês! 🤝</h1>
+              <a href="${escapeHtml(reservarUrl)}" style="display:inline-block;background:#059669;color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:14px 28px;border-radius:12px;margin-top:8px;">Ver reserva</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 24px;background:#f9fafb;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Este email foi enviado pelo app Quadra de Tênis - Igrejinha.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`.trim();
+}
+
+export async function sendParticipantAddedEmail(
+  params: ParticipantAddedEmailParams
+): Promise<{ success: true; messageId: string } | { success: false; error: string }> {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey || !apiKey.trim()) {
+    return { success: false, error: 'BREVO_API_KEY não configurada' };
+  }
+
+  const senderEmail = (process.env.BREVO_SENDER_EMAIL ?? '').trim();
+  const senderName = (process.env.BREVO_SENDER_NAME ?? '').trim();
+  if (!senderEmail) {
+    return {
+      success: false,
+      error:
+        'BREVO_SENDER_EMAIL não configurado. Defina no .env.local um email de remetente verificado no Brevo.',
+    };
+  }
+
+  const htmlContent = buildParticipantAddedEmailHtml(params);
+
+  const body = {
+    sender: {
+      email: senderEmail,
+      name: senderName || 'Quadra Tênis - Igrejinha',
+    },
+    to: [{ email: params.toEmail, name: params.toName }],
+    subject: `${params.creatorName} te adicionou numa reserva! 🎾`,
+    htmlContent,
+  };
+
+  const res = await fetch(BREVO_API_URL, {
+    method: 'POST',
+    headers: {
+      'api-key': apiKey.trim(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    let errMessage = `Brevo retornou ${res.status}`;
+    try {
+      const errJson = JSON.parse(errText);
+      if (errJson?.message) errMessage = errJson.message;
+    } catch {
+      if (errText) errMessage = errText.slice(0, 200);
+    }
+    return { success: false, error: errMessage };
+  }
+
+  const data = (await res.json()) as { messageId?: string };
+  return { success: true, messageId: data.messageId ?? '' };
+}
