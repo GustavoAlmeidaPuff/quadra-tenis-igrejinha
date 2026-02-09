@@ -371,7 +371,7 @@ export default function ReservarPage() {
                       <button
                         type="button"
                         onClick={() => setSelectedReservation(reservation)}
-                        className={`h-full w-full text-left rounded-r-lg p-2 shadow-sm border-l-4 transition-opacity hover:opacity-90 cursor-pointer ${
+                        className={`absolute inset-0 w-full text-left rounded-r-lg p-2 shadow-sm border-l-4 transition-opacity hover:opacity-90 cursor-pointer flex flex-col justify-center ${
                           auth.currentUser && reservation.participantIds.includes(auth.currentUser.uid)
                             ? 'bg-gradient-to-r from-emerald-100 to-emerald-50 border-emerald-500'
                             : 'bg-gradient-to-r from-yellow-100 to-yellow-50 border-yellow-500'
