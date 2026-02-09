@@ -1296,7 +1296,7 @@ export default function SocialPage() {
                         <span className="w-8 text-center font-bold text-gray-400 text-sm flex-shrink-0">
                           #{index + 1}
                         </span>
-                        {entry.pictureUrl ? (
+                        {entry.pictureUrl?.trim() ? (
                           <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
                             <Image
                               src={entry.pictureUrl}
@@ -1307,9 +1307,7 @@ export default function SocialPage() {
                             />
                           </div>
                         ) : (
-                          <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 ${getRandomColor(entry.id)}`}
-                          >
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 bg-primary-600">
                             {entry.initials}
                           </div>
                         )}
