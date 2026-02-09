@@ -134,8 +134,7 @@ export default function SocialPage() {
   const [submittingCommentPostId, setSubmittingCommentPostId] = useState<string | null>(null);
   const [openMenuCommentKey, setOpenMenuCommentKey] = useState<string | null>(null);
   const [commentMenuPosition, setCommentMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const [editingCommentKey, setEditingCommentKey] = useState<string | null>(null);
-  const [editCommentContent, setEditCommentContent] = useState('');
+  const [editingComment, setEditingComment] = useState<{ key: string; content: string } | null>(null);
   const [deletingCommentKey, setDeletingCommentKey] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -556,32 +555,31 @@ export default function SocialPage() {
   const commentKey = (postId: string, commentId: string) => `${postId}_${commentId}`;
 
   const handleStartEditComment = (comment: CommentItem, postId: string) => {
-    setEditingCommentKey(commentKey(postId, comment.id));
-    setEditCommentContent(comment.content);
+    const key = commentKey(postId, comment.id);
+    const content = typeof comment.content === 'string' ? comment.content : '';
+    setEditingComment({ key, content });
     setOpenMenuCommentKey(null);
     setCommentMenuPosition(null);
   };
 
   const handleSaveEditComment = async () => {
-    if (!editingCommentKey || !auth.currentUser) return;
-    const idx = editingCommentKey.indexOf('_');
-    const postId = editingCommentKey.slice(0, idx);
-    const commentId = editingCommentKey.slice(idx + 1);
+    if (!editingComment || !auth.currentUser) return;
+    const idx = editingComment.key.indexOf('_');
+    const postId = editingComment.key.slice(0, idx);
+    const commentId = editingComment.key.slice(idx + 1);
     if (!postId || !commentId) return;
     try {
       await updateDoc(doc(db, 'posts', postId, 'comments', commentId), {
-        content: editCommentContent.trim(),
+        content: editingComment.content.trim(),
       });
-      setEditingCommentKey(null);
-      setEditCommentContent('');
+      setEditingComment(null);
     } catch (e) {
       console.error(e);
     }
   };
 
   const handleCancelEditComment = () => {
-    setEditingCommentKey(null);
-    setEditCommentContent('');
+    setEditingComment(null);
   };
 
   const handleDeleteComment = async (postId: string, commentId: string) => {
@@ -1120,7 +1118,8 @@ export default function SocialPage() {
                                 (commentsByPost[post.id] ?? []).map((comment) => {
                                   const isMyComment = comment.authorId === auth.currentUser?.uid;
                                   const menuKey = commentKey(post.id, comment.id);
-                                  const isEditing = editingCommentKey === menuKey;
+                                  const isEditing = editingComment?.key === menuKey;
+                                  const editContent = isEditing ? (editingComment?.content ?? '') : '';
                                   const isDeleting = deletingCommentKey === menuKey;
                                   return (
                                     <li key={comment.id} className="flex gap-2">
@@ -1180,8 +1179,10 @@ export default function SocialPage() {
                                         {isEditing ? (
                                           <div className="mt-1 space-y-2">
                                             <MentionTextarea
-                                              value={editCommentContent}
-                                              onChange={setEditCommentContent}
+                                              value={editContent}
+                                              onChange={(value) =>
+                                                setEditingComment((prev) => (prev ? { ...prev, content: value } : null))
+                                              }
                                               users={searchableUsers}
                                               className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
                                               rows={2}
@@ -1191,7 +1192,7 @@ export default function SocialPage() {
                                               <button
                                                 type="button"
                                                 onClick={handleSaveEditComment}
-                                                disabled={!editCommentContent.trim()}
+                                                disabled={!editContent.trim()}
                                                 className="text-sm font-medium text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
                                               >
                                                 Salvar
