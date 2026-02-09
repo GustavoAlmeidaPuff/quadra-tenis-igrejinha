@@ -210,18 +210,11 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Verificar permissão: participante OU criador (fallback para reservas antigas)
-    const participantSnap = await adminDb
-      .collection('reservationParticipants')
-      .where('reservationId', '==', reservationId)
-      .where('userId', '==', userId)
-      .limit(1)
-      .get();
-
+    // Apenas o criador da reserva pode cancelar (não participantes)
     const isCreator = reservationData.createdById === userId;
-    if (participantSnap.empty && !isCreator) {
+    if (!isCreator) {
       return NextResponse.json(
-        { error: 'Você não é participante desta reserva' },
+        { error: 'Apenas quem criou a reserva pode cancelá-la' },
         { status: 403 }
       );
     }

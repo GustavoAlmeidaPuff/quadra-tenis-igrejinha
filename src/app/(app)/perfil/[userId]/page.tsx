@@ -745,17 +745,18 @@ export default function PerfilUserIdPage({ params }: PageProps) {
             )}
           </div>
 
-          {/* Modal de detalhes e cancelamento da reserva */}
+          {/* Modal de detalhes e cancelamento da reserva — só o dono do perfil pode cancelar/editar */}
           {selectedReservation && (
             <ReservationDetailModal
               item={selectedReservation}
               onClose={() => setSelectedReservation(null)}
+              canManage={isMe}
               onCancel={handleCancelReservation}
-              onEditParticipants={(id) => {
+              onEditParticipants={isMe ? (id) => {
                 setSelectedReservation(null);
                 setEditingReservationId(id);
                 setShowEditReservationModal(true);
-              }}
+              } : undefined}
               cancelling={cancelling}
             />
           )}
@@ -939,12 +940,15 @@ function ReservationCard({
 function ReservationDetailModal({
   item,
   onClose,
+  canManage,
   onCancel,
   onEditParticipants,
   cancelling,
 }: {
   item: ReservationListItem;
   onClose: () => void;
+  /** Só true quando é o próprio perfil — esconde cancelar/editar para visitantes */
+  canManage?: boolean;
   onCancel: (reservationId: string) => void;
   onEditParticipants?: (reservationId: string) => void;
   cancelling: boolean;
@@ -971,11 +975,13 @@ function ReservationDetailModal({
           <p className="text-sm text-gray-500">{item.time}</p>
           <p className="text-sm text-gray-600">{participantsLabel}</p>
         </div>
-        <p className="text-xs text-gray-500 mb-4">
-          Ao cancelar, a reserva será removida para todos os participantes.
-        </p>
+        {canManage && (
+          <p className="text-xs text-gray-500 mb-4">
+            Ao cancelar, a reserva será removida para todos os participantes.
+          </p>
+        )}
         <div className="flex flex-col gap-3">
-          {onEditParticipants && (
+          {canManage && onEditParticipants && (
             <button
               type="button"
               onClick={() => {
@@ -990,20 +996,22 @@ function ReservationDetailModal({
             </button>
           )}
           <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => onCancel(item.id)}
-              disabled={cancelling}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
-            >
-              <Trash2 className="w-4 h-4" />
-              {cancelling ? 'Cancelando...' : 'Cancelar reserva'}
-            </button>
+            {canManage && (
+              <button
+                type="button"
+                onClick={() => onCancel(item.id)}
+                disabled={cancelling}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" />
+                {cancelling ? 'Cancelando...' : 'Cancelar reserva'}
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}
               disabled={cancelling}
-              className="py-3 px-4 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+              className={canManage ? 'py-3 px-4 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors' : 'flex-1 py-3 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors'}
             >
               Fechar
             </button>
