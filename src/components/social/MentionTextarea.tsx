@@ -221,10 +221,9 @@ export function MentionTextarea({
   useEffect(() => {
     const el = editableRef.current;
     if (!el) return;
-    if (value === lastEmittedValueRef.current) return;
-    lastEmittedValueRef.current = value;
     const currentSerialized = serializeContent(el);
     if (value !== currentSerialized) {
+      lastEmittedValueRef.current = value;
       el.innerHTML = valueToHtml(value) || '<br>';
     }
   }, [value]);
