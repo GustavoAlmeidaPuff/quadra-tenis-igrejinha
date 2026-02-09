@@ -8,6 +8,7 @@ import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatTime } from '@/lib/utils';
 import { Reservation } from '@/lib/types';
 import ModalNovaReserva from '@/components/reserva/ModalNovaReserva';
+import ReservationDetailModal from '@/components/reserva/ReservationDetailModal';
 
 interface DayTab {
   date: Date;
@@ -43,6 +44,10 @@ export default function ReservarPage() {
 
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [daysWithReservations, setDaysWithReservations] = useState<Set<string>>(new Set());
+  const [selectedReservation, setSelectedReservation] = useState<ReservationWithParticipants | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [showEditReservationModal, setShowEditReservationModal] = useState(false);
+  const [editingReservationId, setEditingReservationId] = useState<string | null>(null);
 
   useEffect(() => {
     const adicionarJogador = searchParams.get('adicionarJogador');
@@ -208,6 +213,43 @@ export default function ReservarPage() {
     }
   };
 
+  const handleCancelReservation = async (reservationId: string) => {
+    if (!auth.currentUser) return;
+    setCancelling(true);
+    try {
+      const res = await fetch(
+        `/api/reservations?id=${encodeURIComponent(reservationId)}&userId=${encodeURIComponent(auth.currentUser.uid)}`,
+        { method: 'DELETE' }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = (typeof data?.error === 'string' ? data.error : null) ?? 'Erro ao cancelar reserva';
+        alert(msg);
+        return;
+      }
+      setSelectedReservation(null);
+      setReservationsRefreshKey((k) => k + 1);
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao cancelar reserva. Verifique sua conexão.');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  function getDateLabel(res: ReservationWithParticipants): string {
+    const start = res.startAt.toDate();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const startDay = new Date(start);
+    startDay.setHours(0, 0, 0, 0);
+    if (startDay.getTime() === today.getTime()) return 'Hoje';
+    if (startDay.getTime() === tomorrow.getTime()) return 'Amanhã';
+    return start.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'short' });
+  }
+
   // Horários de 00:00 até 23:00 (inclui 00:00 para reservas que atravessam a meia-noite)
   const timeSlots: string[] = [];
   for (let hour = 0; hour <= 23; hour++) {
@@ -326,8 +368,10 @@ export default function ReservarPage() {
                       className="absolute inset-x-0 top-1 overflow-visible"
                       style={{ top: Math.max(4, topPx), height: heightPx - 8, minHeight: 40 }}
                     >
-                      <div
-                        className={`h-full rounded-r-lg p-2 shadow-sm border-l-4 ${
+                      <button
+                        type="button"
+                        onClick={() => setSelectedReservation(reservation)}
+                        className={`h-full w-full text-left rounded-r-lg p-2 shadow-sm border-l-4 transition-opacity hover:opacity-90 cursor-pointer ${
                           auth.currentUser && reservation.participantIds.includes(auth.currentUser.uid)
                             ? 'bg-gradient-to-r from-emerald-100 to-emerald-50 border-emerald-500'
                             : 'bg-gradient-to-r from-yellow-100 to-yellow-50 border-yellow-500'
@@ -339,7 +383,7 @@ export default function ReservarPage() {
                         <div className="text-xs text-gray-600">
                           {formatTime(reservation.startAt.toDate())} – {formatTime(reservation.endAt.toDate())}
                         </div>
-                      </div>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -357,7 +401,7 @@ export default function ReservarPage() {
         <Plus className="w-6 h-6" />
       </button>
 
-      {/* Modal */}
+      {/* Modal nova reserva */}
       {showModal && (
         <ModalNovaReserva
           isOpen={showModal}
@@ -370,6 +414,44 @@ export default function ReservarPage() {
           selectedDate={selectedDate}
           initialParticipantIds={initialParticipantIds}
           challengeId={challengeId ?? undefined}
+        />
+      )}
+
+      {/* Modal detalhes da reserva (ao clicar na agenda) */}
+      {selectedReservation && (
+        <ReservationDetailModal
+          item={{
+            id: selectedReservation.id,
+            dateLabel: getDateLabel(selectedReservation),
+            time: `${formatTime(selectedReservation.startAt.toDate())} - ${formatTime(selectedReservation.endAt.toDate())}`,
+            participants: selectedReservation.participants,
+          }}
+          onClose={() => setSelectedReservation(null)}
+          canManage={Boolean(auth.currentUser && selectedReservation.participantIds.includes(auth.currentUser.uid))}
+          onCancel={handleCancelReservation}
+          onEditParticipants={
+            auth.currentUser && selectedReservation.participantIds.includes(auth.currentUser.uid)
+              ? (id) => {
+                  setSelectedReservation(null);
+                  setEditingReservationId(id);
+                  setShowEditReservationModal(true);
+                }
+              : undefined
+          }
+          cancelling={cancelling}
+        />
+      )}
+
+      {/* Modal editar participantes (mesmo form da nova reserva em modo edição) */}
+      {showEditReservationModal && (
+        <ModalNovaReserva
+          isOpen={showEditReservationModal}
+          onClose={() => {
+            setShowEditReservationModal(false);
+            setEditingReservationId(null);
+          }}
+          onSuccess={() => setReservationsRefreshKey((k) => k + 1)}
+          reservationId={editingReservationId ?? undefined}
         />
       )}
     </div>
