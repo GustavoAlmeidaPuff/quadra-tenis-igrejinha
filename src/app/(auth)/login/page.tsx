@@ -27,8 +27,8 @@ async function ensureUserDocAndRedirect(
   const userDoc = await getDoc(doc(db, 'users', uid));
   if (!userDoc.exists()) {
     await setDoc(doc(db, 'users', uid), {
-      email: email ?? undefined,
-      pictureUrl: pictureUrl ?? undefined,
+      ...(email != null && email !== '' && { email }),
+      ...(pictureUrl != null && pictureUrl !== '' && { pictureUrl }),
       isAnonymous: false,
       isPrivate: false,
       createdAt: serverTimestamp(),

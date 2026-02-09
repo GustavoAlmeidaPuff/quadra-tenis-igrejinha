@@ -33,8 +33,8 @@ export default function OnboardingPage() {
         {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
-          email: user.email ?? undefined,
-          pictureUrl: user.photoURL ?? undefined,
+          ...(user.email != null && user.email !== '' && { email: user.email }),
+          ...(user.photoURL != null && user.photoURL !== '' && { pictureUrl: user.photoURL }),
           isAnonymous: false,
           isPrivate: false,
           createdAt: serverTimestamp(),
