@@ -47,9 +47,15 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     }
 
     const reservationData = reservationDoc.data();
-    if (reservationData?.createdById !== userId) {
+    const participantsSnapCheck = await adminDb
+      .collection('reservationParticipants')
+      .where('reservationId', '==', reservationId.trim())
+      .where('userId', '==', userId)
+      .limit(1)
+      .get();
+    if (participantsSnapCheck.empty) {
       return NextResponse.json(
-        { error: 'Apenas quem criou a reserva pode editar os participantes.' },
+        { error: 'Apenas participantes da reserva podem editar.' },
         { status: 403 }
       );
     }

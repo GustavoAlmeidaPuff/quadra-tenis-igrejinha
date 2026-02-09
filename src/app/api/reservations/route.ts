@@ -210,11 +210,16 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Apenas o criador da reserva pode cancelar (não participantes)
-    const isCreator = reservationData.createdById === userId;
-    if (!isCreator) {
+    // Qualquer participante da reserva pode cancelar
+    const participantsSnap = await adminDb
+      .collection('reservationParticipants')
+      .where('reservationId', '==', reservationId)
+      .where('userId', '==', userId)
+      .limit(1)
+      .get();
+    if (participantsSnap.empty) {
       return NextResponse.json(
-        { error: 'Apenas quem criou a reserva pode cancelá-la' },
+        { error: 'Apenas participantes da reserva podem cancelá-la.' },
         { status: 403 }
       );
     }
@@ -230,7 +235,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Deletar participantes
+    // Deletar participantes (já temos participantsSnap acima, mas precisamos de todos para o batch)
     const participants = await adminDb
       .collection('reservationParticipants')
       .where('reservationId', '==', reservationId)
