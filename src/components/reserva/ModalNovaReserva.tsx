@@ -34,9 +34,12 @@ interface ModalNovaReservaProps {
   initialParticipantIds?: string[];
   /** Quando preenchido (aceite de desafio), ao criar a reserva o desafio é marcado como aceito. */
   challengeId?: string;
+  /** Quando preenchido, abre em modo edição: só altera participantes da reserva existente. */
+  reservationId?: string;
 }
 
-export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedDate, initialParticipantIds = [], challengeId }: ModalNovaReservaProps) {
+export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedDate, initialParticipantIds = [], challengeId, reservationId }: ModalNovaReservaProps) {
+  const isEditMode = Boolean(reservationId?.trim());
   const [date, setDate] = useState('');
   const [hour, setHour] = useState('19');
   const [minute, setMinute] = useState('00');
@@ -135,6 +138,56 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
   }, [isOpen, initialParticipantIds.join(',')]);
 
   useEffect(() => {
+    if (!isOpen || !reservationId?.trim()) return;
+    const loadReservationForEdit = async () => {
+      try {
+        const resSnap = await getDoc(doc(db, 'reservations', reservationId.trim()));
+        if (!resSnap.exists()) return;
+        const resData = resSnap.data();
+        const startAt = resData?.startAt?.toDate?.();
+        if (!startAt) return;
+        const y = startAt.getFullYear();
+        const m = String(startAt.getMonth() + 1).padStart(2, '0');
+        const d = String(startAt.getDate()).padStart(2, '0');
+        setDate(`${y}-${m}-${d}`);
+        setHour(String(startAt.getHours()).padStart(2, '0'));
+        setMinute(String(startAt.getMinutes()).padStart(2, '0'));
+
+        const participantsSnap = await getDocs(
+          query(
+            collection(db, 'reservationParticipants'),
+            where('reservationId', '==', reservationId.trim())
+          )
+        );
+        const participantIds: string[] = [];
+        participantsSnap.docs.forEach((docSnap) => {
+          const uid = docSnap.data().userId;
+          if (uid && uid !== auth.currentUser?.uid) participantIds.push(uid);
+        });
+
+        const users: User[] = [];
+        for (const userId of participantIds) {
+          const snap = await getDoc(doc(db, 'users', userId));
+          if (snap.exists()) {
+            const data = snap.data();
+            users.push({
+              id: snap.id,
+              firstName: data?.firstName ?? '',
+              lastName: data?.lastName ?? '',
+              email: data?.email ?? '',
+              pictureUrl: data?.pictureUrl,
+            });
+          }
+        }
+        setSelectedParticipants(users);
+      } catch (e) {
+        console.error('Erro ao carregar reserva para edição:', e);
+      }
+    };
+    loadReservationForEdit();
+  }, [isOpen, reservationId]);
+
+  useEffect(() => {
     if (searchTerm.trim() === '') {
       setFilteredUsers(allUsers);
     } else {
@@ -181,6 +234,33 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
     }
     setLoading(true);
     setError('');
+
+    if (isEditMode && reservationId?.trim()) {
+      try {
+        const response = await fetch(`/api/reservations/${reservationId.trim()}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: uid,
+            participantIds: selectedParticipants.map((p) => p.id),
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setError(data.error ?? 'Erro ao atualizar participantes. Tente novamente.');
+          setLoading(false);
+          return;
+        }
+        onSuccess?.();
+        onClose();
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Erro ao atualizar participantes';
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     const hourNum = parseInt(hour, 10);
     const minuteNum = parseInt(minute, 10);
@@ -252,7 +332,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Header */}
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-900">Nova Reserva</h2>
+            <h2 className="text-xl font-bold text-gray-900">{isEditMode ? 'Editar participantes' : 'Nova Reserva'}</h2>
             <button
               type="button"
               onClick={onClose}
@@ -268,62 +348,66 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
             </div>
           )}
 
-          {/* Data */}
-          <div>
-            <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">
-              DATA
-            </label>
-            <input
-              type="date"
-              id="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
-              required
-            />
-            <p className="text-xs text-gray-600 mt-1">
-              {date && new Date(date + 'T00:00:00').toLocaleDateString('pt-BR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              })}
-            </p>
-          </div>
+          {!isEditMode && (
+            <>
+              {/* Data */}
+              <div>
+                <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">
+                  DATA
+                </label>
+                <input
+                  type="date"
+                  id="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
+                  required
+                />
+                <p className="text-xs text-gray-600 mt-1">
+                  {date && new Date(date + 'T00:00:00').toLocaleDateString('pt-BR', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                  })}
+                </p>
+              </div>
 
-          {/* Horário */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              HORÁRIO DE INÍCIO
-            </label>
-            <div className="flex items-center gap-2">
-              <select
-                value={hour}
-                onChange={(e) => setHour(e.target.value)}
-                className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
-              >
-                {Array.from({ length: 24 }, (_, i) => (
-                  <option key={i} value={i.toString().padStart(2, '0')}>
-                    {i.toString().padStart(2, '0')}
-                  </option>
-                ))}
-              </select>
-              <span className="text-gray-500 font-medium">:</span>
-              <select
-                value={minute}
-                onChange={(e) => setMinute(e.target.value)}
-                className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
-              >
-                {['00', '15', '30', '45'].map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <p className="text-xs text-gray-600 mt-2">
-              Término: <strong>{calculateEndTime()}</strong> (1h30)
-            </p>
-          </div>
+              {/* Horário */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  HORÁRIO DE INÍCIO
+                </label>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={hour}
+                    onChange={(e) => setHour(e.target.value)}
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i.toString().padStart(2, '0')}>
+                        {i.toString().padStart(2, '0')}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-gray-500 font-medium">:</span>
+                  <select
+                    value={minute}
+                    onChange={(e) => setMinute(e.target.value)}
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
+                  >
+                    {['00', '15', '30', '45'].map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="text-xs text-gray-600 mt-2">
+                  Término: <strong>{calculateEndTime()}</strong> (1h30)
+                </p>
+              </div>
+            </>
+          )}
 
           {/* Participantes */}
           <div>
@@ -465,10 +549,14 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
           {/* Submit */}
           <button
             type="submit"
-            disabled={loading || !date}
+            disabled={loading || (!isEditMode && !date)}
             className="w-full bg-emerald-600 text-white rounded-xl px-6 py-3 font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Confirmando...' : 'Confirmar Reserva'}
+            {loading
+              ? (isEditMode ? 'Salvando...' : 'Confirmando...')
+              : isEditMode
+                ? 'Salvar participantes'
+                : 'Confirmar Reserva'}
           </button>
         </form>
       </div>

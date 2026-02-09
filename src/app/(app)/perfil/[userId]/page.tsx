@@ -34,10 +34,12 @@ import {
   BarChart2,
   Trophy,
   ImagePlus,
+  Users,
 } from 'lucide-react';
 import Image from 'next/image';
 import Avatar from '@/components/layout/Avatar';
 import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
+import ModalNovaReserva from '@/components/reserva/ModalNovaReserva';
 import { User } from '@/lib/types';
 import {
   getUserStats,
@@ -75,6 +77,8 @@ export default function PerfilUserIdPage({ params }: PageProps) {
   const [linkingPassword, setLinkingPassword] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<ReservationListItem | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [showEditReservationModal, setShowEditReservationModal] = useState(false);
+  const [editingReservationId, setEditingReservationId] = useState<string | null>(null);
   const [showDesafioModal, setShowDesafioModal] = useState(false);
   const [desafioDate, setDesafioDate] = useState('');
   const [desafioHour, setDesafioHour] = useState('19');
@@ -747,7 +751,24 @@ export default function PerfilUserIdPage({ params }: PageProps) {
               item={selectedReservation}
               onClose={() => setSelectedReservation(null)}
               onCancel={handleCancelReservation}
+              onEditParticipants={(id) => {
+                setSelectedReservation(null);
+                setEditingReservationId(id);
+                setShowEditReservationModal(true);
+              }}
               cancelling={cancelling}
+            />
+          )}
+
+          {showEditReservationModal && (
+            <ModalNovaReserva
+              isOpen={showEditReservationModal}
+              onClose={() => {
+                setShowEditReservationModal(false);
+                setEditingReservationId(null);
+              }}
+              onSuccess={refreshStats}
+              reservationId={editingReservationId ?? undefined}
             />
           )}
         </>
@@ -919,11 +940,13 @@ function ReservationDetailModal({
   item,
   onClose,
   onCancel,
+  onEditParticipants,
   cancelling,
 }: {
   item: ReservationListItem;
   onClose: () => void;
   onCancel: (reservationId: string) => void;
+  onEditParticipants?: (reservationId: string) => void;
   cancelling: boolean;
 }) {
   const participantsLabel = item.participants.length > 0
@@ -951,24 +974,40 @@ function ReservationDetailModal({
         <p className="text-xs text-gray-500 mb-4">
           Ao cancelar, a reserva será removida para todos os participantes.
         </p>
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => onCancel(item.id)}
-            disabled={cancelling}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
-          >
-            <Trash2 className="w-4 h-4" />
-            {cancelling ? 'Cancelando...' : 'Cancelar reserva'}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={cancelling}
-            className="py-3 px-4 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-          >
-            Fechar
-          </button>
+        <div className="flex flex-col gap-3">
+          {onEditParticipants && (
+            <button
+              type="button"
+              onClick={() => {
+                onEditParticipants(item.id);
+                onClose();
+              }}
+              disabled={cancelling}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
+            >
+              <Users className="w-4 h-4" />
+              Editar participantes
+            </button>
+          )}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => onCancel(item.id)}
+              disabled={cancelling}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="w-4 h-4" />
+              {cancelling ? 'Cancelando...' : 'Cancelar reserva'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={cancelling}
+              className="py-3 px-4 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+            >
+              Fechar
+            </button>
+          </div>
         </div>
       </div>
     </div>
