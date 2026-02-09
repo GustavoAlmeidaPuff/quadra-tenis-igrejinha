@@ -114,8 +114,7 @@ export default function SocialPage() {
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
-  const [editingPostId, setEditingPostId] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState('');
+  const [editingPost, setEditingPost] = useState<{ postId: string; content: string } | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [searchableUsers, setSearchableUsers] = useState<SearchableUser[]>([]);
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
@@ -451,25 +450,23 @@ export default function SocialPage() {
   };
 
   const handleStartEdit = (post: PostItem) => {
-    setEditingPostId(post.id);
-    setEditContent(post.content);
+    const content = typeof post.content === 'string' ? post.content : '';
+    setEditingPost({ postId: post.id, content });
     setOpenMenuPostId(null);
   };
 
   const handleSaveEdit = async () => {
-    if (!editingPostId || !auth.currentUser) return;
+    if (!editingPost || !auth.currentUser) return;
     try {
-      await updateDoc(doc(db, 'posts', editingPostId), { content: editContent.trim() });
-      setEditingPostId(null);
-      setEditContent('');
+      await updateDoc(doc(db, 'posts', editingPost.postId), { content: editingPost.content.trim() });
+      setEditingPost(null);
     } catch (e) {
       console.error(e);
     }
   };
 
   const handleCancelEdit = () => {
-    setEditingPostId(null);
-    setEditContent('');
+    setEditingPost(null);
   };
 
   const handleLike = async (post: PostItem) => {
@@ -888,7 +885,8 @@ export default function SocialPage() {
         ) : (
           posts.map((post) => {
             const isMyPost = post.authorId === auth.currentUser?.uid;
-            const isEditing = editingPostId === post.id;
+            const isEditing = editingPost?.postId === post.id;
+            const postEditContent = isEditing ? (editingPost?.content ?? '') : '';
             const isDeleting = deletingPostId === post.id;
 
             return (
@@ -976,8 +974,10 @@ export default function SocialPage() {
                     {isEditing ? (
                       <div className="space-y-2 mb-3">
                         <MentionTextarea
-                          value={editContent}
-                          onChange={setEditContent}
+                          value={postEditContent}
+                          onChange={(value) =>
+                            setEditingPost((prev) => (prev ? { ...prev, content: value } : null))
+                          }
                           users={searchableUsers}
                           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none resize-none"
                           rows={3}
@@ -998,7 +998,7 @@ export default function SocialPage() {
                           <button
                             type="button"
                             onClick={handleSaveEdit}
-                            disabled={!editContent.trim()}
+                            disabled={!postEditContent.trim()}
                             className="text-sm font-medium text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
                           >
                             Salvar
