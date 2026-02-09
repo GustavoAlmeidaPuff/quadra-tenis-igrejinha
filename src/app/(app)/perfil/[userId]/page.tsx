@@ -750,9 +750,9 @@ export default function PerfilUserIdPage({ params }: PageProps) {
             <ReservationDetailModal
               item={selectedReservation}
               onClose={() => setSelectedReservation(null)}
-              canManage={isMe}
+              canManage={isMe && selectedReservation.createdById === currentUid}
               onCancel={handleCancelReservation}
-              onEditParticipants={isMe ? (id) => {
+              onEditParticipants={isMe && selectedReservation.createdById === currentUid ? (id) => {
                 setSelectedReservation(null);
                 setEditingReservationId(id);
                 setShowEditReservationModal(true);
@@ -947,7 +947,7 @@ function ReservationDetailModal({
 }: {
   item: ReservationListItem;
   onClose: () => void;
-  /** Só true quando é o próprio perfil — esconde cancelar/editar para visitantes */
+  /** true quando é o próprio perfil e o usuário é o criador da reserva (esconde cancelar/editar para visitantes e para participantes que não criaram a reserva, ex.: reserva vinda de desafio aceito por outro) */
   canManage?: boolean;
   onCancel: (reservationId: string) => void;
   onEditParticipants?: (reservationId: string) => void;

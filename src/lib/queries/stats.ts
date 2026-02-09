@@ -51,6 +51,8 @@ export interface ReservationListItem {
   dateLabel: string;
   time: string;
   participants: string[];
+  /** ID de quem criou a reserva — só o criador pode editar participantes. */
+  createdById: string;
 }
 
 export interface UserStats {
@@ -366,6 +368,7 @@ export async function getUserStats(userId: string): Promise<UserStats> {
       dateLabel,
       time: `${formatTime(r.startAt)} - ${formatTime(r.endAt)}`,
       participants,
+      createdById: r.createdById,
     });
     if (!nextReservation) {
       nextReservation = {
@@ -393,6 +396,7 @@ export async function getUserStats(userId: string): Promise<UserStats> {
       }),
       time: `${formatTime(r.startAt)} - ${formatTime(r.endAt)}`,
       participants,
+      createdById: r.createdById,
     });
   }
 
