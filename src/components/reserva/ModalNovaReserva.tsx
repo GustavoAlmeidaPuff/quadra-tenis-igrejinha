@@ -236,6 +236,27 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
     setError('');
 
     if (isEditMode && reservationId?.trim()) {
+      const hourNum = parseInt(hour, 10);
+      const minuteNum = parseInt(minute, 10);
+      if (Number.isNaN(hourNum) || Number.isNaN(minuteNum)) {
+        setError('Horário inválido. Selecione hora e minuto.');
+        setLoading(false);
+        return;
+      }
+      const dateStr = date.trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        setError('Data inválida. Selecione uma data.');
+        setLoading(false);
+        return;
+      }
+      const [y, mo, d] = dateStr.split('-').map(Number);
+      const startAtLocal = new Date(y, mo - 1, d, hourNum, minuteNum, 0, 0);
+      if (Number.isNaN(startAtLocal.getTime())) {
+        setError('Data/horário inválido.');
+        setLoading(false);
+        return;
+      }
+      const startAtISO = startAtLocal.toISOString();
       try {
         const response = await fetch(`/api/reservations/${reservationId.trim()}`, {
           method: 'PATCH',
@@ -243,18 +264,19 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
           body: JSON.stringify({
             userId: uid,
             participantIds: selectedParticipants.map((p) => p.id),
+            startAtISO,
           }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          setError(data.error ?? 'Erro ao atualizar participantes. Tente novamente.');
+          setError(data.error ?? 'Erro ao atualizar reserva. Tente novamente.');
           setLoading(false);
           return;
         }
         onSuccess?.();
         onClose();
       } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Erro ao atualizar participantes';
+        const message = error instanceof Error ? error.message : 'Erro ao atualizar reserva';
         setError(message);
       } finally {
         setLoading(false);
@@ -332,7 +354,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Header */}
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-900">{isEditMode ? 'Editar participantes' : 'Nova Reserva'}</h2>
+            <h2 className="text-xl font-bold text-gray-900">{isEditMode ? 'Editar reserva' : 'Nova Reserva'}</h2>
             <button
               type="button"
               onClick={onClose}
@@ -348,66 +370,61 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
             </div>
           )}
 
-          {!isEditMode && (
-            <>
-              {/* Data */}
-              <div>
-                <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">
-                  DATA
-                </label>
-                <input
-                  type="date"
-                  id="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
-                  required
-                />
-                <p className="text-xs text-gray-600 mt-1">
-                  {date && new Date(date + 'T00:00:00').toLocaleDateString('pt-BR', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                  })}
-                </p>
-              </div>
+          {/* Data e horário (nova reserva e edição) */}
+          <div>
+            <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">
+              DATA
+            </label>
+            <input
+              type="date"
+              id="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
+              required
+            />
+            <p className="text-xs text-gray-600 mt-1">
+              {date && new Date(date + 'T00:00:00').toLocaleDateString('pt-BR', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+              })}
+            </p>
+          </div>
 
-              {/* Horário */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  HORÁRIO DE INÍCIO
-                </label>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={hour}
-                    onChange={(e) => setHour(e.target.value)}
-                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
-                  >
-                    {Array.from({ length: 24 }, (_, i) => (
-                      <option key={i} value={i.toString().padStart(2, '0')}>
-                        {i.toString().padStart(2, '0')}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="text-gray-500 font-medium">:</span>
-                  <select
-                    value={minute}
-                    onChange={(e) => setMinute(e.target.value)}
-                    className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
-                  >
-                    {['00', '15', '30', '45'].map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <p className="text-xs text-gray-600 mt-2">
-                  Término: <strong>{calculateEndTime()}</strong> (1h30)
-                </p>
-              </div>
-            </>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              HORÁRIO DE INÍCIO
+            </label>
+            <div className="flex items-center gap-2">
+              <select
+                value={hour}
+                onChange={(e) => setHour(e.target.value)}
+                className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
+              >
+                {Array.from({ length: 24 }, (_, i) => (
+                  <option key={i} value={i.toString().padStart(2, '0')}>
+                    {i.toString().padStart(2, '0')}
+                  </option>
+                ))}
+              </select>
+              <span className="text-gray-500 font-medium">:</span>
+              <select
+                value={minute}
+                onChange={(e) => setMinute(e.target.value)}
+                className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
+              >
+                {['00', '15', '30', '45'].map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="text-xs text-gray-600 mt-2">
+              Término: <strong>{calculateEndTime()}</strong> (1h30)
+            </p>
+          </div>
 
           {/* Participantes */}
           <div>
@@ -549,7 +566,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
           {/* Submit */}
           <button
             type="submit"
-            disabled={loading || (!isEditMode && !date)}
+            disabled={loading || !date}
             className="w-full bg-emerald-600 text-white rounded-xl px-6 py-3 font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading

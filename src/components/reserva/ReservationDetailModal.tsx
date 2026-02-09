@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Trash2, Users } from 'lucide-react';
+import { X, Trash2, Pencil } from 'lucide-react';
 
 export interface ReservationDetailItem {
   id: string;
@@ -69,8 +69,8 @@ export default function ReservationDetailModal({
               disabled={cancelling}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
             >
-              <Users className="w-4 h-4" />
-              Editar participantes
+              <Pencil className="w-4 h-4" />
+              Editar reserva
             </button>
           )}
           <div className="flex gap-3">
