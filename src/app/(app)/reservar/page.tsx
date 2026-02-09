@@ -303,14 +303,29 @@ export default function ReservarPage() {
               return hour === firstSlotHour;
             });
 
+            const resStart = reservation ? reservation.startAt.toDate() : null;
+            const resEnd = reservation ? reservation.endAt.toDate() : null;
+            const slotStartMs = slotStart.getTime();
+            const durationMinutes = resStart && resEnd
+              ? (resEnd.getTime() - resStart.getTime()) / (1000 * 60)
+              : 0;
+            const startOffsetMinutes = resStart
+              ? (resStart.getTime() - slotStartMs) / (1000 * 60)
+              : 0;
+            const topPx = startOffsetMinutes * (ROW_HEIGHT_PX / 60);
+            const heightPx = durationMinutes * (ROW_HEIGHT_PX / 60);
+
             return (
               <div key={time} className="flex gap-3 h-16 border-b border-gray-100">
                 <div className="w-14 flex-shrink-0 text-xs text-gray-500 pt-1">
                   {time}
                 </div>
-                <div className="flex-1 relative">
+                <div className="flex-1 relative min-h-0 overflow-visible">
                   {reservation && (
-                    <div className="absolute inset-x-0 top-1 bottom-1">
+                    <div
+                      className="absolute inset-x-0 top-1 overflow-visible"
+                      style={{ top: Math.max(4, topPx), height: heightPx - 8, minHeight: 40 }}
+                    >
                       <div
                         className={`h-full rounded-r-lg p-2 shadow-sm border-l-4 ${
                           auth.currentUser && reservation.participantIds.includes(auth.currentUser.uid)
