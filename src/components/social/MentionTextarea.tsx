@@ -55,10 +55,7 @@ function valueToHtml(value: string): string {
     html += escapeHtml(value.slice(lastIndex, m.index));
     const name = m[1];
     const userId = m[2];
-    // Exibe só o primeiro nome no editor para evitar que o teclado do mobile
-    // sugira o sobrenome ao pressionar espaço (ex: "Maicon" em vez de "Maicon Berwian")
-    const displayName = name.split(/\s+/)[0] || name;
-    html += `<span data-mention="true" data-userid="${escapeHtml(userId)}" data-name="${escapeHtml(name)}" contenteditable="false" class="text-blue-600 font-medium">@${escapeHtml(displayName)}</span>`;
+    html += `<span data-mention="true" data-userid="${escapeHtml(userId)}" data-name="${escapeHtml(name)}" contenteditable="false" class="text-blue-600 font-medium">@${escapeHtml(name)}</span>\u200B`;
     lastIndex = m.index + m[0].length;
   }
   html += escapeHtml(value.slice(lastIndex));
