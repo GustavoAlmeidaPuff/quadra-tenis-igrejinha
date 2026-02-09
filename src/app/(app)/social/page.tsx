@@ -351,11 +351,13 @@ export default function SocialPage() {
           });
         }
 
-        const entries: RankingEntry[] = [];
-        for (const u of users) {
-          const hours = await getTotalHoursForUser(u.id);
-          entries.push({ ...u, hours });
-        }
+        const hoursResults = await Promise.all(
+          users.map((u) => getTotalHoursForUser(u.id))
+        );
+        const entries: RankingEntry[] = users.map((u, i) => ({
+          ...u,
+          hours: hoursResults[i],
+        }));
 
         entries.sort((a, b) => {
           if (b.hours !== a.hours) return b.hours - a.hours;

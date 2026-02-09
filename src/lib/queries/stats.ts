@@ -5,6 +5,7 @@ import {
   getDocs,
   getDoc,
   doc,
+  documentId,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { formatTime } from '@/lib/utils';
@@ -87,6 +88,8 @@ async function getReservationIdsForUser(userId: string): Promise<Set<string>> {
   return ids;
 }
 
+const FIRESTORE_IN_QUERY_LIMIT = 30;
+
 async function getReservationsByIds(
   reservationIds: string[]
 ): Promise<Array<{ id: string; startAt: Date; endAt: Date; createdById: string }>> {
@@ -99,18 +102,23 @@ async function getReservationsByIds(
     createdById: string;
   }> = [];
 
-  for (const id of reservationIds) {
-    const ref = doc(db, 'reservations', id);
-    const snap = await getDoc(ref);
-    if (snap.exists()) {
-      const d = snap.data();
+  // Busca em lotes (Firestore limita 'in' a 30 valores)
+  for (let i = 0; i < reservationIds.length; i += FIRESTORE_IN_QUERY_LIMIT) {
+    const batch = reservationIds.slice(i, i + FIRESTORE_IN_QUERY_LIMIT);
+    const q = query(
+      collection(db, 'reservations'),
+      where(documentId(), 'in', batch)
+    );
+    const snap = await getDocs(q);
+    snap.docs.forEach((d) => {
+      const data = d.data();
       reservations.push({
-        id: snap.id,
-        startAt: d.startAt?.toDate?.() ?? new Date(),
-        endAt: d.endAt?.toDate?.() ?? new Date(),
-        createdById: d.createdById,
+        id: d.id,
+        startAt: data.startAt?.toDate?.() ?? new Date(),
+        endAt: data.endAt?.toDate?.() ?? new Date(),
+        createdById: data.createdById ?? '',
       });
-    }
+    });
   }
 
   return reservations;
