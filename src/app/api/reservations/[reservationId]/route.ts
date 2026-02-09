@@ -4,9 +4,10 @@ import { sendParticipantAddedEmail } from '@/lib/brevo';
 
 const APP_BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://teniscreas.vercel.app';
 
-type RouteContext = { params: Promise<{ reservationId: string }> | { reservationId: string } };
-
-export async function PATCH(request: NextRequest, { params }: RouteContext) {
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ reservationId: string }> }
+) {
   if (!hasAdminCredentials) {
     return NextResponse.json(
       {
@@ -18,7 +19,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
 
   try {
-    const { reservationId } = typeof params.then === 'function' ? await params : params;
+    const { reservationId } = await context.params;
     if (!reservationId?.trim()) {
       return NextResponse.json(
         { error: 'ID da reserva é obrigatório' },
