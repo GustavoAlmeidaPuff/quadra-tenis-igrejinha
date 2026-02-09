@@ -47,13 +47,13 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     }
 
     const reservationData = reservationDoc.data();
-    const participantsSnapCheck = await adminDb
+    const participantsSnap = await adminDb
       .collection('reservationParticipants')
       .where('reservationId', '==', reservationId.trim())
-      .where('userId', '==', userId)
-      .limit(1)
       .get();
-    if (participantsSnapCheck.empty) {
+
+    const isParticipant = participantsSnap.docs.some((d) => d.data().userId === userId);
+    if (!isParticipant) {
       return NextResponse.json(
         { error: 'Apenas participantes da reserva podem editar.' },
         { status: 403 }
@@ -67,11 +67,6 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
         { status: 400 }
       );
     }
-
-    const participantsSnap = await adminDb
-      .collection('reservationParticipants')
-      .where('reservationId', '==', reservationId.trim())
-      .get();
 
     const batch = adminDb.batch();
     participantsSnap.docs.forEach((d) => batch.delete(d.ref));

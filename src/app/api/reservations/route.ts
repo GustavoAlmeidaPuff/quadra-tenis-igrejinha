@@ -211,13 +211,13 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Qualquer participante da reserva pode cancelar
-    const participantsSnap = await adminDb
+    const participants = await adminDb
       .collection('reservationParticipants')
       .where('reservationId', '==', reservationId)
-      .where('userId', '==', userId)
-      .limit(1)
       .get();
-    if (participantsSnap.empty) {
+
+    const isParticipant = participants.docs.some((d) => d.data().userId === userId);
+    if (!isParticipant) {
       return NextResponse.json(
         { error: 'Apenas participantes da reserva podem cancelá-la.' },
         { status: 403 }
@@ -234,12 +234,6 @@ export async function DELETE(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Deletar participantes (já temos participantsSnap acima, mas precisamos de todos para o batch)
-    const participants = await adminDb
-      .collection('reservationParticipants')
-      .where('reservationId', '==', reservationId)
-      .get();
 
     const batch = adminDb.batch();
     participants.docs.forEach((doc) => {
