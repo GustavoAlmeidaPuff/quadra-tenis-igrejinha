@@ -9,6 +9,20 @@ import { formatTime } from '@/lib/utils';
 import { Reservation } from '@/lib/types';
 import ModalNovaReserva from '@/components/reserva/ModalNovaReserva';
 import ReservationDetailModal from '@/components/reserva/ReservationDetailModal';
+import {
+  DndContext,
+  DragOverlay,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  DragStartEvent,
+  DragEndEvent,
+  DragOverEvent,
+  useDraggable,
+  useDroppable,
+} from '@dnd-kit/core';
 
 interface DayTab {
   date: Date;
@@ -48,6 +62,23 @@ export default function ReservarPage() {
   const [cancelling, setCancelling] = useState(false);
   const [showEditReservationModal, setShowEditReservationModal] = useState(false);
   const [editingReservationId, setEditingReservationId] = useState<string | null>(null);
+  const [activeReservation, setActiveReservation] = useState<ReservationWithParticipants | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [overSlotId, setOverSlotId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 5,
+      },
+    })
+  );
 
   useEffect(() => {
     const adicionarJogador = searchParams.get('adicionarJogador');
@@ -250,10 +281,137 @@ export default function ReservarPage() {
     return start.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'short' });
   }
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const reservationId = event.active.id as string;
+    const reservation = reservations.find((r) => r.id === reservationId);
+    if (reservation) {
+      setActiveReservation(reservation);
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    setOverSlotId(event.over?.id ? String(event.over.id) : null);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    setIsDragging(false);
+    setActiveReservation(null);
+    setOverSlotId(null);
+
+    const { active, over } = event;
+    if (!over || !activeReservation) return;
+
+    const reservationId = active.id as string;
+    const targetSlot = over.id as string; // formato: "slot-HH:MM"
+    
+    if (!targetSlot.startsWith('slot-')) return;
+
+    const [, timeStr] = targetSlot.split('-');
+    const [targetHour, targetMinute] = timeStr.split(':').map(Number);
+    
+    const newStartAt = new Date(selectedDate);
+    newStartAt.setHours(targetHour, targetMinute, 0, 0);
+    const newStartAtISO = newStartAt.toISOString();
+
+    if (!auth.currentUser) return;
+
+    try {
+      const currentUserId = auth.currentUser.uid;
+      const response = await fetch(`/api/reservations/${reservationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUserId,
+          participantIds: activeReservation.participantIds.filter(id => id !== currentUserId),
+          startAtISO: newStartAtISO,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        alert(data.error ?? 'Erro ao mover reserva. Tente novamente.');
+        return;
+      }
+
+      setReservationsRefreshKey((k) => k + 1);
+    } catch (error) {
+      console.error('Erro ao mover reserva:', error);
+      alert('Erro ao mover reserva. Verifique sua conexão.');
+    }
+  };
+
+  // Componente auxiliar para reserva arrastável
+  function DraggableReservationButton({ reservation, children, onClick }: {
+    reservation: ReservationWithParticipants;
+    children: React.ReactNode;
+    onClick?: () => void;
+  }) {
+    const isMine = auth.currentUser && reservation.participantIds.includes(auth.currentUser.uid);
+    const { attributes, listeners, setNodeRef, transform, isDragging: isThisDragging } = useDraggable({
+      id: reservation.id,
+      disabled: !isMine,
+    });
+
+    const style = transform ? {
+      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    } : undefined;
+
+    return (
+      <button
+        ref={setNodeRef}
+        type="button"
+        onClick={onClick}
+        {...(isMine ? { ...attributes, ...listeners } : {})}
+        style={style}
+        className={`absolute inset-0 w-full text-left rounded-r-lg p-2 shadow-sm border-l-4 transition-opacity flex flex-col justify-center ${
+          isMine ? 'cursor-move' : 'cursor-pointer'
+        } hover:opacity-90 ${
+          isThisDragging ? 'opacity-50' : ''
+        } ${
+          isMine
+            ? 'bg-gradient-to-r from-emerald-100 to-emerald-50 border-emerald-500'
+            : 'bg-gradient-to-r from-yellow-100 to-yellow-50 border-yellow-500'
+        }`}
+      >
+        {children}
+      </button>
+    );
+  }
+
+  // Componente auxiliar para slot de tempo (drop target)
+  function DroppableTimeSlot({ slotId, children }: {
+    slotId: string;
+    children: React.ReactNode;
+  }) {
+    const { setNodeRef, isOver } = useDroppable({
+      id: slotId,
+    });
+
+    return (
+      <div
+        ref={setNodeRef}
+        className={`flex-1 relative min-h-0 overflow-visible ${
+          isOver ? 'bg-emerald-50/50 ring-2 ring-emerald-300 ring-inset rounded-r-lg' : ''
+        }`}
+      >
+        {children}
+      </div>
+    );
+  }
+
   // Horários de 00:00 até 23:00 (inclui 00:00 para reservas que atravessam a meia-noite)
   const timeSlots: string[] = [];
   for (let hour = 0; hour <= 23; hour++) {
     timeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
+  }
+
+  // Slots de drop a cada 15 minutos para permitir drag and drop preciso
+  const dropSlots: string[] = [];
+  for (let hour = 0; hour < 24; hour++) {
+    for (const minute of ['00', '15', '30', '45']) {
+      dropSlots.push(`${hour.toString().padStart(2, '0')}:${minute}`);
+    }
   }
 
   const ROW_HEIGHT_PX = 64; // h-16
@@ -310,8 +468,15 @@ export default function ReservarPage() {
       </div>
 
       {/* Timeline */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 relative">
-        <div className="relative">
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex-1 overflow-y-auto px-4 py-4 relative">
+          <div className="relative">
           {nowLineTop !== null && (
             <div
               className="absolute left-0 right-0 flex items-center pointer-events-none z-10 -translate-y-1/2"
@@ -363,19 +528,60 @@ export default function ReservarPage() {
                   {time}
                 </div>
                 <div className="flex-1 relative min-h-0 overflow-visible">
+                  {/* Drop slots invisíveis a cada 15 minutos */}
+                  {['00', '15', '30', '45'].map((minute, idx) => {
+                    const slotTime = `${time.split(':')[0]}:${minute}`;
+                    const minuteOffset = idx * (ROW_HEIGHT_PX / 4);
+                    const slotId = `slot-${slotTime}`;
+                    const isTargetSlot = isDragging && overSlotId === slotId;
+                    
+                    return (
+                      <div
+                        key={slotTime}
+                        className="absolute inset-x-0"
+                        style={{ top: minuteOffset, height: ROW_HEIGHT_PX / 4 }}
+                      >
+                        <DroppableTimeSlot slotId={slotId}>
+                          {/* Outline/placeholder quando arrasta sobre este slot */}
+                          {isTargetSlot && activeReservation && (
+                            <div
+                              className="absolute inset-x-0 rounded-r-lg border-2 border-dashed border-emerald-500 bg-emerald-50/30 pointer-events-none"
+                              style={{ 
+                                top: 0,
+                                height: '96px', // 1h30 = 90min
+                              }}
+                            >
+                              <div className="p-2 flex flex-col justify-center h-full opacity-60">
+                                <div className="font-medium text-sm text-gray-700 truncate">
+                                  {activeReservation.participants.join(', ')}
+                                </div>
+                                <div className="text-xs text-gray-600">
+                                  {slotTime} – {(() => {
+                                    const [h, m] = slotTime.split(':').map(Number);
+                                    const endMinutes = h * 60 + m + 90;
+                                    const endH = Math.floor(endMinutes / 60) % 24;
+                                    const endM = endMinutes % 60;
+                                    return `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
+                                  })()}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          <div className="h-full" />
+                        </DroppableTimeSlot>
+                      </div>
+                    );
+                  })}
+
+                  {/* Reserva sobreposta aos drop slots */}
                   {reservation && (
                     <div
-                      className="absolute inset-x-0 top-1 overflow-visible"
-                      style={{ top: Math.max(4, topPx), height: heightPx - 8, minHeight: 40 }}
+                      className="absolute inset-x-0 overflow-visible pointer-events-auto z-10"
+                      style={{ top: Math.max(2, topPx), height: Math.max(40, heightPx - 4) }}
                     >
-                      <button
-                        type="button"
-                        onClick={() => setSelectedReservation(reservation)}
-                        className={`absolute inset-0 w-full text-left rounded-r-lg p-2 shadow-sm border-l-4 transition-opacity hover:opacity-90 cursor-pointer flex flex-col justify-center ${
-                          auth.currentUser && reservation.participantIds.includes(auth.currentUser.uid)
-                            ? 'bg-gradient-to-r from-emerald-100 to-emerald-50 border-emerald-500'
-                            : 'bg-gradient-to-r from-yellow-100 to-yellow-50 border-yellow-500'
-                        }`}
+                      <DraggableReservationButton
+                        reservation={reservation}
+                        onClick={() => !isDragging && setSelectedReservation(reservation)}
                       >
                         <div className="font-medium text-sm text-gray-900 truncate">
                           {reservation.participants.join(', ')}
@@ -383,15 +589,33 @@ export default function ReservarPage() {
                         <div className="text-xs text-gray-600">
                           {formatTime(reservation.startAt.toDate())} – {formatTime(reservation.endAt.toDate())}
                         </div>
-                      </button>
+                      </DraggableReservationButton>
                     </div>
                   )}
                 </div>
               </div>
             );
           })}
+          </div>
         </div>
-      </div>
+
+        {/* DragOverlay com sombra durante drag */}
+        <DragOverlay>
+          {activeReservation ? (
+            <div 
+              className="rounded-r-lg p-2 shadow-2xl border-l-4 bg-gradient-to-r from-emerald-100 to-emerald-50 border-emerald-500 w-[300px] flex flex-col justify-center"
+              style={{ height: '96px' }}
+            >
+              <div className="font-medium text-sm text-gray-900 truncate">
+                {activeReservation.participants.join(', ')}
+              </div>
+              <div className="text-xs text-gray-600">
+                {formatTime(activeReservation.startAt.toDate())} – {formatTime(activeReservation.endAt.toDate())}
+              </div>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {/* FAB */}
       <button
