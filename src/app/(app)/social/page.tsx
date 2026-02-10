@@ -135,6 +135,7 @@ export default function SocialPage() {
   const [commentMenuPosition, setCommentMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [editingComment, setEditingComment] = useState<{ key: string; content: string } | null>(null);
   const [deletingCommentKey, setDeletingCommentKey] = useState<string | null>(null);
+  const [likesModalPostId, setLikesModalPostId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -268,6 +269,40 @@ export default function SocialPage() {
       cancelled = true;
     };
   }, [posts, likedByProfilesCache]);
+
+  // Carrega todos os perfis quando o modal de curtidas é aberto
+  useEffect(() => {
+    if (!likesModalPostId) return;
+    const post = posts.find((p) => p.id === likesModalPostId);
+    if (!post) return;
+
+    const toFetch = post.likedByUserIds.filter((id) => !likedByProfilesCache[id]);
+    if (toFetch.length === 0) return;
+
+    let cancelled = false;
+    Promise.all(
+      toFetch.map(async (userId) => {
+        const snap = await getDoc(doc(db, 'users', userId));
+        if (!snap.exists()) return null;
+        const d = snap.data();
+        const firstName = d.firstName ?? '';
+        const lastName = d.lastName ?? '';
+        const name = `${firstName} ${lastName}`.trim() || 'Jogador';
+        const initials = `${(firstName || '?')[0]}${(lastName || '?')[0]}`.toUpperCase();
+        return { userId, profile: { pictureUrl: d.pictureUrl ?? null, name, initials } as LikedByProfile };
+      })
+    ).then((results) => {
+      if (cancelled) return;
+      const next: Record<string, LikedByProfile> = {};
+      results.forEach((r) => {
+        if (r) next[r.userId] = r.profile;
+      });
+      setLikedByProfilesCache((prev) => ({ ...prev, ...next }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [likesModalPostId, posts, likedByProfilesCache]);
 
   // Carrega comentários do post quando o usuário expande a seção
   useEffect(() => {
@@ -1068,14 +1103,18 @@ export default function SocialPage() {
                           </div>
                           {post.likeCount > 0 && (
                             <div className="flex items-center gap-2 flex-wrap">
-                              <div className="flex items-center -space-x-2" aria-hidden>
+                              <button
+                                type="button"
+                                onClick={() => setLikesModalPostId(post.id)}
+                                className="flex items-center -space-x-2 hover:opacity-80 transition-opacity cursor-pointer"
+                                aria-label="Ver quem curtiu"
+                              >
                                 {post.likedByUserIds.slice(0, 3).map((userId, i) => {
                                   const profile = likedByProfilesCache[userId];
                                   const z = i === 0 ? 'z-0' : i === 1 ? 'z-10' : 'z-20';
                                   return (
-                                    <Link
+                                    <div
                                       key={userId}
-                                      href={`/perfil/${userId}`}
                                       className={`relative flex-shrink-0 w-6 h-6 rounded-full border-2 border-white bg-gray-200 overflow-hidden ring-1 ring-gray-200 ${z}`}
                                       title={profile?.name}
                                     >
@@ -1094,11 +1133,15 @@ export default function SocialPage() {
                                           {profile?.initials ?? '?'}
                                         </span>
                                       )}
-                                    </Link>
+                                    </div>
                                   );
                                 })}
-                              </div>
-                              <p className="text-xs text-gray-500 min-w-0">
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setLikesModalPostId(post.id)}
+                                className="text-xs text-gray-500 min-w-0 hover:underline cursor-pointer text-left"
+                              >
                                 {(() => {
                                   const first = post.likedByUserIds.slice(0, 2).map((id) => likedByProfilesCache[id]?.name || 'Alguém');
                                   const rest = post.likeCount - first.length;
@@ -1107,7 +1150,7 @@ export default function SocialPage() {
                                   if (rest === 1) return `Curtido por ${first.join(', ')} e outra pessoa`;
                                   return `Curtido por ${first.join(', ')} e outras ${rest} pessoas`;
                                 })()}
-                              </p>
+                              </button>
                             </div>
                           )}
                         </div>
@@ -1374,6 +1417,78 @@ export default function SocialPage() {
                   {isDeleting ? 'Excluindo...' : 'Excluir'}
                 </button>
               </nav>
+            </>,
+            document.body
+          );
+        })()}
+      {likesModalPostId &&
+        (() => {
+          const post = posts.find((p) => p.id === likesModalPostId);
+          if (!post) return null;
+          return createPortal(
+            <>
+              <div
+                className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4"
+                onClick={() => setLikesModalPostId(null)}
+              >
+                <div
+                  className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      Curtidas ({post.likeCount})
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setLikesModalPostId(null)}
+                      className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                      aria-label="Fechar"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div className="overflow-y-auto flex-1">
+                    <ul className="divide-y divide-gray-100">
+                      {post.likedByUserIds.map((userId) => {
+                        const profile = likedByProfilesCache[userId];
+                        return (
+                          <li key={userId}>
+                            <Link
+                              href={`/perfil/${userId}`}
+                              onClick={() => setLikesModalPostId(null)}
+                              className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                            >
+                              {profile?.pictureUrl ? (
+                                <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
+                                  <Image
+                                    src={profile.pictureUrl}
+                                    alt={profile.name}
+                                    width={48}
+                                    height={48}
+                                    className="object-cover w-full h-full"
+                                  />
+                                </div>
+                              ) : (
+                                <div
+                                  className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 ${getRandomColor(userId)}`}
+                                >
+                                  {profile?.initials ?? '?'}
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-gray-900 truncate">
+                                  {profile?.name ?? 'Carregando...'}
+                                </p>
+                              </div>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </>,
             document.body
           );
