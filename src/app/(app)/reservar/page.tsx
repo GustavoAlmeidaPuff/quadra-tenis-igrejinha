@@ -65,6 +65,9 @@ export default function ReservarPage() {
   const [activeReservation, setActiveReservation] = useState<ReservationWithParticipants | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [overSlotId, setOverSlotId] = useState<string | null>(null);
+  const [movingReservationId, setMovingReservationId] = useState<string | null>(null);
+  const [optimisticReservations, setOptimisticReservations] = useState<ReservationWithParticipants[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -232,6 +235,14 @@ export default function ReservarPage() {
 
   const visibleDays = days.slice(scrollIndex, scrollIndex + 6);
 
+  // Mesclar reservas otimistas com as do servidor
+  const displayReservations = optimisticReservations.length > 0
+    ? [
+        ...reservations.filter(r => r.id !== movingReservationId),
+        ...optimisticReservations
+      ]
+    : reservations;
+
   const handlePrevious = () => {
     if (scrollIndex > 0) {
       setScrollIndex(scrollIndex - 1);
@@ -296,26 +307,47 @@ export default function ReservarPage() {
 
   const handleDragEnd = async (event: DragEndEvent) => {
     setIsDragging(false);
-    setActiveReservation(null);
     setOverSlotId(null);
 
     const { active, over } = event;
-    if (!over || !activeReservation) return;
+    if (!over || !activeReservation) {
+      setActiveReservation(null);
+      return;
+    }
 
     const reservationId = active.id as string;
-    const targetSlot = over.id as string; // formato: "slot-HH:MM"
+    const targetSlot = over.id as string;
     
-    if (!targetSlot.startsWith('slot-')) return;
+    if (!targetSlot.startsWith('slot-')) {
+      setActiveReservation(null);
+      return;
+    }
 
     const [, timeStr] = targetSlot.split('-');
     const [targetHour, targetMinute] = timeStr.split(':').map(Number);
     
     const newStartAt = new Date(selectedDate);
     newStartAt.setHours(targetHour, targetMinute, 0, 0);
+    const newEndAt = new Date(newStartAt.getTime() + 90 * 60 * 1000);
     const newStartAtISO = newStartAt.toISOString();
 
-    if (!auth.currentUser) return;
+    if (!auth.currentUser) {
+      setActiveReservation(null);
+      return;
+    }
 
+    // Update otimista: move imediatamente na UI
+    const updatedReservation: ReservationWithParticipants = {
+      ...activeReservation,
+      startAt: Timestamp.fromDate(newStartAt),
+      endAt: Timestamp.fromDate(newEndAt),
+    };
+
+    setOptimisticReservations([updatedReservation]);
+    setMovingReservationId(reservationId);
+    setActiveReservation(null);
+
+    // Validar e confirmar no servidor
     try {
       const currentUserId = auth.currentUser.uid;
       const response = await fetch(`/api/reservations/${reservationId}`, {
@@ -329,15 +361,38 @@ export default function ReservarPage() {
       });
 
       const data = await response.json().catch(() => ({}));
+      
       if (!response.ok) {
-        alert(data.error ?? 'Erro ao mover reserva. Tente novamente.');
+        // Reverter update otimista se falhar
+        setOptimisticReservations([]);
+        setMovingReservationId(null);
+        
+        const errorMsg = data.error ?? 'Erro ao mover reserva. Tente novamente.';
+        console.error('Erro ao mover reserva:', {
+          status: response.status,
+          error: errorMsg,
+          reservationId,
+          newTime: timeStr,
+        });
+        
+        setErrorMessage(errorMsg);
+        setTimeout(() => setErrorMessage(null), 5000); // limpar após 5s
+        setReservationsRefreshKey((k) => k + 1); // recarregar estado original
         return;
       }
 
+      // Sucesso: atualizar do servidor
+      setOptimisticReservations([]);
+      setMovingReservationId(null);
       setReservationsRefreshKey((k) => k + 1);
     } catch (error) {
+      // Reverter em caso de erro de rede
+      setOptimisticReservations([]);
+      setMovingReservationId(null);
       console.error('Erro ao mover reserva:', error);
-      alert('Erro ao mover reserva. Verifique sua conexão.');
+      setErrorMessage('Erro ao mover reserva. Verifique sua conexão.');
+      setTimeout(() => setErrorMessage(null), 5000);
+      setReservationsRefreshKey((k) => k + 1);
     }
   };
 
@@ -348,9 +403,10 @@ export default function ReservarPage() {
     onClick?: () => void;
   }) {
     const isMine = auth.currentUser && reservation.participantIds.includes(auth.currentUser.uid);
+    const isBeingMoved = movingReservationId === reservation.id;
     const { attributes, listeners, setNodeRef, transform, isDragging: isThisDragging } = useDraggable({
       id: reservation.id,
-      disabled: !isMine,
+      disabled: !isMine || isBeingMoved,
     });
 
     const style = transform ? {
@@ -362,12 +418,14 @@ export default function ReservarPage() {
         ref={setNodeRef}
         type="button"
         onClick={onClick}
-        {...(isMine ? { ...attributes, ...listeners } : {})}
+        {...(isMine && !isBeingMoved ? { ...attributes, ...listeners } : {})}
         style={style}
-        className={`absolute inset-0 w-full text-left rounded-r-lg p-2 shadow-sm border-l-4 transition-opacity flex flex-col justify-center ${
-          isMine ? 'cursor-move' : 'cursor-pointer'
+        className={`absolute inset-0 w-full text-left rounded-r-lg p-2 shadow-sm border-l-4 transition-all flex flex-col justify-center ${
+          isMine && !isBeingMoved ? 'cursor-move' : 'cursor-pointer'
         } hover:opacity-90 ${
           isThisDragging ? 'opacity-50' : ''
+        } ${
+          isBeingMoved ? 'animate-pulse ring-2 ring-emerald-400 ring-offset-1' : ''
         } ${
           isMine
             ? 'bg-gradient-to-r from-emerald-100 to-emerald-50 border-emerald-500'
@@ -426,6 +484,26 @@ export default function ReservarPage() {
 
   return (
     <div className="max-w-md mx-auto h-[calc(100vh-8rem)] flex flex-col">
+      {/* Toast de erro */}
+      {errorMessage && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-md w-[calc(100%-2rem)] animate-in slide-in-from-top-5 fade-in duration-300">
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-lg">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
+                <span className="text-white text-xs font-bold">!</span>
+              </div>
+              <p className="text-sm text-red-800 flex-1">{errorMessage}</p>
+              <button
+                onClick={() => setErrorMessage(null)}
+                className="text-red-400 hover:text-red-600 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Day Selector */}
       <div className="bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
@@ -499,7 +577,7 @@ export default function ReservarPage() {
             slotEnd.setHours(hour + 1, 0, 0, 0); // hora 23 → 24:00 = 00:00 do dia seguinte
 
             // Reserva aparece apenas no PRIMEIRO slot em que começa (evita duplicação em 02:00-03:30)
-            const reservation = reservations.find((res) => {
+            const reservation = displayReservations.find((res) => {
               const resStart = res.startAt.toDate();
               const resEnd = res.endAt.toDate();
               if (resStart >= slotEnd || resEnd <= slotStart) return false; // não sobrepõe
