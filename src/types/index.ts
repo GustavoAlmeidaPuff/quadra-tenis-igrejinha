@@ -43,6 +43,7 @@ export interface Challenge {
   createdAt: Timestamp;
   reservationId?: string;
   proposedStartAt?: Timestamp;
+  hiddenByUserIds?: string[];
 }
 
 export interface CourtStatus {

@@ -448,9 +448,36 @@ export default function NotificacoesPage() {
     const user = auth.currentUser;
     if (!user) return;
     try {
-      await updateDoc(doc(db, 'challenges', challengeId), {
-        hiddenByUserIds: arrayUnion(user.uid),
-      });
+      // Busca o desafio para verificar os usuários envolvidos
+      const challengeRef = doc(db, 'challenges', challengeId);
+      const challengeSnap = await getDoc(challengeRef);
+      
+      if (!challengeSnap.exists()) return;
+      
+      const challengeData = challengeSnap.data();
+      const fromUserId = challengeData.fromUserId;
+      const toUserId = challengeData.toUserId;
+      const hiddenByUserIds = (challengeData.hiddenByUserIds ?? []) as string[];
+      
+      // Adiciona o usuário atual ao array de usuários que ocultaram
+      const updatedHiddenByUserIds = [...hiddenByUserIds, user.uid];
+      
+      // Verifica se ambos os usuários envolvidos já ocultaram o desafio
+      const bothUsersHidden = 
+        updatedHiddenByUserIds.includes(fromUserId) && 
+        updatedHiddenByUserIds.includes(toUserId);
+      
+      if (bothUsersHidden) {
+        // Se ambos ocultaram, apaga definitivamente do banco de dados
+        await deleteDoc(challengeRef);
+      } else {
+        // Se apenas um ocultou, atualiza o array
+        await updateDoc(challengeRef, {
+          hiddenByUserIds: arrayUnion(user.uid),
+        });
+      }
+      
+      // Remove da lista local de notificações
       setNotifications((prev) =>
         prev.filter((n) => (n.type === 'received_challenge' || n.type === 'sent_challenge') && n.challenge.id !== challengeId)
       );
