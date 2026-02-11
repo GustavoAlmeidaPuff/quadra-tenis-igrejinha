@@ -51,14 +51,34 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Janela de 7 dias: hoje até hoje+6 (igual ao reservationValidator)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const toYMD = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const minDate = toYMD(today);
+  const maxDateObj = new Date(today);
+  maxDateObj.setDate(today.getDate() + 6);
+  const maxDate = toYMD(maxDateObj);
+
   useEffect(() => {
     if (selectedDate) {
       const y = selectedDate.getFullYear();
       const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
       const d = String(selectedDate.getDate()).padStart(2, '0');
-      setDate(`${y}-${m}-${d}`);
+      const dateStr = `${y}-${m}-${d}`;
+      // Manter dentro da janela de 7 dias
+      if (dateStr < minDate) setDate(minDate);
+      else if (dateStr > maxDate) setDate(maxDate);
+      else setDate(dateStr);
     }
-  }, [selectedDate]);
+  }, [selectedDate, minDate, maxDate]);
+
+  // Ao abrir o modal, garantir que a data esteja na janela de 7 dias (ex.: estado antigo)
+  useEffect(() => {
+    if (!isOpen || !date) return;
+    if (date < minDate || date > maxDate) setDate(minDate);
+  }, [isOpen, date, minDate, maxDate]);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -380,6 +400,8 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
               id="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
+              min={minDate}
+              max={maxDate}
               className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
               required
             />
