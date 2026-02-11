@@ -159,6 +159,8 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
 
   useEffect(() => {
     if (!isOpen || !reservationId?.trim()) return;
+    const toYMD = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const loadReservationForEdit = async () => {
       try {
         const resSnap = await getDoc(doc(db, 'reservations', reservationId.trim()));
@@ -169,7 +171,15 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
         const y = startAt.getFullYear();
         const m = String(startAt.getMonth() + 1).padStart(2, '0');
         const d = String(startAt.getDate()).padStart(2, '0');
-        setDate(`${y}-${m}-${d}`);
+        const dateStr = `${y}-${m}-${d}`;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const minD = toYMD(today);
+        const maxDateObj = new Date(today);
+        maxDateObj.setDate(today.getDate() + 6);
+        const maxD = toYMD(maxDateObj);
+        const clamped = dateStr < minD ? minD : dateStr > maxD ? maxD : dateStr;
+        setDate(clamped);
         setHour(String(startAt.getHours()).padStart(2, '0'));
         setMinute(String(startAt.getMinutes()).padStart(2, '0'));
 
