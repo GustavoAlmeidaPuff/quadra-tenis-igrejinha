@@ -5,6 +5,26 @@
 
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
+/** Fuso da quadra (Brasília). Datas chegam em UTC; emails devem mostrar horário local. */
+const TZ_BRAZIL = 'America/Sao_Paulo';
+
+function formatDateTimePtBR(date: Date): { dateStr: string; timeStr: string } {
+  const opts = { timeZone: TZ_BRAZIL } as const;
+  const dateStr = date.toLocaleDateString('pt-BR', {
+    ...opts,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const timeStr = date.toLocaleTimeString('pt-BR', {
+    ...opts,
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return { dateStr, timeStr };
+}
+
 export interface ChallengeEmailParams {
   toEmail: string;
   toName: string;
@@ -18,23 +38,14 @@ function buildChallengeEmailHtml(params: ChallengeEmailParams): string {
   const { fromUserName, fromUserPictureUrl, notificationsUrl, proposedStartAt } = params;
   const dateTimeHtml =
     proposedStartAt && !Number.isNaN(proposedStartAt.getTime())
-      ? `
+      ? (() => {
+          const { dateStr, timeStr } = formatDateTimePtBR(proposedStartAt);
+          return `
               <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;">${escapeHtml(
-                proposedStartAt
-                  .toLocaleDateString('pt-BR', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })
-                  .replace(/^\w/, (c) => c.toUpperCase())
+                dateStr.replace(/^\w/, (c) => c.toUpperCase())
               )}</p>
-              <p style="margin:0 0 24px;font-size:20px;font-weight:700;color:#059669;">às ${escapeHtml(
-                proposedStartAt.toLocaleTimeString('pt-BR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })
-              )}</p>`
+              <p style="margin:0 0 24px;font-size:20px;font-weight:700;color:#059669;">às ${escapeHtml(timeStr)}</p>`;
+        })()
       : '';
   const initial = escapeHtml(fromUserName.charAt(0).toUpperCase());
   const avatarHtml = fromUserPictureUrl
@@ -158,16 +169,7 @@ function buildReservationConfirmationEmailHtml(
   params: ReservationConfirmationEmailParams
 ): string {
   const { toName, startAt, reservarUrl } = params;
-  const dateStr = startAt.toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-  const timeStr = startAt.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const { dateStr, timeStr } = formatDateTimePtBR(startAt);
 
   return `
 <!DOCTYPE html>
@@ -276,16 +278,7 @@ export interface ParticipantAddedEmailParams {
 
 function buildParticipantAddedEmailHtml(params: ParticipantAddedEmailParams): string {
   const { creatorName, startAt, reservarUrl } = params;
-  const dateStr = startAt.toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-  const timeStr = startAt.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const { dateStr, timeStr } = formatDateTimePtBR(startAt);
 
   return `
 <!DOCTYPE html>
@@ -392,16 +385,7 @@ export interface ChallengeAcceptedEmailParams {
 
 function buildChallengeAcceptedEmailHtml(params: ChallengeAcceptedEmailParams): string {
   const { accepterName, startAt, reservarUrl } = params;
-  const dateStr = startAt.toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-  const timeStr = startAt.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const { dateStr, timeStr } = formatDateTimePtBR(startAt);
 
   return `
 <!DOCTYPE html>
