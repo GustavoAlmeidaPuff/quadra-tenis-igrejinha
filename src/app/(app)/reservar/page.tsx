@@ -228,6 +228,7 @@ export default function ReservarPage() {
         return;
       }
       setSelectedReservation(null);
+      setReservations((prev) => prev.filter((r) => r.id !== reservationId));
       setReservationsRefreshKey((k) => k + 1);
     } catch (e) {
       console.error(e);
