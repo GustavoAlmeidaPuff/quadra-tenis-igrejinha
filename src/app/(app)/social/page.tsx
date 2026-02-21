@@ -21,7 +21,7 @@ import {
   increment,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
-import { Search, MoreVertical, Pencil, Trash2, LayoutList, Trophy, Clock, ImagePlus, X, Heart, MessageCircle } from 'lucide-react';
+import { Search, MoreVertical, Pencil, Trash2, LayoutList, Trophy, Clock, ImagePlus, X, Heart, MessageCircle, Hand } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getRandomColor } from '@/lib/utils';
@@ -103,7 +103,7 @@ function formatTimeAgo(date: Date): string {
   return date.toLocaleDateString('pt-BR');
 }
 
-type Tab = 'feed' | 'ranking';
+type Tab = 'feed' | 'ranking' | 'quem-anima';
 
 export default function SocialPage() {
   const searchParams = useSearchParams();
@@ -665,6 +665,7 @@ export default function SocialPage() {
   const tabs = [
     { id: 'feed' as const, label: 'Feed', icon: LayoutList },
     { id: 'ranking' as const, label: 'Ranking', icon: Trophy },
+    { id: 'quem-anima' as const, label: 'Quem anima?', icon: Hand },
   ];
 
   return (
@@ -1314,6 +1315,13 @@ export default function SocialPage() {
         )}
       </div>
           </>
+        )}
+
+        {activeTab === 'quem-anima' && (
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center">
+            <Hand className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">Quem anima? — Em breve.</p>
+          </div>
         )}
 
         {activeTab === 'ranking' && (
