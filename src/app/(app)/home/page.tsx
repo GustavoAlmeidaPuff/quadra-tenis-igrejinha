@@ -134,21 +134,21 @@ export default function HomePage() {
           <TrendingUp className="w-5 h-5 text-emerald-600" />
           <h2 className="font-semibold text-gray-900">Frequência por dia</h2>
         </div>
-        <div className="flex items-end justify-between gap-2 h-32">
+        <div className="flex items-end justify-between gap-2 min-h-[140px]">
           {(stats?.dayStats ?? []).map((stat) => (
             <div
               key={stat.day}
               className="flex-1 flex flex-col items-center gap-2"
             >
-              <div className="w-full flex items-end justify-center flex-1">
-                {stat.count > 0 && (
-                  <div
-                    className="w-full bg-emerald-500 rounded-t-lg transition-all"
-                    style={{
-                      height: `${(stat.count / maxCount) * 100}%`,
-                    }}
-                  />
-                )}
+              <div className="w-full flex flex-col items-center justify-end h-[120px]">
+                <div
+                  className="w-full max-w-[52px] rounded-t-md bg-emerald-500 transition-all"
+                  style={{
+                    height: `${Math.round((stat.count / maxCount) * 120)}px`,
+                    minHeight: stat.count > 0 ? 8 : 0,
+                  }}
+                  aria-label={`${stat.day}: ${stat.count} jogos`}
+                />
               </div>
               <span className="text-xs font-medium text-gray-600">{stat.day}</span>
               <span className="text-xs text-gray-500">{stat.count}</span>
