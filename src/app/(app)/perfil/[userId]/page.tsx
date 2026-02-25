@@ -33,6 +33,11 @@ import {
   BarChart2,
   Trophy,
   ImagePlus,
+  Target,
+  Star,
+  Zap,
+  Flame,
+  Gem,
 } from 'lucide-react';
 import Image from 'next/image';
 import Avatar from '@/components/layout/Avatar';
@@ -45,10 +50,24 @@ import {
   type UserStats,
   type ReservationListItem,
 } from '@/lib/queries/stats';
+import { getPatenteAtual } from '@/lib/patentes';
 
 type PageProps = {
   params: Promise<{ userId: string }>;
 };
+
+const PATENTE_ICON_MAP = {
+  target: Target,
+  star: Star,
+  zap: Zap,
+  flame: Flame,
+  gem: Gem,
+} as const;
+
+function PatenteIcon({ icon, className }: { icon: string; className?: string }) {
+  const IconComp = PATENTE_ICON_MAP[icon as keyof typeof PATENTE_ICON_MAP] ?? Target;
+  return <IconComp className={className ?? 'w-5 h-5'} />;
+}
 
 export default function PerfilUserIdPage({ params }: PageProps) {
   const router = useRouter();
@@ -401,6 +420,8 @@ export default function PerfilUserIdPage({ params }: PageProps) {
 
   const upcoming = stats?.upcomingReservations ?? [];
   const past = stats?.pastReservations ?? [];
+  const totalHours = stats?.totalHours ?? 0;
+  const patente = getPatenteAtual(totalHours);
 
   return (
     <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-6">
@@ -554,6 +575,18 @@ export default function PerfilUserIdPage({ params }: PageProps) {
 
       {(!user.isPrivate || isMe) && (
         <>
+          {/* Classificação (patente) - acima das estatísticas */}
+          <div className="px-4 pt-6 pb-3">
+            <div className="bg-white rounded-2xl p-4 flex items-center gap-3 shadow-sm border border-gray-100">
+              <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0 text-primary-600">
+                <PatenteIcon icon={patente.icon} className="w-6 h-6" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs text-gray-500">Classificação</div>
+                <div className="text-lg font-bold text-gray-900 truncate">{patente.nome}</div>
+              </div>
+            </div>
+          </div>
           {/* Cards de estatísticas: Horas jogadas, Total reservas, Semanas consecutivas */}
           <div className="grid grid-cols-3 gap-3 px-4 py-6">
             <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100">
