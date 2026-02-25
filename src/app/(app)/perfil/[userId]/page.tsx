@@ -47,7 +47,9 @@ import ReservationDetailModal from '@/components/reserva/ReservationDetailModal'
 import { User } from '@/lib/types';
 import {
   getUserStats,
+  getProfileSummary,
   type UserStats,
+  type ProfileSummary,
   type ReservationListItem,
 } from '@/lib/queries/stats';
 import { getPatenteAtual } from '@/lib/patentes';
@@ -78,7 +80,9 @@ export default function PerfilUserIdPage({ params }: PageProps) {
 
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
+  const [summary, setSummary] = useState<ProfileSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
@@ -115,7 +119,15 @@ export default function PerfilUserIdPage({ params }: PageProps) {
     }
 
     const load = async () => {
-      const userSnap = await getDoc(doc(db, 'users', uid));
+      setLoading(true);
+      setStatsLoading(true);
+      setSummary(null);
+      setStats(null);
+      const [userSnap, summaryResult] = await Promise.all([
+        getDoc(doc(db, 'users', uid)),
+        getProfileSummary(uid).catch(() => null),
+      ]);
+
       if (!userSnap.exists()) {
         router.replace('/home');
         return;
@@ -123,6 +135,8 @@ export default function PerfilUserIdPage({ params }: PageProps) {
 
       const data = userSnap.data();
       const createdAt = data.createdAt;
+      const isPrivateOther = data.isPrivate && !isMe && uid !== auth.currentUser?.uid;
+
       setUser({
         id: userSnap.id,
         email: data.email,
@@ -136,11 +150,16 @@ export default function PerfilUserIdPage({ params }: PageProps) {
       setEditFirstName(data.firstName ?? '');
       setEditLastName(data.lastName ?? '');
 
-      if (data.isPrivate && !isMe && uid !== auth.currentUser?.uid) {
+      if (isPrivateOther) {
         setStats(null);
+        setSummary(null);
         setLoading(false);
+        setStatsLoading(false);
         return;
       }
+
+      if (summaryResult) setSummary(summaryResult);
+      setLoading(false);
 
       try {
         const userStats = await getUserStats(uid);
@@ -149,6 +168,7 @@ export default function PerfilUserIdPage({ params }: PageProps) {
         console.error(e);
         setStats(null);
       } finally {
+        setStatsLoading(false);
         setLoading(false);
       }
     };
@@ -418,10 +438,11 @@ export default function PerfilUserIdPage({ params }: PageProps) {
     user.id !== auth.currentUser.uid &&
     !user.isPrivate;
 
+  const effective = stats ?? summary;
+  const totalHours = effective?.totalHours ?? 0;
+  const patente = getPatenteAtual(totalHours);
   const upcoming = stats?.upcomingReservations ?? [];
   const past = stats?.pastReservations ?? [];
-  const totalHours = stats?.totalHours ?? 0;
-  const patente = getPatenteAtual(totalHours);
 
   return (
     <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-6">
@@ -612,19 +633,19 @@ export default function PerfilUserIdPage({ params }: PageProps) {
               <>
                 <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100">
                   <div className="text-2xl font-bold text-gray-900">
-                    {stats?.totalHours ?? 0}h
+                    {effective?.totalHours ?? 0}h
                   </div>
                   <div className="text-xs text-gray-500 mt-1">Horas jogadas</div>
                 </div>
                 <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100">
                   <div className="text-2xl font-bold text-gray-900">
-                    {stats?.totalReservations ?? 0}
+                    {effective?.totalReservations ?? 0}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">Total reservas</div>
                 </div>
                 <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100">
                   <div className="text-2xl font-bold text-gray-900">
-                    {stats?.weekStreak ?? 0}
+                    {effective?.weekStreak ?? 0}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">Semanas consecutivas</div>
                 </div>
@@ -759,7 +780,7 @@ export default function PerfilUserIdPage({ params }: PageProps) {
               <Calendar className="w-4 h-4 text-emerald-600" />
               Próximas reservas
             </h2>
-            {loading ? (
+            {statsLoading ? (
               <div className="space-y-2">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm animate-pulse">
@@ -794,7 +815,7 @@ export default function PerfilUserIdPage({ params }: PageProps) {
               <Clock className="w-4 h-4 text-emerald-600" />
               Histórico
             </h2>
-            {loading ? (
+            {statsLoading ? (
               <div className="space-y-2">
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm animate-pulse">

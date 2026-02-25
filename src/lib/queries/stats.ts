@@ -69,24 +69,24 @@ export interface UserStats {
 }
 
 async function getReservationIdsForUser(userId: string): Promise<Set<string>> {
+  const [asCreatorSnap, asParticipantSnap] = await Promise.all([
+    getDocs(
+      query(
+        collection(db, 'reservations'),
+        where('createdById', '==', userId)
+      )
+    ),
+    getDocs(
+      query(
+        collection(db, 'reservationParticipants'),
+        where('userId', '==', userId)
+      )
+    ),
+  ]);
+
   const ids = new Set<string>();
-
-  const asCreator = await getDocs(
-    query(
-      collection(db, 'reservations'),
-      where('createdById', '==', userId)
-    )
-  );
-  asCreator.docs.forEach((d) => ids.add(d.id));
-
-  const asParticipant = await getDocs(
-    query(
-      collection(db, 'reservationParticipants'),
-      where('userId', '==', userId)
-    )
-  );
-  asParticipant.docs.forEach((d) => ids.add(d.data().reservationId));
-
+  asCreatorSnap.docs.forEach((d) => ids.add(d.id));
+  asParticipantSnap.docs.forEach((d) => ids.add(d.data().reservationId));
   return ids;
 }
 
@@ -255,6 +255,28 @@ function computeWeekStreak(pastReservationDates: Date[]): number {
   return streak;
 }
 
+export interface ProfileSummary {
+  totalHours: number;
+  totalReservations: number;
+  weekStreak: number;
+}
+
+/** Resumo rápido para o perfil: só números, sem participantes nem usuários. */
+export async function getProfileSummary(userId: string): Promise<ProfileSummary> {
+  const reservationIds = await getReservationIdsForUser(userId);
+  const allReservations = await getReservationsByIds(Array.from(reservationIds));
+  const now = new Date();
+  const pastReservations = allReservations.filter((r) => r.endAt <= now);
+  const totalHours =
+    Math.round(pastReservations.length * RESERVATION_DURATION_HOURS * 10) / 10;
+  const weekStreak = computeWeekStreak(pastReservations.map((r) => r.startAt));
+  return {
+    totalHours,
+    totalReservations: allReservations.length,
+    weekStreak,
+  };
+}
+
 export async function getUserStats(userId: string): Promise<UserStats> {
   const reservationIds = await getReservationIdsForUser(userId);
   const allReservations = await getReservationsByIds(Array.from(reservationIds));
@@ -281,13 +303,17 @@ export async function getUserStats(userId: string): Promise<UserStats> {
   }));
 
   const partnerCounts = new Map<string, number>();
-  for (const res of pastReservations) {
-    const participantsSnap = await getDocs(
-      query(
-        collection(db, 'reservationParticipants'),
-        where('reservationId', '==', res.id)
+  const participantsSnaps = await Promise.all(
+    pastReservations.map((res) =>
+      getDocs(
+        query(
+          collection(db, 'reservationParticipants'),
+          where('reservationId', '==', res.id)
+        )
       )
-    );
+    )
+  );
+  for (const participantsSnap of participantsSnaps) {
     participantsSnap.docs.forEach((d) => {
       const data = d.data();
       const uid = data.userId;
@@ -301,10 +327,13 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
 
+  const topPartnerDocs = await Promise.all(
+    topPartnerIds.map(([uid]) => getDoc(doc(db, 'users', uid)))
+  );
   const topPartners: PartnerStat[] = [];
   for (let i = 0; i < topPartnerIds.length; i++) {
     const [uid, count] = topPartnerIds[i];
-    const userSnap = await getDoc(doc(db, 'users', uid));
+    const userSnap = topPartnerDocs[i];
     if (userSnap.exists()) {
       const u = userSnap.data();
       const firstName = u?.firstName ?? '';
@@ -348,10 +377,20 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     weeklyHours.push({ weekKey, weekLabel, hours });
   }
 
+  const pastSorted = [...pastReservations].sort(
+    (a, b) => b.startAt.getTime() - a.startAt.getTime()
+  );
+
+  const [futureParticipants, pastParticipants] = await Promise.all([
+    Promise.all(futureReservations.map((r) => getParticipantNamesForReservation(r.id))),
+    Promise.all(pastSorted.map((r) => getParticipantNamesForReservation(r.id))),
+  ]);
+
   let nextReservation: NextReservationInfo | null = null;
   const upcomingReservations: ReservationListItem[] = [];
-  for (const r of futureReservations) {
-    const participants = await getParticipantNamesForReservation(r.id);
+  for (let i = 0; i < futureReservations.length; i++) {
+    const r = futureReservations[i];
+    const participants = futureParticipants[i];
     const isTomorrow =
       r.startAt.getDate() === now.getDate() + 1 &&
       r.startAt.getMonth() === now.getMonth() &&
@@ -381,24 +420,17 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     }
   }
 
-  const pastReservationsList: ReservationListItem[] = [];
-  const pastSorted = [...pastReservations].sort(
-    (a, b) => b.startAt.getTime() - a.startAt.getTime()
-  );
-  for (const r of pastSorted) {
-    const participants = await getParticipantNamesForReservation(r.id);
-    pastReservationsList.push({
-      id: r.id,
-      dateLabel: r.startAt.toLocaleDateString('pt-BR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'short',
-      }),
-      time: `${formatTime(r.startAt)} - ${formatTime(r.endAt)}`,
-      participants,
-      createdById: r.createdById,
-    });
-  }
+  const pastReservationsList: ReservationListItem[] = pastSorted.map((r, i) => ({
+    id: r.id,
+    dateLabel: r.startAt.toLocaleDateString('pt-BR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'short',
+    }),
+    time: `${formatTime(r.startAt)} - ${formatTime(r.endAt)}`,
+    participants: pastParticipants[i],
+    createdById: r.createdById,
+  }));
 
   return {
     totalHours,
