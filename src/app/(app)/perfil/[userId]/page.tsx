@@ -664,7 +664,7 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                   className="w-full flex items-center justify-center gap-2 py-4 text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
                 >
                   <Trophy className="w-4 h-4 text-gray-900" />
-                  Nível de jogo
+                  Classificação
                 </Link>
               </div>
 

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { ArrowLeft, Target, Star, Zap, Flame, Gem } from 'lucide-react';
-import Image from 'next/image';
 import { getTotalHoursForUser } from '@/lib/queries/stats';
 import {
   getTodasPatentesComStatus,
@@ -87,7 +86,7 @@ export default function NivelPage({ params }: PageProps) {
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <h1 className="text-xl font-bold text-gray-900">Ranking de Patentes</h1>
+          <h1 className="text-xl font-bold text-gray-900">Classificação</h1>
         </div>
         <div className="px-4 py-12 flex flex-col items-center justify-center text-center">
           <div className="w-12 h-12 rounded-full bg-gray-200 animate-pulse mb-4" />
@@ -108,7 +107,7 @@ export default function NivelPage({ params }: PageProps) {
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <h1 className="text-xl font-bold text-gray-900">Ranking de Patentes</h1>
+          <h1 className="text-xl font-bold text-gray-900">Classificação</h1>
         </div>
         <div className="px-4 py-12 flex flex-col items-center justify-center text-center">
           <p className="text-sm text-red-600">{error}</p>
@@ -136,18 +135,7 @@ export default function NivelPage({ params }: PageProps) {
         >
           <ArrowLeft className="w-5 h-5" />
         </Link>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-            <Image
-              src="/images/logo.png"
-              alt=""
-              width={24}
-              height={24}
-              className="object-contain"
-            />
-          </div>
-          <h1 className="text-xl font-bold text-gray-900">Ranking de Patentes</h1>
-        </div>
+        <h1 className="text-xl font-bold text-gray-900">Classificação</h1>
       </div>
 
       <div className="px-4 py-8 flex flex-col items-center">
