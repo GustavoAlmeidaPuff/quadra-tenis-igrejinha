@@ -577,36 +577,59 @@ export default function PerfilUserIdPage({ params }: PageProps) {
         <>
           {/* Classificação (patente) - acima das estatísticas */}
           <div className="px-4 pt-6 pb-3">
-            <div className="bg-white rounded-2xl p-4 flex items-center gap-3 shadow-sm border border-gray-100">
-              <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0 text-primary-600">
-                <PatenteIcon icon={patente.icon} className="w-6 h-6" />
+            {loading ? (
+              <div className="bg-white rounded-2xl p-4 flex items-center gap-3 shadow-sm border border-gray-100">
+                <div className="w-12 h-12 rounded-full bg-gray-200 animate-pulse flex-shrink-0" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="h-3 w-16 rounded bg-gray-200 animate-pulse" />
+                  <div className="h-5 w-24 rounded bg-gray-200 animate-pulse" />
+                </div>
               </div>
-              <div className="min-w-0">
-                <div className="text-xs text-gray-500">Classificação</div>
-                <div className="text-lg font-bold text-gray-900 truncate">{patente.nome}</div>
+            ) : (
+              <div className="bg-white rounded-2xl p-4 flex items-center gap-3 shadow-sm border border-gray-100">
+                <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0 text-primary-600">
+                  <PatenteIcon icon={patente.icon} className="w-6 h-6" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs text-gray-500">Classificação</div>
+                  <div className="text-lg font-bold text-gray-900 truncate">{patente.nome}</div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
           {/* Cards de estatísticas: Horas jogadas, Total reservas, Semanas consecutivas */}
           <div className="grid grid-cols-3 gap-3 px-4 py-6">
-            <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100">
-              <div className="text-2xl font-bold text-gray-900">
-                {stats?.totalHours ?? 0}h
-              </div>
-              <div className="text-xs text-gray-500 mt-1">Horas jogadas</div>
-            </div>
-            <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100">
-              <div className="text-2xl font-bold text-gray-900">
-                {stats?.totalReservations ?? 0}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">Total reservas</div>
-            </div>
-            <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100">
-              <div className="text-2xl font-bold text-gray-900">
-                {stats?.weekStreak ?? 0}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">Semanas consecutivas</div>
-            </div>
+            {loading ? (
+              <>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100">
+                    <div className="h-8 w-12 mx-auto rounded bg-gray-200 animate-pulse" />
+                    <div className="h-3 w-14 mx-auto mt-2 rounded bg-gray-200 animate-pulse" />
+                  </div>
+                ))}
+              </>
+            ) : (
+              <>
+                <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {stats?.totalHours ?? 0}h
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">Horas jogadas</div>
+                </div>
+                <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {stats?.totalReservations ?? 0}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">Total reservas</div>
+                </div>
+                <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {stats?.weekStreak ?? 0}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">Semanas consecutivas</div>
+                </div>
+              </>
+            )}
           </div>
 
           {isMe && !editing && (
@@ -737,8 +760,17 @@ export default function PerfilUserIdPage({ params }: PageProps) {
               Próximas reservas
             </h2>
             {loading ? (
-              <div className="flex justify-center py-6">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-emerald-600 border-t-transparent" />
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm animate-pulse">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="h-4 w-24 rounded bg-gray-200" />
+                      <div className="h-4 w-12 rounded bg-gray-200" />
+                    </div>
+                    <div className="mt-2 h-3 w-full rounded bg-gray-200" />
+                    <div className="mt-1 h-3 w-3/4 rounded bg-gray-200" />
+                  </div>
+                ))}
               </div>
             ) : upcoming.length === 0 ? (
               <p className="text-sm text-gray-500 py-4">Nenhuma reserva próxima.</p>
@@ -763,8 +795,17 @@ export default function PerfilUserIdPage({ params }: PageProps) {
               Histórico
             </h2>
             {loading ? (
-              <div className="flex justify-center py-6">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-emerald-600 border-t-transparent" />
+              <div className="space-y-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm animate-pulse">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="h-4 w-24 rounded bg-gray-200" />
+                      <div className="h-4 w-12 rounded bg-gray-200" />
+                    </div>
+                    <div className="mt-2 h-3 w-full rounded bg-gray-200" />
+                    <div className="mt-1 h-3 w-3/4 rounded bg-gray-200" />
+                  </div>
+                ))}
               </div>
             ) : past.length === 0 ? (
               <p className="text-sm text-gray-500 py-4">Nenhuma reserva no histórico.</p>
