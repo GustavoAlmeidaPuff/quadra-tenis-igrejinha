@@ -218,7 +218,6 @@ export default function AdminPage() {
         )}
 
         {courts.map((court) => {
-          const isEditingThisName = courtId => editingName.hasOwnProperty(courtId);
           const editing = court.id in editingName;
 
           return (
