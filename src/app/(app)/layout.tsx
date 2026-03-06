@@ -6,6 +6,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
 import { User } from '@/lib/types';
+import { DEVELOPER_EMAIL } from '@/lib/courts';
 import Header from '@/components/layout/Header';
 import BottomNav from '@/components/layout/BottomNav';
 import WelcomePopup from '@/components/ui/WelcomePopup';
@@ -27,8 +28,14 @@ export default function AppLayout({
         return;
       }
 
+      // Conta de desenvolvedor nunca entra no app normal
+      if (firebaseUser.email === DEVELOPER_EMAIL) {
+        router.push('/admin');
+        return;
+      }
+
       const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-      
+
       if (!userDoc.exists() || !userDoc.data().firstName) {
         router.push('/onboarding');
         return;

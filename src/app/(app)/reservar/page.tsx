@@ -4,11 +4,14 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { collection, query, where, getDocs, getDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { formatTime } from '@/lib/utils';
 import { Reservation } from '@/lib/types';
 import ModalNovaReserva from '@/components/reserva/ModalNovaReserva';
 import ReservationDetailModal from '@/components/reserva/ReservationDetailModal';
+import { COURTS, CourtId, normalizeCourtId } from '@/lib/courts';
+import { canManageCourt } from '@/lib/permissions';
+import Link from 'next/link';
 
 interface DayTab {
   date: Date;
@@ -29,6 +32,7 @@ interface ReservationWithParticipants extends Reservation {
 export default function ReservarPage() {
   const searchParams = useSearchParams();
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedCourt, setSelectedCourt] = useState<CourtId>('quadra_1');
   const [days, setDays] = useState<DayTab[]>([]);
   const [reservations, setReservations] = useState<ReservationWithParticipants[]>([]);
   const [scrollIndex, setScrollIndex] = useState(0);
@@ -36,6 +40,7 @@ export default function ReservarPage() {
   const [reservationsRefreshKey, setReservationsRefreshKey] = useState(0);
   const [initialParticipantIds, setInitialParticipantIds] = useState<string[]>([]);
   const [now, setNow] = useState(() => new Date());
+  const [canManage, setCanManage] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 60_000);
@@ -48,6 +53,22 @@ export default function ReservarPage() {
   const [cancelling, setCancelling] = useState(false);
   const [showEditReservationModal, setShowEditReservationModal] = useState(false);
   const [editingReservationId, setEditingReservationId] = useState<string | null>(null);
+
+  // Verificar se o usuário atual pode gerenciar a quadra selecionada
+  useEffect(() => {
+    const checkPermission = async () => {
+      const user = auth.currentUser;
+      if (!user) { setCanManage(false); return; }
+
+      const courtSnap = await getDoc(doc(db, 'courts', selectedCourt));
+      const managerIds: string[] = courtSnap.exists()
+        ? (courtSnap.data().managerIds ?? [])
+        : [];
+
+      setCanManage(canManageCourt(user.uid, user.email, managerIds));
+    };
+    checkPermission();
+  }, [selectedCourt]);
 
   useEffect(() => {
     const adicionarJogador = searchParams.get('adicionarJogador');
@@ -65,15 +86,14 @@ export default function ReservarPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    // Gerar próximos 7 dias
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const daysArray: DayTab[] = [];
     for (let i = 0; i < 7; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      
+
       daysArray.push({
         date,
         dayName: date.toLocaleDateString('pt-BR', { weekday: 'short' }).toUpperCase(),
@@ -81,7 +101,7 @@ export default function ReservarPage() {
         isToday: i === 0,
       });
     }
-    
+
     setDays(daysArray);
     setSelectedDate(daysArray[0].date);
   }, []);
@@ -109,6 +129,8 @@ export default function ReservarPage() {
 
       for (const d of snapshot.docs) {
         const data = d.data();
+        if (normalizeCourtId(data.courtId) !== selectedCourt) continue;
+
         const resStart = data.startAt?.toDate?.()?.getTime?.() ?? 0;
         const resEnd = data.endAt?.toDate?.()?.getTime?.() ?? 0;
 
@@ -128,7 +150,7 @@ export default function ReservarPage() {
     };
 
     fetchDaysWithReservations();
-  }, [days, reservationsRefreshKey]);
+  }, [days, reservationsRefreshKey, selectedCourt]);
 
   useEffect(() => {
     if (!selectedDate) return;
@@ -145,7 +167,6 @@ export default function ReservarPage() {
       startOfNextDay.setDate(selectedDate.getDate() + 1);
       startOfNextDay.setHours(0, 0, 0, 0);
 
-      // Busca reservas que podem sobrepor o dia: início até 1 dia antes OU até 1 dia depois
       const q = query(
         collection(db, 'reservations'),
         where('startAt', '>=', Timestamp.fromDate(startOfPrevDay)),
@@ -160,9 +181,11 @@ export default function ReservarPage() {
 
       for (const d of snapshot.docs) {
         const data = d.data();
+
+        if (normalizeCourtId(data.courtId) !== selectedCourt) continue;
+
         const resStart = data.startAt?.toDate?.()?.getTime?.() ?? 0;
         const resEnd = data.endAt?.toDate?.()?.getTime?.() ?? 0;
-        // Só inclui se a reserva sobrepõe o dia selecionado
         if (resEnd <= dayStartMs || resStart > dayEndMs) continue;
 
         const participantsSnap = await getDocs(
@@ -188,6 +211,7 @@ export default function ReservarPage() {
           endAt: data.endAt,
           createdById: data.createdById,
           createdAt: data.createdAt,
+          courtId: data.courtId,
           participants: names.length > 0 ? names : ['—'],
           participantIds: ids,
         });
@@ -197,20 +221,16 @@ export default function ReservarPage() {
     };
 
     fetchReservations();
-  }, [selectedDate, reservationsRefreshKey]);
+  }, [selectedDate, reservationsRefreshKey, selectedCourt]);
 
   const visibleDays = days.slice(scrollIndex, scrollIndex + 6);
 
   const handlePrevious = () => {
-    if (scrollIndex > 0) {
-      setScrollIndex(scrollIndex - 1);
-    }
+    if (scrollIndex > 0) setScrollIndex(scrollIndex - 1);
   };
 
   const handleNext = () => {
-    if (scrollIndex < days.length - 6) {
-      setScrollIndex(scrollIndex + 1);
-    }
+    if (scrollIndex < days.length - 6) setScrollIndex(scrollIndex + 1);
   };
 
   const handleCancelReservation = async (reservationId: string) => {
@@ -251,13 +271,12 @@ export default function ReservarPage() {
     return start.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'short' });
   }
 
-  // Horários de 00:00 até 23:00 (inclui 00:00 para reservas que atravessam a meia-noite)
   const timeSlots: string[] = [];
   for (let hour = 0; hour <= 23; hour++) {
     timeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
   }
 
-  const ROW_HEIGHT_PX = 64; // h-16
+  const ROW_HEIGHT_PX = 64;
   const isSelectedToday =
     selectedDate && now && selectedDate.toDateString() === now.toDateString();
   const hoursFromMidnight =
@@ -269,6 +288,35 @@ export default function ReservarPage() {
 
   return (
     <div className="max-w-md mx-auto h-[calc(100vh-8rem)] flex flex-col">
+      {/* Court Tabs */}
+      <div className="bg-white border-b border-gray-200 px-4 pt-3 pb-0">
+        <div className="flex gap-1">
+          {COURTS.map((court) => (
+            <button
+              key={court.id}
+              onClick={() => setSelectedCourt(court.id)}
+              className={`flex-1 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors flex items-center justify-center gap-1.5 ${
+                selectedCourt === court.id
+                  ? 'border-emerald-600 text-emerald-700'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {court.name}
+              {selectedCourt === court.id && canManage && (
+                <Link
+                  href={`/quadra/${court.id}/gerenciar`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-0.5 rounded hover:bg-emerald-100 transition-colors"
+                  title="Configurações da quadra"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                </Link>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Day Selector */}
       <div className="bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
@@ -332,17 +380,16 @@ export default function ReservarPage() {
             const slotStart = new Date(selectedDate);
             slotStart.setHours(hour, 0, 0, 0);
             const slotEnd = new Date(selectedDate);
-            slotEnd.setHours(hour + 1, 0, 0, 0); // hora 23 → 24:00 = 00:00 do dia seguinte
+            slotEnd.setHours(hour + 1, 0, 0, 0);
 
-            // Reserva aparece apenas no PRIMEIRO slot em que começa (evita duplicação em 02:00-03:30)
             const reservation = reservations.find((res) => {
               const resStart = res.startAt.toDate();
               const resEnd = res.endAt.toDate();
-              if (resStart >= slotEnd || resEnd <= slotStart) return false; // não sobrepõe
+              if (resStart >= slotEnd || resEnd <= slotStart) return false;
               const dayStart = new Date(selectedDate);
               dayStart.setHours(0, 0, 0, 0);
               const firstSlotHour =
-                resStart >= dayStart ? resStart.getHours() : 0; // se começou ontem, mostra em 00:00
+                resStart >= dayStart ? resStart.getHours() : 0;
               return hour === firstSlotHour;
             });
 
@@ -415,10 +462,11 @@ export default function ReservarPage() {
           selectedDate={selectedDate}
           initialParticipantIds={initialParticipantIds}
           challengeId={challengeId ?? undefined}
+          initialCourtId={selectedCourt}
         />
       )}
 
-      {/* Modal detalhes da reserva (ao clicar na agenda) */}
+      {/* Modal detalhes da reserva */}
       {selectedReservation && (
         <ReservationDetailModal
           item={{
@@ -443,7 +491,7 @@ export default function ReservarPage() {
         />
       )}
 
-      {/* Modal editar participantes (mesmo form da nova reserva em modo edição) */}
+      {/* Modal editar participantes */}
       {showEditReservationModal && (
         <ModalNovaReserva
           isOpen={showEditReservationModal}

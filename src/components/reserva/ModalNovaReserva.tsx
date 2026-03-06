@@ -17,6 +17,8 @@ function isExternalAvatarUrl(url: string): boolean {
 import { collection, getDocs, getDoc, doc, query, where, updateDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
+import { COURTS, CourtId, normalizeCourtId, DEVELOPER_EMAIL } from '@/lib/courts';
+import { CourtReservationRules, DurationMode } from '@/lib/types';
 
 interface User {
   id: string;
@@ -36,13 +38,20 @@ interface ModalNovaReservaProps {
   challengeId?: string;
   /** Quando preenchido, abre em modo edição: só altera participantes da reserva existente. */
   reservationId?: string;
+  /** Quadra pré-selecionada ao criar nova reserva. */
+  initialCourtId?: CourtId;
 }
 
-export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedDate, initialParticipantIds = [], challengeId, reservationId }: ModalNovaReservaProps) {
+export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedDate, initialParticipantIds = [], challengeId, reservationId, initialCourtId }: ModalNovaReservaProps) {
   const isEditMode = Boolean(reservationId?.trim());
   const [date, setDate] = useState('');
   const [hour, setHour] = useState('19');
   const [minute, setMinute] = useState('00');
+  const [endHour, setEndHour] = useState('20');
+  const [endMinute, setEndMinute] = useState('30');
+  const [selectedCourtId, setSelectedCourtId] = useState<CourtId>(initialCourtId ?? 'quadra_1');
+  const [courtIdFromReservation, setCourtIdFromReservation] = useState<CourtId | null>(null);
+  const [courtRules, setCourtRules] = useState<CourtReservationRules | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -60,6 +69,34 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
   const maxDateObj = new Date(today);
   maxDateObj.setDate(today.getDate() + 6);
   const maxDate = toYMD(maxDateObj);
+
+  const durationMode: DurationMode = courtRules?.durationMode ?? 'fixed';
+  const fixedMinutes = courtRules?.fixedMinutes ?? 90;
+
+  // Fetch court rules whenever the active court changes
+  useEffect(() => {
+    if (!isOpen) return;
+    const courtToLoad = isEditMode ? null : selectedCourtId; // for edit mode we load in loadReservationForEdit
+    if (!courtToLoad) return;
+    getDoc(doc(db, 'courts', courtToLoad)).then((snap) => {
+      if (snap.exists()) {
+        setCourtRules((snap.data().reservationRules as CourtReservationRules) ?? null);
+      } else {
+        setCourtRules(null);
+      }
+    }).catch(() => setCourtRules(null));
+  }, [isOpen, selectedCourtId, isEditMode]);
+
+  // When mode is fixed, keep end time in sync with start time
+  useEffect(() => {
+    if (durationMode !== 'fixed') return;
+    const startMins = parseInt(hour) * 60 + parseInt(minute);
+    const endMins = startMins + fixedMinutes;
+    const eh = Math.floor(endMins / 60) % 24;
+    const em = endMins % 60;
+    setEndHour(eh.toString().padStart(2, '0'));
+    setEndMinute(em.toString().padStart(2, '0'));
+  }, [hour, minute, durationMode, fixedMinutes]);
 
   useEffect(() => {
     if (selectedDate) {
@@ -80,6 +117,13 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
     if (date < minDate || date > maxDate) setDate(minDate);
   }, [isOpen, date, minDate, maxDate]);
 
+  // Sincronizar court quando prop muda (ex.: usuário troca de aba no reservar page)
+  useEffect(() => {
+    if (!isEditMode && initialCourtId) {
+      setSelectedCourtId(initialCourtId);
+    }
+  }, [initialCourtId, isEditMode]);
+
   useEffect(() => {
     const fetchUsers = async () => {
       const user = auth.currentUser;
@@ -89,7 +133,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
       const currentUserDoc = await getDocs(
         query(collection(db, 'users'), where('__name__', '==', user.uid))
       );
-      
+
       if (!currentUserDoc.empty) {
         const userData = currentUserDoc.docs[0].data();
         setCurrentUser({
@@ -102,11 +146,9 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
       }
 
       // Buscar todos os usuários (exceto anônimos e o próprio usuário).
-      // Não filtramos por isAnonymous no Firestore para incluir contas email/senha
-      // cujo documento pode não ter o campo isAnonymous; filtramos anônimos em memória.
       const usersSnapshot = await getDocs(collection(db, 'users'));
       const users: User[] = usersSnapshot.docs
-        .filter((d) => d.id !== user.uid && d.data().isAnonymous !== true)
+        .filter((d) => d.id !== user.uid && d.data().isAnonymous !== true && d.data().email !== DEVELOPER_EMAIL)
         .map((d) => ({
           id: d.id,
           firstName: d.data().firstName,
@@ -114,7 +156,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
           email: d.data().email,
           pictureUrl: d.data().pictureUrl,
         }));
-      
+
       setAllUsers(users);
       setFilteredUsers(users);
     };
@@ -183,6 +225,23 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
         setHour(String(startAt.getHours()).padStart(2, '0'));
         setMinute(String(startAt.getMinutes()).padStart(2, '0'));
 
+        // Carregar courtId da reserva existente
+        const existingCourtId = normalizeCourtId(resData?.courtId);
+        setCourtIdFromReservation(existingCourtId);
+
+        // Carregar regras da quadra para edição
+        const courtSnap = await getDoc(doc(db, 'courts', existingCourtId));
+        if (courtSnap.exists()) {
+          setCourtRules((courtSnap.data().reservationRules as CourtReservationRules) ?? null);
+        }
+
+        // Pré-preencher horário de fim
+        const endAtDate = resData?.endAt?.toDate?.();
+        if (endAtDate) {
+          setEndHour(String(endAtDate.getHours()).padStart(2, '0'));
+          setEndMinute(String(endAtDate.getMinutes()).padStart(2, '0'));
+        }
+
         const participantsSnap = await getDocs(
           query(
             collection(db, 'reservationParticipants'),
@@ -243,16 +302,34 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
     setSelectedParticipants(selectedParticipants.filter((p) => p.id !== userId));
   };
 
+  const formatMins = (mins: number) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h === 0) return `${m}min`;
+    if (m === 0) return `${h}h`;
+    return `${h}h${m}`;
+  };
+
   const calculateEndTime = () => {
-    const startMinutes = parseInt(hour) * 60 + parseInt(minute);
-    const endMinutes = startMinutes + 90;
-    const endHour = Math.floor(endMinutes / 60);
-    const endMinute = endMinutes % 60;
-    if (endHour >= 24) {
-      const h = endHour % 24;
-      return `${h.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')} (dia seguinte)`;
+    if (durationMode === 'fixed') {
+      const startMinutes = parseInt(hour) * 60 + parseInt(minute);
+      const endMinutes = startMinutes + fixedMinutes;
+      const eh = Math.floor(endMinutes / 60);
+      const em = endMinutes % 60;
+      if (eh >= 24) {
+        return `${(eh % 24).toString().padStart(2, '0')}:${em.toString().padStart(2, '0')} (dia seguinte)`;
+      }
+      return `${eh.toString().padStart(2, '0')}:${em.toString().padStart(2, '0')}`;
     }
-    return `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
+    return `${endHour}:${endMinute}`;
+  };
+
+  const getEndAtISO = (dateStr: string): string | null => {
+    if (durationMode === 'fixed') return null; // API computes it
+    const [y, mo, d] = dateStr.split('-').map(Number);
+    const endDate = new Date(y, mo - 1, d, parseInt(endHour), parseInt(endMinute), 0, 0);
+    if (Number.isNaN(endDate.getTime())) return null;
+    return endDate.toISOString();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -288,6 +365,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
       }
       const startAtISO = startAtLocal.toISOString();
       try {
+        const endAtISO = getEndAtISO(dateStr);
         const response = await fetch(`/api/reservations/${reservationId.trim()}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -295,6 +373,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
             userId: uid,
             participantIds: selectedParticipants.map((p) => p.id),
             startAtISO,
+            ...(endAtISO ? { endAtISO } : {}),
           }),
         });
         const data = await response.json().catch(() => ({}));
@@ -336,14 +415,17 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
     const startAtISO = startAtLocal.toISOString();
 
     try {
+      const endAtISO = getEndAtISO(dateStr);
       const response = await fetch('/api/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: uid,
           startAtISO,
+          ...(endAtISO ? { endAtISO } : {}),
           participantIds: selectedParticipants.map((p) => p.id),
           challengeId: challengeId ?? undefined,
+          courtId: selectedCourtId,
         }),
       });
 
@@ -378,6 +460,10 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
 
   if (!isOpen) return null;
 
+  // Quadra a exibir: em edição usa a da reserva, em criação usa a selecionada
+  const displayCourtId = isEditMode ? (courtIdFromReservation ?? selectedCourtId) : selectedCourtId;
+  const displayCourtName = COURTS.find((c) => c.id === displayCourtId)?.name ?? 'Quadra 1';
+
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-end sm:items-center sm:justify-center">
       <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -399,6 +485,35 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
               <ErrorWithSupportLink message={error} roleAlert />
             </div>
           )}
+
+          {/* Seletor de quadra */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              QUADRA
+            </label>
+            {isEditMode ? (
+              <div className="px-4 py-3 rounded-xl bg-gray-100 text-sm text-gray-700 font-medium">
+                {displayCourtName}
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                {COURTS.map((court) => (
+                  <button
+                    key={court.id}
+                    type="button"
+                    onClick={() => setSelectedCourtId(court.id)}
+                    className={`flex-1 py-3 rounded-xl border-2 text-sm font-medium transition-colors ${
+                      selectedCourtId === court.id
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                        : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                    }`}
+                  >
+                    {court.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Data e horário (nova reserva e edição) */}
           <div>
@@ -453,10 +568,49 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
                 ))}
               </select>
             </div>
-            <p className="text-xs text-gray-600 mt-2">
-              Término: <strong>{calculateEndTime()}</strong> (1h30)
-            </p>
           </div>
+
+          {durationMode === 'fixed' ? (
+            <p className="text-xs text-gray-600 -mt-4">
+              Término: <strong>{calculateEndTime()}</strong> ({formatMins(fixedMinutes)})
+            </p>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                HORÁRIO DE TÉRMINO
+                {durationMode === 'max' && courtRules && (
+                  <span className="text-gray-400 font-normal ml-1">
+                    (máx. {formatMins(courtRules.maxMinutes)})
+                  </span>
+                )}
+              </label>
+              <div className="flex items-center gap-2">
+                <select
+                  value={endHour}
+                  onChange={(e) => setEndHour(e.target.value)}
+                  className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i.toString().padStart(2, '0')}>
+                      {i.toString().padStart(2, '0')}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-gray-500 font-medium">:</span>
+                <select
+                  value={endMinute}
+                  onChange={(e) => setEndMinute(e.target.value)}
+                  className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-emerald-500 focus:outline-none"
+                >
+                  {['00', '15', '30', '45'].map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
 
           {/* Participantes */}
           <div>
@@ -466,7 +620,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
             <p className="text-xs text-gray-500 mb-2">
               A reserva aparecerá no seu perfil e no de cada jogador adicionado.
             </p>
-            
+
             {/* Current User */}
             {currentUser && (
               <div className="flex items-center gap-3 bg-emerald-50 rounded-xl p-3 mb-3">

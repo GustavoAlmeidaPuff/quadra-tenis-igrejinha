@@ -5,7 +5,7 @@ import { collection, query, where, limit, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client';
 import { Bell, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
-import CourtStatus from './CourtStatus';
+import CourtsStatusSummary from './CourtsStatusSummary';
 import Avatar from './Avatar';
 import { User } from '@/lib/types';
 
@@ -58,7 +58,7 @@ export default function Header({ user }: HeaderProps) {
           <ChevronDown className="w-4 h-4 text-gray-600" strokeWidth={2.5} />
         </Link>
 
-        <CourtStatus showLabel={true} />
+        <CourtsStatusSummary />
 
         <Link
           href="/notificacoes"

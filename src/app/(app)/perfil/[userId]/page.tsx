@@ -66,6 +66,8 @@ const PATENTE_ICON_MAP = {
   gem: Gem,
 } as const;
 
+const HISTORY_PAGE_SIZE = 5;
+
 function PatenteIcon({ icon, className }: { icon: string; className?: string }) {
   const IconComp = PATENTE_ICON_MAP[icon as keyof typeof PATENTE_ICON_MAP] ?? Target;
   return <IconComp className={className ?? 'w-5 h-5'} />;
@@ -106,6 +108,7 @@ export default function PerfilUserIdPage({ params }: PageProps) {
   const [desafioHour, setDesafioHour] = useState('19');
   const [desafioMinute, setDesafioMinute] = useState('00');
   const [desafioError, setDesafioError] = useState('');
+  const [historyVisibleCount, setHistoryVisibleCount] = useState(5);
 
   useEffect(() => {
     const uid =
@@ -443,6 +446,8 @@ export default function PerfilUserIdPage({ params }: PageProps) {
   const patente = getPatenteAtual(totalHours);
   const upcoming = stats?.upcomingReservations ?? [];
   const past = stats?.pastReservations ?? [];
+  const pastVisible = past.slice(0, historyVisibleCount);
+  const hasMoreHistory = past.length > historyVisibleCount;
 
   return (
     <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-6">
@@ -832,9 +837,18 @@ export default function PerfilUserIdPage({ params }: PageProps) {
               <p className="text-sm text-gray-500 py-4">Nenhuma reserva no histórico.</p>
             ) : (
               <div className="space-y-2">
-                {past.map((res) => (
+                {pastVisible.map((res) => (
                   <ReservationCard key={res.id} item={res} />
                 ))}
+                {hasMoreHistory && (
+                  <button
+                    type="button"
+                    onClick={() => setHistoryVisibleCount((n) => n + HISTORY_PAGE_SIZE)}
+                    className="w-full py-3 mt-2 rounded-xl border-2 border-emerald-500 text-emerald-600 font-medium hover:bg-emerald-50 transition-colors"
+                  >
+                    Carregar mais
+                  </button>
+                )}
               </div>
             )}
           </div>

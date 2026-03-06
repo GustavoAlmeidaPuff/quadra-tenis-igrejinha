@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, hasAdminCredentials } from '@/lib/firebase/admin';
 import { Timestamp } from 'firebase-admin/firestore';
+import { normalizeCourtId } from '@/lib/courts';
 
 /**
  * Verifica se um horário está livre para reserva (sem conflitos).
- * GET /api/reservations/check-slot?startAtISO=...
+ * GET /api/reservations/check-slot?startAtISO=...&courtId=quadra_1
  */
 export async function GET(request: NextRequest) {
   if (!hasAdminCredentials) {
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const startAtISO = searchParams.get('startAtISO');
+    const courtId = normalizeCourtId(searchParams.get('courtId'));
 
     if (!startAtISO || typeof startAtISO !== 'string') {
       return NextResponse.json(
@@ -49,21 +51,26 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 2. Verificar conflitos
+    // 2. Verificar conflitos na mesma quadra (filtro in-memory para backward compat)
     const startTimestamp = Timestamp.fromDate(startAt);
     const endTimestamp = Timestamp.fromDate(endAt);
 
-    const conflictingReservations = await adminDb
+    const conflictingSnap = await adminDb
       .collection('reservations')
       .where('startAt', '<', endTimestamp)
       .where('endAt', '>', startTimestamp)
       .get();
 
-    if (!conflictingReservations.empty) {
-      const conflict = conflictingReservations.docs[0].data();
+    const conflictDoc = conflictingSnap.docs.find((doc) => {
+      const docCourtId = normalizeCourtId(doc.data().courtId);
+      return docCourtId === courtId;
+    });
+
+    if (conflictDoc) {
+      const conflict = conflictDoc.data();
       const participants = await adminDb
         .collection('reservationParticipants')
-        .where('reservationId', '==', conflictingReservations.docs[0].id)
+        .where('reservationId', '==', conflictDoc.id)
         .get();
 
       const participantNames: string[] = [];

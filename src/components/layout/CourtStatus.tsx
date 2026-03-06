@@ -4,8 +4,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { collection, query, where, orderBy, onSnapshot, getDocs, getDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { Reservation } from '@/lib/types';
+import { normalizeCourtId, getCourtName, CourtId } from '@/lib/courts';
 
 interface CourtStatusProps {
+  courtId?: CourtId;
   showLabel?: boolean;
   className?: string;
 }
@@ -32,7 +34,8 @@ async function fetchParticipantNames(reservationId: string): Promise<string[]> {
   return names.length > 0 ? names : ['—'];
 }
 
-export default function CourtStatus({ showLabel = true, className = '' }: CourtStatusProps) {
+export default function CourtStatus({ courtId = 'quadra_1', showLabel = true, className = '' }: CourtStatusProps) {
+  const normalizedCourtId = normalizeCourtId(courtId);
   const [isOccupied, setIsOccupied] = useState(false);
   const [participantNames, setParticipantNames] = useState<string[]>([]);
 
@@ -42,6 +45,10 @@ export default function CourtStatus({ showLabel = true, className = '' }: CourtS
 
     for (const d of docs) {
       const data = d.data();
+      // Filtro por quadra in-memory (backward compat: sem courtId = quadra_1)
+      const docCourtId = normalizeCourtId((data as Reservation & { courtId?: string }).courtId);
+      if (docCourtId !== normalizedCourtId) continue;
+
       const start = data.startAt.toMillis();
       const end = data.endAt.toMillis();
 
@@ -59,7 +66,7 @@ export default function CourtStatus({ showLabel = true, className = '' }: CourtS
       setIsOccupied(false);
       setParticipantNames([]);
     }
-  }, []);
+  }, [normalizedCourtId]);
 
   useEffect(() => {
     const now = new Date();
@@ -82,8 +89,6 @@ export default function CourtStatus({ showLabel = true, className = '' }: CourtS
       updateStatusFromSnapshot(docs);
     });
 
-    // Reavalia a cada 30s para atualizar automaticamente quando o período da reserva termina
-    // (o onSnapshot só dispara em mudanças no Firestore, não quando o relógio avança)
     const interval = setInterval(async () => {
       const snapshot = await getDocs(reservationsQuery);
       const docs = snapshot.docs.map((d) => ({ id: d.id, data: () => d.data() as Reservation }));
@@ -95,6 +100,8 @@ export default function CourtStatus({ showLabel = true, className = '' }: CourtS
       clearInterval(interval);
     };
   }, [updateStatusFromSnapshot]);
+
+  const courtName = getCourtName(normalizedCourtId);
 
   const displayText = isOccupied
     ? participantNames.length > 2
@@ -133,7 +140,7 @@ export default function CourtStatus({ showLabel = true, className = '' }: CourtS
               isOccupied ? 'text-red-600' : 'text-emerald-600'
             }`}
           >
-            {isOccupied ? 'Quadra ocupada' : 'Quadra livre'}
+            {isOccupied ? `${courtName} ocupada` : `${courtName} livre`}
           </span>
         )}
         {isOccupied && displayText ? (

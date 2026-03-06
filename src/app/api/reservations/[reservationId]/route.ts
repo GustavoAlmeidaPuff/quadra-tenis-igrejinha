@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Timestamp } from 'firebase-admin/firestore';
 import { adminDb, hasAdminCredentials } from '@/lib/firebase/admin';
 import { sendParticipantAddedEmail } from '@/lib/brevo';
+import { normalizeCourtId } from '@/lib/courts';
 
 const APP_BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://teniscreas.vercel.app';
 
@@ -29,7 +30,7 @@ export async function PATCH(
     }
 
     const body = await request.json().catch(() => ({}));
-    const { userId, participantIds, startAtISO } = body;
+    const { userId, participantIds, startAtISO, endAtISO } = body;
 
     if (!userId || typeof userId !== 'string' || !userId.trim()) {
       return NextResponse.json(
@@ -49,6 +50,8 @@ export async function PATCH(
     }
 
     const reservationData = reservationDoc.data();
+    const existingCourtId = normalizeCourtId(reservationData?.courtId);
+
     const participantsSnap = await adminDb
       .collection('reservationParticipants')
       .where('reservationId', '==', reservationId.trim())
@@ -79,7 +82,9 @@ export async function PATCH(
           { status: 400 }
         );
       }
-      const newEndAt = new Date(newStartAt.getTime() + 90 * 60 * 1000);
+      const newEndAt = (endAtISO && typeof endAtISO === 'string')
+        ? new Date(endAtISO)
+        : new Date(newStartAt.getTime() + 90 * 60 * 1000);
       const now = new Date();
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -100,12 +105,19 @@ export async function PATCH(
       }
       const startTs = Timestamp.fromDate(newStartAt);
       const endTs = Timestamp.fromDate(newEndAt);
+
+      // Busca conflitos e filtra pela mesma quadra em memória (backward compat)
       const conflicting = await adminDb
         .collection('reservations')
         .where('startAt', '<', endTs)
         .where('endAt', '>', startTs)
         .get();
-      const conflictDoc = conflicting.docs.find((doc) => doc.id !== reservationId.trim());
+
+      const conflictDoc = conflicting.docs.find((doc) => {
+        if (doc.id === reservationId.trim()) return false;
+        return normalizeCourtId(doc.data().courtId) === existingCourtId;
+      });
+
       if (conflictDoc) {
         const conflictData = conflictDoc.data();
         const participants = await adminDb

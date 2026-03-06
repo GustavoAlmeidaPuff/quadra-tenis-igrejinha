@@ -19,6 +19,8 @@ export interface Reservation {
   endAt: Timestamp;
   createdById: string;
   createdAt: Timestamp;
+  /** Quadra da reserva. Ausente em reservas antigas = 'quadra_1'. */
+  courtId?: string;
 }
 
 export interface ReservationParticipant {
@@ -46,6 +48,25 @@ export interface Challenge {
   createdAt: Timestamp;
   /** Preenchido quando o adversário marca horário (status vira accepted). */
   reservationId?: string;
+}
+
+export type DurationMode = 'fixed' | 'free' | 'max';
+
+export interface CourtReservationRules {
+  durationMode: DurationMode;
+  /** Duração exata em minutos (usado quando durationMode === 'fixed'). Padrão: 90. */
+  fixedMinutes: number;
+  /** Duração máxima em minutos (usado quando durationMode === 'max'). Padrão: 300. */
+  maxMinutes: number;
+}
+
+export interface Court {
+  id: string;
+  name: string;
+  managerIds: string[];
+  createdAt: Timestamp;
+  createdBy: string;
+  reservationRules?: CourtReservationRules;
 }
 
 export interface CourtStatus {

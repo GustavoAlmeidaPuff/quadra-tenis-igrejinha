@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, hasAdminCredentials } from '@/lib/firebase/admin';
 import { validateReservation } from '@/lib/validators/reservationValidator';
+import { normalizeCourtId } from '@/lib/courts';
 import { sendReservationConfirmationEmail, sendParticipantAddedEmail, sendChallengeAcceptedEmail } from '@/lib/brevo';
 import { Timestamp } from 'firebase-admin/firestore';
 
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { userId, startAtISO, date, hour, minute, participantIds, challengeId } = body;
+    const { userId, startAtISO, endAtISO, date, hour, minute, participantIds, challengeId, courtId } = body;
 
     if (!userId || typeof userId !== 'string' || !userId.trim()) {
       return NextResponse.json(
@@ -57,10 +58,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const endAt = new Date(startAt.getTime() + 90 * 60 * 1000);
+    let endAt: Date;
+    if (endAtISO && typeof endAtISO === 'string') {
+      endAt = new Date(endAtISO);
+      if (Number.isNaN(endAt.getTime()) || endAt <= startAt) {
+        return NextResponse.json(
+          { error: 'Horário de término inválido.' },
+          { status: 400 }
+        );
+      }
+    } else {
+      endAt = new Date(startAt.getTime() + 90 * 60 * 1000);
+    }
+
+    const normalizedCourtId = normalizeCourtId(typeof courtId === 'string' ? courtId : undefined);
 
     // Validar reserva
-    const validation = await validateReservation(userId, startAt, endAt);
+    const validation = await validateReservation(userId, startAt, endAt, normalizedCourtId);
 
     if (!validation.valid) {
       return NextResponse.json(
@@ -75,6 +89,7 @@ export async function POST(request: NextRequest) {
       endAt: Timestamp.fromDate(endAt),
       createdById: userId,
       createdAt: Timestamp.now(),
+      courtId: normalizedCourtId,
     });
 
     // Adicionar criador como participante
