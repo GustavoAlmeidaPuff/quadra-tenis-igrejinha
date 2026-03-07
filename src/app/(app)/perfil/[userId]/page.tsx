@@ -38,6 +38,7 @@ import {
   Zap,
   Flame,
   Gem,
+  GraduationCap,
 } from 'lucide-react';
 import Image from 'next/image';
 import Avatar from '@/components/layout/Avatar';
@@ -768,6 +769,13 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                   <Coffee className="w-4 h-4" />
                   Pague-me um café
                 </a>
+                <Link
+                  href="/aulas"
+                  className="w-full flex items-center justify-center gap-2 py-4 text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
+                >
+                  <GraduationCap className="w-4 h-4" />
+                  Aulas de tênis!
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center justify-center gap-2 py-4 text-red-600 hover:bg-red-50 transition-colors border-t border-gray-100"
