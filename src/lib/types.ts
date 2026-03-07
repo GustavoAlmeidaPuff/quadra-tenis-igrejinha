@@ -11,6 +11,8 @@ export interface User {
   createdAt: Timestamp;
   /** Quando true, o popup de boas-vindas não é mais exibido. */
   welcomePopupSeen?: boolean;
+  /** IDs das quadras que o usuário escolheu ao entrar no app. */
+  courtIds?: string[];
 }
 
 export interface Reservation {

@@ -58,7 +58,7 @@ export default function Header({ user }: HeaderProps) {
           <ChevronDown className="w-4 h-4 text-gray-600" strokeWidth={2.5} />
         </Link>
 
-        <CourtsStatusSummary />
+        <CourtsStatusSummary courtIds={user.courtIds ?? []} />
 
         <Link
           href="/notificacoes"

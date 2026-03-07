@@ -31,6 +31,7 @@ interface ReservationWithParticipants extends Reservation {
 
 export default function ReservarPage() {
   const searchParams = useSearchParams();
+  const [userCourtIds, setUserCourtIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedCourt, setSelectedCourt] = useState<CourtId>('quadra_1');
   const [days, setDays] = useState<DayTab[]>([]);
@@ -45,6 +46,18 @@ export default function ReservarPage() {
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+    getDoc(doc(db, 'users', user.uid)).then((snap) => {
+      if (!snap.exists()) return;
+      const ids: string[] = snap.data().courtIds ?? [];
+      setUserCourtIds(ids);
+      const available = COURTS.filter((c) => ids.includes(c.id));
+      if (available.length > 0) setSelectedCourt(available[0].id);
+    });
   }, []);
 
   const [challengeId, setChallengeId] = useState<string | null>(null);
@@ -291,7 +304,7 @@ export default function ReservarPage() {
       {/* Court Tabs */}
       <div className="bg-white border-b border-gray-200 px-4 pt-3 pb-0">
         <div className="flex gap-1">
-          {COURTS.map((court) => (
+          {COURTS.filter((court) => userCourtIds.includes(court.id)).map((court) => (
             <button
               key={court.id}
               onClick={() => setSelectedCourt(court.id)}
@@ -463,6 +476,7 @@ export default function ReservarPage() {
           initialParticipantIds={initialParticipantIds}
           challengeId={challengeId ?? undefined}
           initialCourtId={selectedCourt}
+          availableCourtIds={userCourtIds}
         />
       )}
 

@@ -40,9 +40,11 @@ interface ModalNovaReservaProps {
   reservationId?: string;
   /** Quadra pré-selecionada ao criar nova reserva. */
   initialCourtId?: CourtId;
+  /** Quadras disponíveis para seleção (das quais o usuário participa). */
+  availableCourtIds?: string[];
 }
 
-export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedDate, initialParticipantIds = [], challengeId, reservationId, initialCourtId }: ModalNovaReservaProps) {
+export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedDate, initialParticipantIds = [], challengeId, reservationId, initialCourtId, availableCourtIds }: ModalNovaReservaProps) {
   const isEditMode = Boolean(reservationId?.trim());
   const [date, setDate] = useState('');
   const [hour, setHour] = useState('19');
@@ -497,7 +499,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
               </div>
             ) : (
               <div className="flex gap-2">
-                {COURTS.map((court) => (
+                {COURTS.filter((c) => !availableCourtIds || availableCourtIds.includes(c.id)).map((court) => (
                   <button
                     key={court.id}
                     type="button"

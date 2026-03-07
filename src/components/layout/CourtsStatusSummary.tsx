@@ -87,9 +87,14 @@ function CourtRow({ court }: { court: CourtInfo }) {
   );
 }
 
-export default function CourtsStatusSummary() {
+interface Props {
+  courtIds: string[];
+}
+
+export default function CourtsStatusSummary({ courtIds }: Props) {
+  const visibleCourts = COURTS.filter((c) => courtIds.includes(c.id));
   const [courts, setCourts] = useState<CourtInfo[]>(
-    COURTS.map((c) => ({ courtId: c.id, name: c.name, isOccupied: false, participantNames: [] }))
+    visibleCourts.map((c) => ({ courtId: c.id, name: c.name, isOccupied: false, participantNames: [] }))
   );
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -97,8 +102,9 @@ export default function CourtsStatusSummary() {
   const updateFromDocs = useCallback(
     async (docs: { id: string; data: () => Reservation & { courtId?: string } }[]) => {
       const now = Date.now();
+      const activeCourts = COURTS.filter((c) => courtIds.includes(c.id));
       const updated: CourtInfo[] = await Promise.all(
-        COURTS.map(async (c) => {
+        activeCourts.map(async (c) => {
           const normalizedId = normalizeCourtId(c.id);
           let occupied = false;
           let names: string[] = [];
@@ -125,7 +131,7 @@ export default function CourtsStatusSummary() {
       );
       setCourts(updated);
     },
-    []
+    [courtIds]
   );
 
   useEffect(() => {
