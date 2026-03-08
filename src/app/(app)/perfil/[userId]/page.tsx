@@ -39,6 +39,7 @@ import {
   Flame,
   Gem,
   GraduationCap,
+  MapPin,
 } from 'lucide-react';
 import Image from 'next/image';
 import Avatar from '@/components/layout/Avatar';
@@ -748,6 +749,13 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                 >
                   <Trophy className="w-4 h-4 text-gray-900" />
                   Classificação
+                </Link>
+                <Link
+                  href={`/perfil/${userIdParam}/quadras`}
+                  className="w-full flex items-center justify-center gap-2 py-4 text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
+                >
+                  <MapPin className="w-4 h-4 text-gray-900" />
+                  Minhas quadras
                 </Link>
               </div>
 
