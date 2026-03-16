@@ -12,6 +12,13 @@ import { formatTime } from '@/lib/utils';
 
 const RESERVATION_DURATION_HOURS = 1.5;
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const DAY_NAMES_LONG = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+
+const MIN_PAST_RESERVATIONS_FOR_SUGGESTION = 5;
+const MIN_SLOT_OCCURRENCES = 3;
+const MIN_SLOT_PERCENT = 0.25;
+const FALLBACK_MIN_OCCURRENCES = 2;
+const FALLBACK_MIN_PERCENT = 0.2;
 
 export interface NextReservationInfo {
   id: string;
@@ -55,6 +62,15 @@ export interface ReservationListItem {
   createdById: string;
 }
 
+/** Sugestão de reserva baseada em padrão de uso (ex.: sempre quarta às 19h). */
+export interface ReservationSuggestion {
+  dayOfWeek: number;
+  hour: number;
+  label: string;
+  nextDateISO: string;
+  courtId?: string;
+}
+
 export interface UserStats {
   totalHours: number;
   totalReservations: number;
@@ -66,6 +82,7 @@ export interface UserStats {
   nextReservation: NextReservationInfo | null;
   upcomingReservations: ReservationListItem[];
   pastReservations: ReservationListItem[];
+  reservationSuggestion: ReservationSuggestion | null;
 }
 
 async function getReservationIdsForUser(userId: string): Promise<Set<string>> {
@@ -223,6 +240,75 @@ function getWeekKey(date: Date): string {
   const sunday = new Date(d);
   sunday.setDate(diff);
   return sunday.toISOString().slice(0, 10);
+}
+
+/** Agrupa reservas por (dia da semana, hora cheia) e retorna o slot que caracteriza padrão, ou null. */
+function detectReservationPattern(
+  pastReservations: Array<{ startAt: Date }>
+): { dayOfWeek: number; hour: number } | null {
+  if (pastReservations.length < MIN_PAST_RESERVATIONS_FOR_SUGGESTION) return null;
+
+  const slotCounts = new Map<string, number>();
+  for (const r of pastReservations) {
+    const day = r.startAt.getDay();
+    const hour = r.startAt.getHours();
+    const key = `${day}-${hour}`;
+    slotCounts.set(key, (slotCounts.get(key) ?? 0) + 1);
+  }
+
+  const total = pastReservations.length;
+  let best: { dayOfWeek: number; hour: number; count: number } | null = null;
+
+  for (const [key, count] of slotCounts) {
+    const [dayStr, hourStr] = key.split('-');
+    const dayOfWeek = parseInt(dayStr, 10);
+    const hour = parseInt(hourStr, 10);
+    const percent = count / total;
+    if (
+      count >= MIN_SLOT_OCCURRENCES &&
+      percent >= MIN_SLOT_PERCENT
+    ) {
+      if (!best || count > best.count) {
+        best = { dayOfWeek, hour, count };
+      }
+    }
+  }
+
+  if (best) return { dayOfWeek: best.dayOfWeek, hour: best.hour };
+
+  const sorted = Array.from(slotCounts.entries())
+    .map(([key, count]) => {
+      const [dayStr, hourStr] = key.split('-');
+      return {
+        dayOfWeek: parseInt(dayStr, 10),
+        hour: parseInt(hourStr, 10),
+        count,
+        percent: 0,
+      };
+    })
+    .map((e) => ({ ...e, percent: e.count / total }))
+    .filter((e) => e.count >= FALLBACK_MIN_OCCURRENCES && e.percent >= FALLBACK_MIN_PERCENT)
+    .sort((a, b) => b.count - a.count);
+
+  if (sorted.length === 0) return null;
+  return { dayOfWeek: sorted[0].dayOfWeek, hour: sorted[0].hour };
+}
+
+/** Retorna a próxima ocorrência de (dia da semana, hora) a partir de agora, em ISO date (YYYY-MM-DD). */
+function getNextOccurrenceISO(dayOfWeek: number, hour: number): string {
+  const now = new Date();
+  const d = new Date(now);
+  d.setHours(hour, 0, 0, 0);
+  let diff = dayOfWeek - d.getDay();
+  if (diff < 0) diff += 7;
+  if (diff === 0 && d.getTime() <= now.getTime()) diff = 7;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+
+function buildSuggestionLabel(dayOfWeek: number, hour: number): string {
+  const dayName = DAY_NAMES_LONG[dayOfWeek] ?? DAY_NAMES[dayOfWeek];
+  return `${dayName} às ${hour}h`;
 }
 
 function computeWeekStreak(pastReservationDates: Date[]): number {
@@ -432,6 +518,30 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     createdById: r.createdById,
   }));
 
+  let reservationSuggestion: ReservationSuggestion | null = null;
+  const pattern = detectReservationPattern(pastReservations);
+  if (pattern) {
+    const nextDateISO = getNextOccurrenceISO(pattern.dayOfWeek, pattern.hour);
+    const suggestedDate = new Date(nextDateISO);
+    suggestedDate.setHours(pattern.hour, 0, 0, 0);
+    const alreadyHasReservation = futureReservations.some((r) => {
+      const start = r.startAt;
+      return (
+        start.getDay() === pattern.dayOfWeek &&
+        start.getHours() === pattern.hour &&
+        start.toISOString().slice(0, 10) === nextDateISO
+      );
+    });
+    if (!alreadyHasReservation) {
+      reservationSuggestion = {
+        dayOfWeek: pattern.dayOfWeek,
+        hour: pattern.hour,
+        label: buildSuggestionLabel(pattern.dayOfWeek, pattern.hour),
+        nextDateISO,
+      };
+    }
+  }
+
   return {
     totalHours,
     totalReservations,
@@ -443,5 +553,6 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     nextReservation,
     upcomingReservations,
     pastReservations: pastReservationsList,
+    reservationSuggestion,
   };
 }
