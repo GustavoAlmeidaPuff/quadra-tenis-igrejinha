@@ -243,11 +243,11 @@ function getWeekKey(date: Date): string {
   return sunday.toISOString().slice(0, 10);
 }
 
-/** Agrupa reservas por (dia da semana, hora cheia) e retorna o slot que caracteriza padrão, ou null. */
-function detectReservationPattern(
+/** Agrupa reservas por (dia da semana, hora) e retorna até N padrões ordenados por frequência (mais forte primeiro). */
+function detectReservationPatterns(
   pastReservations: Array<{ startAt: Date }>
-): { dayOfWeek: number; hour: number } | null {
-  if (pastReservations.length < MIN_PAST_RESERVATIONS_FOR_SUGGESTION) return null;
+): Array<{ dayOfWeek: number; hour: number }> {
+  if (pastReservations.length < MIN_PAST_RESERVATIONS_FOR_SUGGESTION) return [];
 
   const slotCounts = new Map<string, number>();
   for (const r of pastReservations) {
@@ -258,41 +258,45 @@ function detectReservationPattern(
   }
 
   const total = pastReservations.length;
-  let best: { dayOfWeek: number; hour: number; count: number } | null = null;
-
-  for (const [key, count] of slotCounts) {
-    const [dayStr, hourStr] = key.split('-');
-    const dayOfWeek = parseInt(dayStr, 10);
-    const hour = parseInt(hourStr, 10);
-    const percent = count / total;
-    if (
-      count >= MIN_SLOT_OCCURRENCES &&
-      percent >= MIN_SLOT_PERCENT
-    ) {
-      if (!best || count > best.count) {
-        best = { dayOfWeek, hour, count };
-      }
-    }
-  }
-
-  if (best) return { dayOfWeek: best.dayOfWeek, hour: best.hour };
-
-  const sorted = Array.from(slotCounts.entries())
+  const primary = Array.from(slotCounts.entries())
     .map(([key, count]) => {
       const [dayStr, hourStr] = key.split('-');
       return {
         dayOfWeek: parseInt(dayStr, 10),
         hour: parseInt(hourStr, 10),
         count,
-        percent: 0,
+        percent: count / total,
       };
     })
-    .map((e) => ({ ...e, percent: e.count / total }))
-    .filter((e) => e.count >= FALLBACK_MIN_OCCURRENCES && e.percent >= FALLBACK_MIN_PERCENT)
-    .sort((a, b) => b.count - a.count);
+    .filter(
+      (e) =>
+        e.count >= MIN_SLOT_OCCURRENCES && e.percent >= MIN_SLOT_PERCENT
+    )
+    .sort((a, b) => b.count - a.count || a.dayOfWeek - b.dayOfWeek || a.hour - b.hour);
 
-  if (sorted.length === 0) return null;
-  return { dayOfWeek: sorted[0].dayOfWeek, hour: sorted[0].hour };
+  const list =
+    primary.length > 0
+      ? primary
+      : Array.from(slotCounts.entries())
+          .map(([key, count]) => {
+            const [dayStr, hourStr] = key.split('-');
+            return {
+              dayOfWeek: parseInt(dayStr, 10),
+              hour: parseInt(hourStr, 10),
+              count,
+              percent: count / total,
+            };
+          })
+          .filter(
+            (e) =>
+              e.count >= FALLBACK_MIN_OCCURRENCES &&
+              e.percent >= FALLBACK_MIN_PERCENT
+          )
+          .sort((a, b) => b.count - a.count || a.dayOfWeek - b.dayOfWeek || a.hour - b.hour);
+
+  return list
+    .slice(0, MAX_SUGGESTION_PATTERNS)
+    .map((e) => ({ dayOfWeek: e.dayOfWeek, hour: e.hour }));
 }
 
 /** Retorna a próxima ocorrência de (dia da semana, hora) a partir de agora, em ISO date (YYYY-MM-DD). */
@@ -520,8 +524,8 @@ export async function getUserStats(userId: string): Promise<UserStats> {
   }));
 
   let reservationSuggestion: ReservationSuggestion | null = null;
-  const pattern = detectReservationPattern(pastReservations);
-  if (pattern) {
+  const patterns = detectReservationPatterns(pastReservations);
+  for (const pattern of patterns) {
     const nextDateISO = getNextOccurrenceISO(pattern.dayOfWeek, pattern.hour);
     const alreadyHasReservation = futureReservations.some((r) =>
       r.startAt.toISOString().slice(0, 10) === nextDateISO
@@ -533,6 +537,7 @@ export async function getUserStats(userId: string): Promise<UserStats> {
         label: buildSuggestionLabel(pattern.dayOfWeek, pattern.hour),
         nextDateISO,
       };
+      break;
     }
   }
 
