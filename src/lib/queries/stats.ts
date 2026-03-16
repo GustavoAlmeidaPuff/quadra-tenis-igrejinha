@@ -19,6 +19,7 @@ const MIN_SLOT_OCCURRENCES = 3;
 const MIN_SLOT_PERCENT = 0.25;
 const FALLBACK_MIN_OCCURRENCES = 2;
 const FALLBACK_MIN_PERCENT = 0.2;
+const MAX_SUGGESTION_PATTERNS = 5;
 
 export interface NextReservationInfo {
   id: string;
