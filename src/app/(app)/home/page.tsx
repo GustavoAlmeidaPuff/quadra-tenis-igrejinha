@@ -52,6 +52,7 @@ export default function HomePage() {
           nextReservation: null,
           upcomingReservations: [],
           pastReservations: [],
+          reservationSuggestion: null,
         });
       } finally {
         setLoading(false);

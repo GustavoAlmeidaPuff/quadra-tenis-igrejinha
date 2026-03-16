@@ -522,8 +522,6 @@ export async function getUserStats(userId: string): Promise<UserStats> {
   const pattern = detectReservationPattern(pastReservations);
   if (pattern) {
     const nextDateISO = getNextOccurrenceISO(pattern.dayOfWeek, pattern.hour);
-    const suggestedDate = new Date(nextDateISO);
-    suggestedDate.setHours(pattern.hour, 0, 0, 0);
     const alreadyHasReservation = futureReservations.some((r) => {
       const start = r.startAt;
       return (
