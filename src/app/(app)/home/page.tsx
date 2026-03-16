@@ -106,6 +106,27 @@ export default function HomePage() {
         </div>
       )}
 
+      {stats?.reservationSuggestion && (
+        <div className="bg-white rounded-2xl p-5 border border-gray-200">
+          <div className="flex items-start justify-between mb-3">
+            <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">
+              Sugestão para você
+            </span>
+            <Sparkles className="w-4 h-4 text-amber-600" />
+          </div>
+          <p className="font-semibold text-gray-900 mb-3">
+            Reservar para {stats.reservationSuggestion.label}
+          </p>
+          <Link
+            href={`/reservar?date=${stats.reservationSuggestion.nextDateISO}&hour=${stats.reservationSuggestion.hour}`}
+            className="inline-flex items-center gap-2 text-sm font-medium text-emerald-600 hover:text-emerald-700"
+          >
+            Reservar
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white rounded-xl p-4 text-center border border-gray-200">
           <Clock className="w-5 h-5 text-emerald-600 mx-auto mb-2" />
