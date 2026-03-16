@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { collection, query, where, getDocs, getDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
@@ -66,6 +66,7 @@ export default function ReservarPage() {
   const [cancelling, setCancelling] = useState(false);
   const [showEditReservationModal, setShowEditReservationModal] = useState(false);
   const [editingReservationId, setEditingReservationId] = useState<string | null>(null);
+  const scrollToHourRef = useRef<number | null>(null);
 
   // Verificar se o usuário atual pode gerenciar a quadra selecionada
   useEffect(() => {
@@ -116,8 +117,39 @@ export default function ReservarPage() {
     }
 
     setDays(daysArray);
-    setSelectedDate(daysArray[0].date);
-  }, []);
+
+    const dateParam = searchParams.get('date');
+    const hourParam = searchParams.get('hour');
+    if (dateParam && hourParam !== null && hourParam !== '') {
+      const parsed = new Date(dateParam + 'T12:00:00');
+      if (!Number.isNaN(parsed.getTime())) {
+        const requestedKey = toDateKey(parsed);
+        const day = daysArray.find((d) => toDateKey(d.date) === requestedKey);
+        if (day) {
+          setSelectedDate(day.date);
+          const h = parseInt(hourParam, 10);
+          if (h >= 0 && h <= 23) scrollToHourRef.current = h;
+        } else {
+          setSelectedDate(daysArray[0].date);
+        }
+      } else {
+        setSelectedDate(daysArray[0].date);
+      }
+    } else {
+      setSelectedDate(daysArray[0].date);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const hour = scrollToHourRef.current;
+    if (hour === null) return;
+    const id = `slot-${hour}`;
+    const timer = setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      scrollToHourRef.current = null;
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [selectedDate]);
 
   useEffect(() => {
     if (days.length === 0) return;
@@ -419,7 +451,11 @@ export default function ReservarPage() {
             const heightPx = durationMinutes * (ROW_HEIGHT_PX / 60);
 
             return (
-              <div key={time} className="flex gap-3 h-16 border-b border-gray-100">
+              <div
+                key={time}
+                id={hour >= 0 && hour <= 23 ? `slot-${hour}` : undefined}
+                className="flex gap-3 h-16 border-b border-gray-100"
+              >
                 <div className="w-14 flex-shrink-0 text-xs text-gray-500 pt-1">
                   {time}
                 </div>
