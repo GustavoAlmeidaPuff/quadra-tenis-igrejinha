@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
-import { Clock, Calendar, TrendingUp } from 'lucide-react';
+import { Clock, Calendar, TrendingUp, Sparkles, ArrowRight } from 'lucide-react';
 import {
   getUserStats,
   type UserStats,
