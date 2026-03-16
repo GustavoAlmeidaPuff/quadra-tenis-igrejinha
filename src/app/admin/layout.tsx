@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase/client';
+import { auth, isFirebaseConfigured } from '@/lib/firebase/client';
 import { DEVELOPER_EMAIL } from '@/lib/courts';
 import { LogOut } from 'lucide-react';
 
@@ -18,6 +18,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   useEffect(() => {
+    if (!isFirebaseConfigured) {
+      router.push('/login');
+      return;
+    }
     const unsub = onAuthStateChanged(auth, (user) => {
       if (!user || user.email !== DEVELOPER_EMAIL) {
         router.push('/login');
@@ -27,7 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setLoading(false);
     });
     return () => unsub();
-  }, [router]);
+  }, [router, isFirebaseConfigured]);
 
   if (loading) {
     return (

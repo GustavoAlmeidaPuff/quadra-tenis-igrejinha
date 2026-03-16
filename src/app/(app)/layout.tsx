@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase/client';
+import { auth, db, isFirebaseConfigured } from '@/lib/firebase/client';
 import { User } from '@/lib/types';
 import { DEVELOPER_EMAIL } from '@/lib/courts';
 import Header from '@/components/layout/Header';
@@ -22,6 +22,10 @@ export default function AppLayout({
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
 
   useEffect(() => {
+    if (!isFirebaseConfigured) {
+      router.push('/login');
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!firebaseUser) {
         router.push('/login');
@@ -65,7 +69,7 @@ export default function AppLayout({
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, [router, isFirebaseConfigured]);
 
   if (loading) {
     return (
