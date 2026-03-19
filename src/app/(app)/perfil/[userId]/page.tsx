@@ -782,15 +782,27 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                 >
                   <span
                     aria-hidden="true"
-                    className="absolute -top-6 -left-6 h-16 w-16 rounded-full bg-emerald-300/35 blur-xl pointer-events-none"
+                    className="absolute -top-14 -left-16 h-28 w-52 rotate-[-10deg] blur-2xl pointer-events-none"
+                    style={{
+                      background:
+                        'radial-gradient(ellipse at center, rgba(52, 211, 153, 0.40) 0%, rgba(52, 211, 153, 0.18) 40%, rgba(52, 211, 153, 0) 72%)',
+                    }}
                   />
                   <span
                     aria-hidden="true"
-                    className="absolute -top-5 -right-7 h-14 w-14 rounded-full bg-amber-300/40 blur-xl pointer-events-none"
+                    className="absolute -top-10 -right-16 h-24 w-48 rotate-[12deg] blur-2xl pointer-events-none"
+                    style={{
+                      background:
+                        'radial-gradient(ellipse at center, rgba(250, 204, 21, 0.36) 0%, rgba(250, 204, 21, 0.16) 42%, rgba(250, 204, 21, 0) 74%)',
+                    }}
                   />
                   <span
                     aria-hidden="true"
-                    className="absolute -bottom-7 right-10 h-16 w-16 rounded-full bg-sky-300/35 blur-xl pointer-events-none"
+                    className="absolute -bottom-14 right-0 h-24 w-56 rotate-[-8deg] blur-2xl pointer-events-none"
+                    style={{
+                      background:
+                        'radial-gradient(ellipse at center, rgba(56, 189, 248, 0.34) 0%, rgba(56, 189, 248, 0.14) 40%, rgba(56, 189, 248, 0) 72%)',
+                    }}
                   />
                   <span
                     aria-hidden="true"
