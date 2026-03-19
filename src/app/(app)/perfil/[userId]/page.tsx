@@ -779,43 +779,9 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                 </a>
                 <Link
                   href="/aulas"
-                  className="w-full relative overflow-hidden flex items-center justify-center py-5 text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
+                  className="w-full flex items-center justify-center py-4 text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
                 >
-                  <span
-                    aria-hidden="true"
-                    className="absolute -top-14 -left-16 h-28 w-52 rotate-[-10deg] blur-2xl pointer-events-none"
-                    style={{
-                      background:
-                        'radial-gradient(ellipse at center, rgba(52, 211, 153, 0.40) 0%, rgba(52, 211, 153, 0.18) 40%, rgba(52, 211, 153, 0) 72%)',
-                    }}
-                  />
-                  <span
-                    aria-hidden="true"
-                    className="absolute -top-10 -right-16 h-24 w-48 rotate-[12deg] blur-2xl pointer-events-none"
-                    style={{
-                      background:
-                        'radial-gradient(ellipse at center, rgba(250, 204, 21, 0.36) 0%, rgba(250, 204, 21, 0.16) 42%, rgba(250, 204, 21, 0) 74%)',
-                    }}
-                  />
-                  <span
-                    aria-hidden="true"
-                    className="absolute -bottom-14 right-0 h-24 w-56 rotate-[-8deg] blur-2xl pointer-events-none"
-                    style={{
-                      background:
-                        'radial-gradient(ellipse at center, rgba(56, 189, 248, 0.34) 0%, rgba(56, 189, 248, 0.14) 40%, rgba(56, 189, 248, 0) 72%)',
-                    }}
-                  />
-                  <span
-                    aria-hidden="true"
-                    className="absolute inset-0 opacity-10 pointer-events-none"
-                    style={{
-                      backgroundImage: 'url("/images/rafitos%20lettering.png")',
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: '50% 55%',
-                      backgroundSize: '100% auto',
-                    }}
-                  />
-                  <span className="relative z-10 flex items-center gap-2">
+                  <span className="flex items-center gap-2">
                     <svg
                       aria-hidden="true"
                       className="w-4 h-4"
