@@ -38,7 +38,6 @@ import {
   Zap,
   Flame,
   Gem,
-  GraduationCap,
   MapPin,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -779,10 +778,19 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                 </a>
                 <Link
                   href="/aulas"
-                  className="w-full flex items-center justify-center gap-2 py-4 text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
+                  className="w-full relative overflow-hidden flex items-center justify-center py-4 text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
                 >
-                  <GraduationCap className="w-4 h-4" />
-                  Aulas de tênis!
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-0 opacity-10 pointer-events-none"
+                    style={{
+                      backgroundImage: 'url("/images/rafitos%20lettering.png")',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: '50% 55%',
+                      backgroundSize: '90% auto',
+                    }}
+                  />
+                  <span className="relative z-10">Evolua no Tênis com Rafitos</span>
                 </Link>
                 <button
                   onClick={handleLogout}
