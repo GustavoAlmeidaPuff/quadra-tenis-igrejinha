@@ -782,6 +782,18 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                 >
                   <span
                     aria-hidden="true"
+                    className="absolute -top-6 -left-6 h-16 w-16 rounded-full bg-emerald-300/35 blur-xl pointer-events-none"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-5 -right-7 h-14 w-14 rounded-full bg-amber-300/40 blur-xl pointer-events-none"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="absolute -bottom-7 right-10 h-16 w-16 rounded-full bg-sky-300/35 blur-xl pointer-events-none"
+                  />
+                  <span
+                    aria-hidden="true"
                     className="absolute inset-0 opacity-10 pointer-events-none"
                     style={{
                       backgroundImage: 'url("/images/rafitos%20lettering.png")',
