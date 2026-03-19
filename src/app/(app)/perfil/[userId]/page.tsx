@@ -39,6 +39,7 @@ import {
   Flame,
   Gem,
   MapPin,
+  Users,
 } from 'lucide-react';
 import Image from 'next/image';
 import Avatar from '@/components/layout/Avatar';
@@ -825,6 +826,13 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                     </svg>
                     Evolua no Tênis com Rafitos
                   </span>
+                </Link>
+                <Link
+                  href="/parceiros"
+                  className="w-full flex items-center justify-center gap-2 py-4 text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
+                >
+                  <Users className="w-4 h-4 text-gray-900" />
+                  Parceiros do Tênis
                 </Link>
                 <button
                   onClick={handleLogout}
