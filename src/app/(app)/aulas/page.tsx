@@ -1,5 +1,18 @@
 import Image from 'next/image';
 
+function RacketIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className ?? 'w-8 h-8'}
+    >
+      <path d="M1.573,19.665A3.269,3.269,0,0,1,2,15.484l.751-.75A11.648,11.648,0,0,0,5.938,7.689,7.556,7.556,0,0,1,20.983,9.067,1.018,1.018,0,0,1,19.918,10a1,1,0,0,1-.93-1.065A5.556,5.556,0,0,0,7.925,7.916,13.625,13.625,0,0,1,4.163,16.15l-.751.75A1.272,1.272,0,0,0,3.2,18.5a1.188,1.188,0,0,0,1.812.157l.712-.71a14.318,14.318,0,0,1,2.768-2.164A1,1,0,1,1,9.512,17.5a12.294,12.294,0,0,0-2.38,1.863l-.712.71a3.188,3.188,0,0,1-4.847-.4ZM23,17a6,6,0,1,1-6-6A6.006,6.006,0,0,1,23,17Zm-2,0a4,4,0,1,0-4,4A4,4,0,0,0,21,17Z" />
+    </svg>
+  );
+}
+
 export default function AulasPage() {
   return (
     <div className="min-h-screen bg-gray-50">
@@ -36,19 +49,19 @@ export default function AulasPage() {
           <section className="mt-7 rounded-3xl border border-gray-200 bg-white/70 p-6 text-left shadow-sm backdrop-blur">
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl border border-gray-200 bg-white/80 p-4">
-                <div className="text-4xl leading-none">🎾</div>
+                <RacketIcon className="w-10 h-10 text-emerald-600" />
                 <div className="mt-2 font-semibold text-gray-900">
                   Aulas para iniciantes e intermediários
                 </div>
               </div>
               <div className="rounded-2xl border border-gray-200 bg-white/80 p-4">
-                <div className="text-4xl leading-none">🎾</div>
+                <RacketIcon className="w-10 h-10 text-emerald-600" />
                 <div className="mt-2 font-semibold text-gray-900">
                   Treinos focados em técnica, tática e confiança em quadra
                 </div>
               </div>
               <div className="rounded-2xl border border-gray-200 bg-white/80 p-4">
-                <div className="text-4xl leading-none">🎾</div>
+                <RacketIcon className="w-10 h-10 text-emerald-600" />
                 <div className="mt-2 font-semibold text-gray-900">
                   Ambiente leve, mas com treino de verdade (sem enrolação 😅)
                 </div>
