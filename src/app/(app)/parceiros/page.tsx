@@ -21,9 +21,9 @@ export default function ParceirosPage() {
               <Handshake className="h-6 w-6 text-emerald-700" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Parceiros do Tênis</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Patrocinadores do Tênis</h1>
               <p className="text-sm text-gray-600">
-                Marcas, profissionais e serviços recomendados para quem joga em Igrejinha.
+                Empresas e marcas que apoiam o ecossistema do tênis em Igrejinha.
               </p>
             </div>
           </div>
@@ -32,30 +32,30 @@ export default function ParceirosPage() {
             <article className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
               <div className="flex items-center gap-2 text-gray-900 font-semibold">
                 <Trophy className="h-4 w-4 text-emerald-600" />
-                Treinadores parceiros
+                Cota Ouro
               </div>
               <p className="mt-1 text-sm text-gray-600">
-                Em breve: lista de professores e horários recomendados.
+                Marcas com presença principal nas ações e torneios da plataforma.
               </p>
             </article>
 
             <article className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
               <div className="flex items-center gap-2 text-gray-900 font-semibold">
                 <Wrench className="h-4 w-4 text-emerald-600" />
-                Serviços técnicos
+                Cota Prata
               </div>
               <p className="mt-1 text-sm text-gray-600">
-                Encordamento, manutenção e customização de raquetes.
+                Apoio técnico e operacional para manter o jogo acontecendo.
               </p>
             </article>
 
             <article className="rounded-2xl border border-gray-200 bg-gray-50 p-4 sm:col-span-2">
               <div className="flex items-center gap-2 text-gray-900 font-semibold">
                 <Store className="h-4 w-4 text-emerald-600" />
-                Lojas e acessórios
+                Cota Bronze
               </div>
               <p className="mt-1 text-sm text-gray-600">
-                Equipamentos e acessórios para treinar e competir melhor.
+                Negócios locais e marcas que fortalecem a comunidade do tênis.
               </p>
             </article>
           </div>
