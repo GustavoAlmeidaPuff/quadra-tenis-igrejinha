@@ -778,7 +778,7 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                 </a>
                 <Link
                   href="/aulas"
-                  className="w-full relative overflow-hidden flex items-center justify-center py-4 text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
+                  className="w-full relative overflow-hidden flex items-center justify-center py-5 text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
                 >
                   <span
                     aria-hidden="true"
@@ -787,7 +787,7 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                       backgroundImage: 'url("/images/rafitos%20lettering.png")',
                       backgroundRepeat: 'no-repeat',
                       backgroundPosition: '50% 55%',
-                      backgroundSize: '90% auto',
+                      backgroundSize: '100% auto',
                     }}
                   />
                   <span className="relative z-10">Evolua no Tênis com Rafitos</span>
