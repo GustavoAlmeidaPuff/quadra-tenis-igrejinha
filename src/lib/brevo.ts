@@ -32,10 +32,12 @@ export interface ChallengeEmailParams {
   fromUserPictureUrl: string | null;
   notificationsUrl: string;
   proposedStartAt?: Date | null;
+  courtName?: string;
 }
 
 function buildChallengeEmailHtml(params: ChallengeEmailParams): string {
-  const { fromUserName, fromUserPictureUrl, notificationsUrl, proposedStartAt } = params;
+  const { fromUserName, fromUserPictureUrl, notificationsUrl, proposedStartAt, courtName } = params;
+  const appLabel = `Quadra de Tênis${courtName ? ` - ${courtName}` : ''}`;
   const dateTimeHtml =
     proposedStartAt && !Number.isNaN(proposedStartAt.getTime())
       ? (() => {
@@ -67,7 +69,7 @@ function buildChallengeEmailHtml(params: ChallengeEmailParams): string {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:400px;background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -2px rgba(0,0,0,0.1);overflow:hidden;">
           <tr>
             <td style="padding:32px 24px;text-align:center;">
-              <p style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#059669;font-weight:600;">Quadra de Tênis - Igrejinha</p>
+              <p style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#059669;font-weight:600;">${escapeHtml(appLabel)}</p>
               <h1 style="margin:0 0 24px;font-size:22px;font-weight:700;color:#111827;">Você recebeu um desafio!</h1>
               ${avatarHtml}
               <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;">${escapeHtml(fromUserName)}</p>
@@ -78,7 +80,7 @@ function buildChallengeEmailHtml(params: ChallengeEmailParams): string {
           </tr>
           <tr>
             <td style="padding:16px 24px;background:#f9fafb;border-top:1px solid #e5e7eb;">
-              <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Este email foi enviado pelo app Quadra de Tênis - Igrejinha.</p>
+              <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Este email foi enviado pelo app ${escapeHtml(appLabel)}.</p>
             </td>
           </tr>
         </table>
@@ -124,7 +126,7 @@ export async function sendChallengeNotificationEmail(
   const body = {
     sender: {
       email: senderEmail,
-      name: senderName || 'Quadra Tênis - Igrejinha',
+      name: senderName || `Quadra Tênis${params.courtName ? ` - ${params.courtName}` : ''}`,
     },
     to: [{ email: params.toEmail, name: params.toName }],
     subject: `${params.fromUserName} te desafiou! 🎾`,
@@ -163,12 +165,14 @@ export interface ReservationConfirmationEmailParams {
   toName: string;
   startAt: Date;
   reservarUrl: string;
+  courtName: string;
 }
 
 function buildReservationConfirmationEmailHtml(
   params: ReservationConfirmationEmailParams
 ): string {
-  const { toName, startAt, reservarUrl } = params;
+  const { toName, startAt, reservarUrl, courtName } = params;
+  const appLabel = `Quadra de Tênis - ${courtName}`;
   const { dateStr, timeStr } = formatDateTimePtBR(startAt);
 
   return `
@@ -186,7 +190,7 @@ function buildReservationConfirmationEmailHtml(
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:400px;background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -2px rgba(0,0,0,0.1);overflow:hidden;">
           <tr>
             <td style="padding:32px 24px;text-align:center;">
-              <p style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#059669;font-weight:600;">Quadra de Tênis - Igrejinha</p>
+              <p style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#059669;font-weight:600;">${escapeHtml(appLabel)}</p>
               <h1 style="margin:0 0 24px;font-size:22px;font-weight:700;color:#111827;">Deu boa! 🎉<br> Seu horário está marcado! 🎾</h1>
               <div style="width:80px;height:80px;border-radius:50%;background:#059669;color:#fff;font-size:32px;line-height:80px;text-align:center;margin:0 auto 20px;">✓</div>
               <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;">${escapeHtml(
@@ -199,7 +203,7 @@ function buildReservationConfirmationEmailHtml(
           </tr>
           <tr>
             <td style="padding:16px 24px;background:#f9fafb;border-top:1px solid #e5e7eb;">
-              <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Este email foi enviado pelo app Quadra de Tênis - Igrejinha.</p>
+              <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Este email foi enviado pelo app ${escapeHtml(appLabel)}.</p>
             </td>
           </tr>
         </table>
@@ -234,7 +238,7 @@ export async function sendReservationConfirmationEmail(
   const body = {
     sender: {
       email: senderEmail,
-      name: senderName || 'Quadra Tênis - Igrejinha',
+      name: senderName || `Quadra Tênis - ${params.courtName}`,
     },
     to: [{ email: params.toEmail, name: params.toName }],
     subject: 'Reserva confirmada! 🎾 Seu horário tá marcado',
@@ -274,10 +278,12 @@ export interface ParticipantAddedEmailParams {
   creatorName: string;
   startAt: Date;
   reservarUrl: string;
+  courtName: string;
 }
 
 function buildParticipantAddedEmailHtml(params: ParticipantAddedEmailParams): string {
-  const { creatorName, startAt, reservarUrl } = params;
+  const { creatorName, startAt, reservarUrl, courtName } = params;
+  const appLabel = `Quadra de Tênis - ${courtName}`;
   const { dateStr, timeStr } = formatDateTimePtBR(startAt);
 
   return `
@@ -295,7 +301,7 @@ function buildParticipantAddedEmailHtml(params: ParticipantAddedEmailParams): st
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:400px;background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -2px rgba(0,0,0,0.1);overflow:hidden;">
           <tr>
             <td style="padding:32px 24px;text-align:center;">
-              <p style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#059669;font-weight:600;">Quadra de Tênis - Igrejinha</p>
+              <p style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#059669;font-weight:600;">${escapeHtml(appLabel)}</p>
               <h1 style="margin:0 0 24px;font-size:22px;font-weight:700;color:#111827;line-height:1.4;">Deu boa! 🎉<br><span style="font-weight:600;color:#059669;">${escapeHtml(creatorName)}</span> reservou a quadra pra vocês! 🤝</h1>
               <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;">${escapeHtml(
                 dateStr.charAt(0).toUpperCase() + dateStr.slice(1)
@@ -306,7 +312,7 @@ function buildParticipantAddedEmailHtml(params: ParticipantAddedEmailParams): st
           </tr>
           <tr>
             <td style="padding:16px 24px;background:#f9fafb;border-top:1px solid #e5e7eb;">
-              <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Este email foi enviado pelo app Quadra de Tênis - Igrejinha.</p>
+              <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Este email foi enviado pelo app ${escapeHtml(appLabel)}.</p>
             </td>
           </tr>
         </table>
@@ -341,7 +347,7 @@ export async function sendParticipantAddedEmail(
   const body = {
     sender: {
       email: senderEmail,
-      name: senderName || 'Quadra Tênis - Igrejinha',
+      name: senderName || `Quadra Tênis - ${params.courtName}`,
     },
     to: [{ email: params.toEmail, name: params.toName }],
     subject: `${params.creatorName} te adicionou numa reserva! 🎾`,
@@ -381,10 +387,12 @@ export interface ChallengeAcceptedEmailParams {
   accepterName: string;
   startAt: Date;
   reservarUrl: string;
+  courtName: string;
 }
 
 function buildChallengeAcceptedEmailHtml(params: ChallengeAcceptedEmailParams): string {
-  const { accepterName, startAt, reservarUrl } = params;
+  const { accepterName, startAt, reservarUrl, courtName } = params;
+  const appLabel = `Quadra de Tênis - ${courtName}`;
   const { dateStr, timeStr } = formatDateTimePtBR(startAt);
 
   return `
@@ -402,7 +410,7 @@ function buildChallengeAcceptedEmailHtml(params: ChallengeAcceptedEmailParams): 
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:400px;background:#fff;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -2px rgba(0,0,0,0.1);overflow:hidden;">
           <tr>
             <td style="padding:32px 24px;text-align:center;">
-              <p style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#059669;font-weight:600;">Quadra de Tênis - Igrejinha</p>
+              <p style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#059669;font-weight:600;">${escapeHtml(appLabel)}</p>
               <h1 style="margin:0 0 24px;font-size:22px;font-weight:700;color:#111827;line-height:1.4;">Seu desafio foi aceito! 🎾</h1>
               <p style="margin:0 0 16px;font-size:18px;color:#111827;"><strong style="color:#059669;">${escapeHtml(accepterName)}</strong> aceitou e marcou a quadra pra vocês!</p>
               <p style="margin:0 0 8px;font-size:18px;font-weight:600;color:#111827;">${escapeHtml(
@@ -414,7 +422,7 @@ function buildChallengeAcceptedEmailHtml(params: ChallengeAcceptedEmailParams): 
           </tr>
           <tr>
             <td style="padding:16px 24px;background:#f9fafb;border-top:1px solid #e5e7eb;">
-              <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Este email foi enviado pelo app Quadra de Tênis - Igrejinha.</p>
+              <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Este email foi enviado pelo app ${escapeHtml(appLabel)}.</p>
             </td>
           </tr>
         </table>
@@ -449,7 +457,7 @@ export async function sendChallengeAcceptedEmail(
   const body = {
     sender: {
       email: senderEmail,
-      name: senderName || 'Quadra Tênis - Igrejinha',
+      name: senderName || `Quadra Tênis - ${params.courtName}`,
     },
     to: [{ email: params.toEmail, name: params.toName }],
     subject: `${params.accepterName} aceitou seu desafio! 🎾`,
