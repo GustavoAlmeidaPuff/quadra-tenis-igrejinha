@@ -58,14 +58,12 @@ export default function AulasPage() {
 
             <div className="mt-6 text-gray-700">
               <div className="font-semibold text-gray-900">Além das aulas, também ofereço:</div>
-              <ul className="mt-2 space-y-2">
-                <li className="flex gap-3">
-                  <span className="shrink-0">🔧</span>
-                  <span>Encordamento de raquetes</span>
+              <ul className="mt-2 space-y-2 list-disc list-inside marker:text-gray-500">
+                <li>
+                  🔧 Encordamento de raquetes
                 </li>
-                <li className="flex gap-3">
-                  <span className="shrink-0">🎒🎾</span>
-                  <span>Acessórios e equipamentos para jogar tênis</span>
+                <li>
+                  🎒🎾 Acessórios e equipamentos para jogar tênis
                 </li>
               </ul>
             </div>
