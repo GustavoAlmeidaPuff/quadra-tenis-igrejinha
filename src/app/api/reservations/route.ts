@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, hasAdminCredentials } from '@/lib/firebase/admin';
 import { validateReservation } from '@/lib/validators/reservationValidator';
-import { normalizeCourtId } from '@/lib/courts';
+import { normalizeCourtId, getCourtName } from '@/lib/courts';
 import { sendReservationConfirmationEmail, sendParticipantAddedEmail, sendChallengeAcceptedEmail } from '@/lib/brevo';
 import { Timestamp } from 'firebase-admin/firestore';
 
@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedCourtId = normalizeCourtId(typeof courtId === 'string' ? courtId : undefined);
+    const courtName = getCourtName(normalizedCourtId);
 
     // Validar reserva
     const validation = await validateReservation(userId, startAt, endAt, normalizedCourtId);
@@ -130,6 +131,7 @@ export async function POST(request: NextRequest) {
         toName: creatorName,
         startAt,
         reservarUrl: `${APP_BASE_URL}/reservar`,
+        courtName,
       }).catch((err) => console.error('Erro ao enviar email de confirmação da reserva:', err));
     }
 
@@ -149,6 +151,7 @@ export async function POST(request: NextRequest) {
             creatorName,
             startAt,
             reservarUrl,
+            courtName,
           }).catch((err) => console.error('Erro ao enviar email para participante:', err));
         }
       }
@@ -167,6 +170,7 @@ export async function POST(request: NextRequest) {
           accepterName: creatorName,
           startAt,
           reservarUrl: `${APP_BASE_URL}/reservar`,
+          courtName,
         }).catch((err) => console.error('Erro ao enviar email de desafio aceito:', err));
       }
     }

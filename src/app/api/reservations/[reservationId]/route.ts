@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Timestamp } from 'firebase-admin/firestore';
 import { adminDb, hasAdminCredentials } from '@/lib/firebase/admin';
 import { sendParticipantAddedEmail } from '@/lib/brevo';
-import { normalizeCourtId } from '@/lib/courts';
+import { normalizeCourtId, getCourtName } from '@/lib/courts';
 
 const APP_BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://teniscreas.vercel.app';
 
@@ -185,6 +185,7 @@ export async function PATCH(
           creatorName,
           startAt,
           reservarUrl: `${APP_BASE_URL}/reservar`,
+          courtName: getCourtName(existingCourtId),
         }).catch((err) => console.error('Erro ao enviar email para participante:', err));
       }
     }
