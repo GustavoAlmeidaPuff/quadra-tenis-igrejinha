@@ -47,6 +47,7 @@ export async function validateReservation(
   const durationMode = rules?.durationMode ?? 'fixed';
   const fixedMinutes = rules?.fixedMinutes ?? 90;
   const maxMinutes = rules?.maxMinutes ?? 300;
+  const maxReservationsPerDay: number | null = rules?.maxReservationsPerDay ?? null;
 
   const formatMins = (mins: number) => {
     const h = Math.floor(mins / 60);
@@ -133,30 +134,36 @@ export async function validateReservation(
     };
   }
 
-  // 4. Verificar limite de 1 reserva por dia (por usuário, em qualquer quadra)
-  const dayStart = new Date(startAt);
-  dayStart.setHours(0, 0, 0, 0);
-  const dayEnd = new Date(startAt);
-  dayEnd.setHours(23, 59, 59, 999);
+  // 4. Verificar limite de reservas por dia (configurável por quadra)
+  if (maxReservationsPerDay != null && maxReservationsPerDay > 0) {
+    const dayStart = new Date(startAt);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(startAt);
+    dayEnd.setHours(23, 59, 59, 999);
 
-  const dayReservations = await adminDb
-    .collection('reservations')
-    .where('createdById', '==', userId)
-    .where('startAt', '>=', Timestamp.fromDate(dayStart))
-    .where('startAt', '<=', Timestamp.fromDate(dayEnd))
-    .get();
+    const dayReservations = await adminDb
+      .collection('reservations')
+      .where('createdById', '==', userId)
+      .where('startAt', '>=', Timestamp.fromDate(dayStart))
+      .where('startAt', '<=', Timestamp.fromDate(dayEnd))
+      .get();
 
-  const dayConflict = dayReservations.docs.find(
-    (doc) => !excludeReservationId || doc.id !== excludeReservationId
-  );
+    const dayCount = dayReservations.docs.filter((doc) => {
+      if (excludeReservationId && doc.id === excludeReservationId) return false;
+      return normalizeCourtId(doc.data().courtId) === normalizedCourtId;
+    }).length;
 
-  if (dayConflict) {
-    return {
-      valid: false,
-      error: {
-        message: 'Você já possui uma reserva neste dia. Máximo de 1 reserva por dia.',
-      },
-    };
+    if (dayCount >= maxReservationsPerDay) {
+      const limit = maxReservationsPerDay === 1
+        ? '1 reserva por dia'
+        : `${maxReservationsPerDay} reservas por dia`;
+      return {
+        valid: false,
+        error: {
+          message: `Você atingiu o limite de ${limit} nesta quadra.`,
+        },
+      };
+    }
   }
 
   // 5. Verificar limite de 4 reservas por semana

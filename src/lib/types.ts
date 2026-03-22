@@ -60,6 +60,8 @@ export interface CourtReservationRules {
   fixedMinutes: number;
   /** Duração máxima em minutos (usado quando durationMode === 'max'). Padrão: 300. */
   maxMinutes: number;
+  /** Máximo de reservas por dia por pessoa. null/undefined = sem limite (livre). */
+  maxReservationsPerDay?: number | null;
 }
 
 export interface Court {

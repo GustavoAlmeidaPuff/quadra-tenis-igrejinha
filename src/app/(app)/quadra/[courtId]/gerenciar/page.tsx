@@ -56,6 +56,7 @@ export default function GerenciarQuadraPage() {
   const [fixedMins, setFixedMins] = useState(30);
   const [maxHours, setMaxHours] = useState(5);
   const [maxMinsExtra, setMaxMinsExtra] = useState(0);
+  const [maxReservationsPerDay, setMaxReservationsPerDay] = useState<number | null>(null);
   const [savingRules, setSavingRules] = useState(false);
   const [rulesSaved, setRulesSaved] = useState(false);
 
@@ -80,6 +81,7 @@ export default function GerenciarQuadraPage() {
     const mm = rules.maxMinutes % 60;
     setMaxHours(mh);
     setMaxMinsExtra(mm);
+    setMaxReservationsPerDay(rules.maxReservationsPerDay ?? null);
 
     const managerUsers: UserBasic[] = [];
     for (const uid of courtData.managerIds ?? []) {
@@ -145,6 +147,7 @@ export default function GerenciarQuadraPage() {
         durationMode,
         fixedMinutes: fixedHours * 60 + fixedMins,
         maxMinutes: maxHours * 60 + maxMinsExtra,
+        maxReservationsPerDay: maxReservationsPerDay ?? null,
       };
       await updateDoc(doc(db, 'courts', courtId), { reservationRules: rules });
       setRulesSaved(true);
@@ -296,6 +299,54 @@ export default function GerenciarQuadraPage() {
             </div>
           </div>
         )}
+
+        <div>
+          <p className="text-xs text-gray-500 mb-2">Reservas por dia (por pessoa)</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setMaxReservationsPerDay(null)}
+              className={`flex-1 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
+                maxReservationsPerDay === null
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              Livre
+            </button>
+            <button
+              type="button"
+              onClick={() => setMaxReservationsPerDay((prev) => prev ?? 1)}
+              className={`flex-1 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
+                maxReservationsPerDay !== null
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              Limitado
+            </button>
+          </div>
+          {maxReservationsPerDay !== null && (
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={maxReservationsPerDay}
+                onChange={(e) =>
+                  setMaxReservationsPerDay(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))
+                }
+                className="w-20 px-2 py-2 text-sm rounded-lg border border-gray-300 focus:border-emerald-500 focus:outline-none text-center"
+              />
+              <span className="text-sm text-gray-500">reserva(s) por dia</span>
+            </div>
+          )}
+          <p className="text-xs text-gray-400 mt-2">
+            {maxReservationsPerDay === null
+              ? 'Sem limite de reservas por dia nesta quadra.'
+              : `Cada pessoa pode fazer no máximo ${maxReservationsPerDay} reserva(s) por dia nesta quadra.`}
+          </p>
+        </div>
 
         <button
           onClick={handleSaveRules}
