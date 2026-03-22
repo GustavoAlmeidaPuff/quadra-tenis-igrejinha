@@ -49,7 +49,7 @@ export default function ParceirosPage() {
               <Handshake className="h-6 w-6 text-emerald-700" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Patrocinadores do Tênis</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Parceiros do Tênis</h1>
               <p className="text-sm text-gray-600">
                 Empresas e marcas que apoiam o ecossistema do tênis em Igrejinha.
               </p>
