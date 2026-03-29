@@ -51,7 +51,7 @@ export default function ParceirosPage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Parceiros do Tênis</h1>
               <p className="text-sm text-gray-600">
-                Empresas e marcas que apoiam o ecossistema do tênis em Igrejinha.
+                Empresas e marcas que apoiam o ecossistema do tênis nas quadras parceiras.
               </p>
             </div>
           </div>

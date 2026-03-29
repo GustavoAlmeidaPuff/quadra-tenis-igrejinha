@@ -181,7 +181,7 @@ export default function LoginPage() {
       <div className="relative w-full h-64 overflow-hidden">
         <Image
           src="/images/quadra.png"
-          alt="Quadra de Tênis"
+          alt="Quadras de tênis"
           fill
           className="object-cover object-center"
           priority
@@ -204,8 +204,8 @@ export default function LoginPage() {
         <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 sm:p-8 space-y-5 max-h-[calc(100vh-6rem)] overflow-y-auto">
           {/* Title */}
           <div className="text-center space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Quadra de Tênis</h1>
-            <p className="text-sm text-gray-600">Igrejinha, RS</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">QuadraLivre</h1>
+            <p className="text-sm text-gray-600">Reservas e agenda em várias quadras</p>
           </div>
 
           {/* Court Status */}

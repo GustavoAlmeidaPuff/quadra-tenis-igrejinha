@@ -10,7 +10,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Quadra de Tênis - Igrejinha",
-  description: "Agenda comunitária da quadra de tênis em Igrejinha, RS",
+  title: "QuadraLivre — Reservas e agenda para quadras de tênis",
+  description:
+    "Reserve horários, organize partidas e acompanhe a agenda em várias quadras de tênis num só lugar.",
   manifest: "/manifest.json",
 };

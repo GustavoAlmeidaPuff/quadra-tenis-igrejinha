@@ -12,20 +12,35 @@ export const viewport: Viewport = {
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://teniscreas.vercel.app";
 
+const siteTitle = "QuadraLivre — Reservas e agenda para quadras de tênis";
+const siteDescription =
+  "Reserve horários, organize partidas e acompanhe a agenda em várias quadras de tênis num só lugar.";
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "Quadra de Tênis - Igrejinha",
-  description: "Agenda comunitária da quadra de tênis em Igrejinha, RS",
+  title: {
+    default: siteTitle,
+    template: "%s | QuadraLivre",
+  },
+  description: siteDescription,
+  keywords: [
+    "tênis",
+    "quadra de tênis",
+    "reserva de quadra",
+    "agenda",
+    "marcação de horário",
+    "QuadraLivre",
+  ],
   manifest: "/manifest.json",
   icons: {
     icon: "/images/logo-white.svg",
     apple: "/images/logo-white.svg",
   },
   openGraph: {
-    title: "Quadra de Tênis - Igrejinha",
-    description: "Agenda comunitária da quadra de tênis em Igrejinha, RS",
+    title: siteTitle,
+    description: siteDescription,
     url: siteUrl,
-    siteName: "Quadra de Tênis - Igrejinha",
+    siteName: "QuadraLivre",
     images: [
       {
         url: new URL("/images/Ad-og.jpg", siteUrl).href,
@@ -39,8 +54,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Quadra de Tênis - Igrejinha",
-    description: "Agenda comunitária da quadra de tênis em Igrejinha, RS",
+    title: siteTitle,
+    description: siteDescription,
     images: [new URL("/images/Ad-og.jpg", siteUrl).href],
   },
 };
