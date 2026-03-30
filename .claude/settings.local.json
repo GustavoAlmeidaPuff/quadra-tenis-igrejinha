@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npx create-expo-app@latest . --template tabs)",
+      "Bash(npx expo:*)",
+      "Bash(ls \"C:\\\\Users\\\\gualm\\\\OneDrive\\\\Documentos\\\\code\\\\quadra-livre-app\\\\app\\\\\\(tabs\\)\"\")"
     ]
   }
 }
