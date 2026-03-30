@@ -64,6 +64,7 @@ export default function ReservarPage() {
   const [daysWithReservations, setDaysWithReservations] = useState<Set<string>>(new Set());
   const [selectedReservation, setSelectedReservation] = useState<ReservationWithParticipants | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [showEditReservationModal, setShowEditReservationModal] = useState(false);
   const [editingReservationId, setEditingReservationId] = useState<string | null>(null);
   const scrollToHourRef = useRef<number | null>(null);
@@ -303,6 +304,31 @@ export default function ReservarPage() {
     }
   };
 
+  const handleLeaveReservation = async (reservationId: string) => {
+    if (!auth.currentUser) return;
+    setLeaving(true);
+    try {
+      const res = await fetch(
+        `/api/reservations/${encodeURIComponent(reservationId)}?userId=${encodeURIComponent(auth.currentUser.uid)}`,
+        { method: 'DELETE' }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = (typeof data?.error === 'string' ? data.error : null) ?? 'Erro ao sair da reserva';
+        alert(msg);
+        return;
+      }
+      setSelectedReservation(null);
+      setReservations((prev) => prev.filter((r) => r.id !== reservationId));
+      setReservationsRefreshKey((k) => k + 1);
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao sair da reserva. Verifique sua conexão.');
+    } finally {
+      setLeaving(false);
+    }
+  };
+
   function getDateLabel(res: ReservationWithParticipants): string {
     const start = res.startAt.toDate();
     const today = new Date();
@@ -528,6 +554,8 @@ export default function ReservarPage() {
           onClose={() => setSelectedReservation(null)}
           canManage={Boolean(auth.currentUser && selectedReservation.participantIds.includes(auth.currentUser.uid))}
           onCancel={handleCancelReservation}
+          onLeave={handleLeaveReservation}
+          leaving={leaving}
           onEditParticipants={
             auth.currentUser && selectedReservation.participantIds.includes(auth.currentUser.uid)
               ? (id) => {

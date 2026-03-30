@@ -4,6 +4,75 @@ import { adminDb, hasAdminCredentials } from '@/lib/firebase/admin';
 import { sendParticipantAddedEmail } from '@/lib/brevo';
 import { normalizeCourtId, getCourtName } from '@/lib/courts';
 
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ reservationId: string }> }
+) {
+  if (!hasAdminCredentials) {
+    return NextResponse.json(
+      { error: 'Servidor não configurado: chave de conta de serviço do Firebase não definida.' },
+      { status: 503 }
+    );
+  }
+
+  try {
+    const { reservationId } = await context.params;
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+
+    if (!reservationId?.trim() || !userId?.trim()) {
+      return NextResponse.json(
+        { error: 'ID da reserva e userId são obrigatórios' },
+        { status: 400 }
+      );
+    }
+
+    const reservationRef = adminDb.collection('reservations').doc(reservationId.trim());
+    const reservationDoc = await reservationRef.get();
+
+    if (!reservationDoc.exists) {
+      return NextResponse.json({ error: 'Reserva não encontrada' }, { status: 404 });
+    }
+
+    const reservationData = reservationDoc.data();
+    const endAt = reservationData?.endAt?.toDate?.() ?? new Date(0);
+    if (endAt <= new Date()) {
+      return NextResponse.json(
+        { error: 'Não é possível sair de reservas que já terminaram.' },
+        { status: 400 }
+      );
+    }
+
+    const participantsSnap = await adminDb
+      .collection('reservationParticipants')
+      .where('reservationId', '==', reservationId.trim())
+      .get();
+
+    const userParticipantDoc = participantsSnap.docs.find((d) => d.data().userId === userId);
+    if (!userParticipantDoc) {
+      return NextResponse.json(
+        { error: 'Você não é participante desta reserva.' },
+        { status: 403 }
+      );
+    }
+
+    const batch = adminDb.batch();
+    batch.delete(userParticipantDoc.ref);
+
+    // Se era o último participante, deleta a reserva também
+    if (participantsSnap.docs.length === 1) {
+      batch.delete(reservationRef);
+    }
+
+    await batch.commit();
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erro ao sair da reserva';
+    console.error('Erro ao sair da reserva:', error);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
 const APP_BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://teniscreas.vercel.app';
 
 export async function PATCH(

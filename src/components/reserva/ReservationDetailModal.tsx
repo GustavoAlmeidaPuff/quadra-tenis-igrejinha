@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Trash2, Pencil } from 'lucide-react';
+import { X, Trash2, Pencil, LogOut } from 'lucide-react';
 
 export interface ReservationDetailItem {
   id: string;
@@ -15,8 +15,10 @@ interface ReservationDetailModalProps {
   /** true quando o usuário pode editar/cancelar (ex.: participante da reserva) */
   canManage?: boolean;
   onCancel: (reservationId: string) => void;
+  onLeave?: (reservationId: string) => void;
   onEditParticipants?: (reservationId: string) => void;
   cancelling: boolean;
+  leaving?: boolean;
 }
 
 export default function ReservationDetailModal({
@@ -24,11 +26,16 @@ export default function ReservationDetailModal({
   onClose,
   canManage,
   onCancel,
+  onLeave,
   onEditParticipants,
   cancelling,
+  leaving,
 }: ReservationDetailModalProps) {
   const participantsLabel =
     item.participants.length > 0 ? item.participants.join(', ') : '—';
+
+  const hasMultipleParticipants = item.participants.length > 1;
+  const busy = cancelling || leaving;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
@@ -55,7 +62,9 @@ export default function ReservationDetailModal({
         </div>
         {canManage && (
           <p className="text-xs text-gray-500 mb-4">
-            Ao cancelar, a reserva será removida para todos os participantes.
+            {hasMultipleParticipants
+              ? 'Ao cancelar, a reserva será removida para todos os participantes.'
+              : 'Ao cancelar, a reserva será removida para todos os participantes.'}
           </p>
         )}
         <div className="flex flex-col gap-3">
@@ -66,11 +75,22 @@ export default function ReservationDetailModal({
                 onEditParticipants(item.id);
                 onClose();
               }}
-              disabled={cancelling}
+              disabled={busy}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
             >
               <Pencil className="w-4 h-4" />
               Editar reserva
+            </button>
+          )}
+          {canManage && hasMultipleParticipants && onLeave && (
+            <button
+              type="button"
+              onClick={() => onLeave(item.id)}
+              disabled={busy}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-orange-500 text-white font-medium hover:bg-orange-600 transition-colors disabled:opacity-50"
+            >
+              <LogOut className="w-4 h-4" />
+              {leaving ? 'Saindo...' : 'Sair da reserva'}
             </button>
           )}
           <div className="flex gap-3">
@@ -78,7 +98,7 @@ export default function ReservationDetailModal({
               <button
                 type="button"
                 onClick={() => onCancel(item.id)}
-                disabled={cancelling}
+                disabled={busy}
                 className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
               >
                 <Trash2 className="w-4 h-4" />
@@ -88,7 +108,7 @@ export default function ReservationDetailModal({
             <button
               type="button"
               onClick={onClose}
-              disabled={cancelling}
+              disabled={busy}
               className={
                 canManage
                   ? 'py-3 px-4 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors'
