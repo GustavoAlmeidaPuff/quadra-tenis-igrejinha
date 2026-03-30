@@ -62,6 +62,8 @@ export interface CourtReservationRules {
   maxMinutes: number;
   /** Máximo de reservas por dia por pessoa. null/undefined = sem limite (livre). */
   maxReservationsPerDay?: number | null;
+  /** Máximo de reservas por semana por pessoa. null/undefined = sem limite (livre). */
+  maxReservationsPerWeek?: number | null;
 }
 
 export interface Court {

@@ -48,6 +48,7 @@ export async function validateReservation(
   const fixedMinutes = rules?.fixedMinutes ?? 90;
   const maxMinutes = rules?.maxMinutes ?? 300;
   const maxReservationsPerDay: number | null = rules?.maxReservationsPerDay ?? null;
+  const maxReservationsPerWeek: number | null = rules?.maxReservationsPerWeek ?? null;
 
   const formatMins = (mins: number) => {
     const h = Math.floor(mins / 60);
@@ -166,31 +167,37 @@ export async function validateReservation(
     }
   }
 
-  // 5. Verificar limite de 4 reservas por semana
-  const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - today.getDay()); // Domingo
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-  weekEnd.setHours(23, 59, 59, 999);
+  // 5. Verificar limite de reservas por semana (configurável por quadra)
+  if (maxReservationsPerWeek != null && maxReservationsPerWeek > 0) {
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay()); // Domingo
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
 
-  const weekReservations = await adminDb
-    .collection('reservations')
-    .where('createdById', '==', userId)
-    .where('startAt', '>=', Timestamp.fromDate(weekStart))
-    .where('startAt', '<=', Timestamp.fromDate(weekEnd))
-    .get();
+    const weekReservations = await adminDb
+      .collection('reservations')
+      .where('createdById', '==', userId)
+      .where('startAt', '>=', Timestamp.fromDate(weekStart))
+      .where('startAt', '<=', Timestamp.fromDate(weekEnd))
+      .get();
 
-  const weekCount = weekReservations.docs.filter(
-    (doc) => !excludeReservationId || doc.id !== excludeReservationId
-  ).length;
+    const weekCount = weekReservations.docs.filter((doc) => {
+      if (excludeReservationId && doc.id === excludeReservationId) return false;
+      return normalizeCourtId(doc.data().courtId) === normalizedCourtId;
+    }).length;
 
-  if (weekCount >= 4) {
-    return {
-      valid: false,
-      error: {
-        message: 'Você atingiu o limite de 4 reservas por semana.',
-      },
-    };
+    if (weekCount >= maxReservationsPerWeek) {
+      const limit = maxReservationsPerWeek === 1
+        ? '1 reserva por semana'
+        : `${maxReservationsPerWeek} reservas por semana`;
+      return {
+        valid: false,
+        error: {
+          message: `Você atingiu o limite de ${limit} nesta quadra.`,
+        },
+      };
+    }
   }
 
   return { valid: true };

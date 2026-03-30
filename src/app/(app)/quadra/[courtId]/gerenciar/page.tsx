@@ -57,6 +57,7 @@ export default function GerenciarQuadraPage() {
   const [maxHours, setMaxHours] = useState(5);
   const [maxMinsExtra, setMaxMinsExtra] = useState(0);
   const [maxReservationsPerDay, setMaxReservationsPerDay] = useState<number | null>(null);
+  const [maxReservationsPerWeek, setMaxReservationsPerWeek] = useState<number | null>(null);
   const [savingRules, setSavingRules] = useState(false);
   const [rulesSaved, setRulesSaved] = useState(false);
 
@@ -82,6 +83,7 @@ export default function GerenciarQuadraPage() {
     setMaxHours(mh);
     setMaxMinsExtra(mm);
     setMaxReservationsPerDay(rules.maxReservationsPerDay ?? null);
+    setMaxReservationsPerWeek(rules.maxReservationsPerWeek ?? null);
 
     const managerUsers: UserBasic[] = [];
     for (const uid of courtData.managerIds ?? []) {
