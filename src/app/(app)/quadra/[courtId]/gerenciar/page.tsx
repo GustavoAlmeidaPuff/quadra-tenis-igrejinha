@@ -150,6 +150,7 @@ export default function GerenciarQuadraPage() {
         fixedMinutes: fixedHours * 60 + fixedMins,
         maxMinutes: maxHours * 60 + maxMinsExtra,
         maxReservationsPerDay: maxReservationsPerDay ?? null,
+        maxReservationsPerWeek: maxReservationsPerWeek ?? null,
       };
       await updateDoc(doc(db, 'courts', courtId), { reservationRules: rules });
       setRulesSaved(true);
@@ -347,6 +348,54 @@ export default function GerenciarQuadraPage() {
             {maxReservationsPerDay === null
               ? 'Sem limite de reservas por dia nesta quadra.'
               : `Cada pessoa pode fazer no máximo ${maxReservationsPerDay} reserva(s) por dia nesta quadra.`}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs text-gray-500 mb-2">Reservas por semana (por pessoa)</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setMaxReservationsPerWeek(null)}
+              className={`flex-1 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
+                maxReservationsPerWeek === null
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              Livre
+            </button>
+            <button
+              type="button"
+              onClick={() => setMaxReservationsPerWeek((prev) => prev ?? 1)}
+              className={`flex-1 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
+                maxReservationsPerWeek !== null
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              Limitado
+            </button>
+          </div>
+          {maxReservationsPerWeek !== null && (
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={maxReservationsPerWeek}
+                onChange={(e) =>
+                  setMaxReservationsPerWeek(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))
+                }
+                className="w-20 px-2 py-2 text-sm rounded-lg border border-gray-300 focus:border-emerald-500 focus:outline-none text-center"
+              />
+              <span className="text-sm text-gray-500">reserva(s) por semana</span>
+            </div>
+          )}
+          <p className="text-xs text-gray-400 mt-2">
+            {maxReservationsPerWeek === null
+              ? 'Sem limite de reservas por semana nesta quadra.'
+              : `Cada pessoa pode fazer no máximo ${maxReservationsPerWeek} reserva(s) por semana nesta quadra.`}
           </p>
         </div>
 
