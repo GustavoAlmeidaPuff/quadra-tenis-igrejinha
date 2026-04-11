@@ -186,48 +186,71 @@ export default function CourtsStatusSummary({ courtIds }: Props) {
   }, [dropdownOpen]);
 
   const freeCourts = courts.filter((c) => !c.isOccupied);
-  const showSummary = freeCourts.length > 1;
+  const occupiedCourts = courts.filter((c) => c.isOccupied);
+  const allFree = occupiedCourts.length === 0;
+  const allOccupied = freeCourts.length === 0;
+  const mixed = !allFree && !allOccupied;
 
-  if (showSummary) {
+  let summaryLabel: string;
+  let summarySubtext: string;
+  let summaryIsOccupied: boolean;
+
+  if (allFree) {
+    summaryLabel = courts.length === 1 ? `${courts[0].name} livre` : `${courts.length} quadras livres`;
+    summarySubtext = 'Reserve agora!';
+    summaryIsOccupied = false;
+  } else if (allOccupied) {
+    summaryLabel = courts.length === 1 ? `${courts[0].name} ocupada` : `${courts.length} quadras ocupadas`;
+    summarySubtext = 'Todas ocupadas';
+    summaryIsOccupied = true;
+  } else {
+    const freeLabel = freeCourts.length === 1 ? '1 quadra livre' : `${freeCourts.length} quadras livres`;
+    const occupiedLabel = occupiedCourts.length === 1 ? '1 ocupada' : `${occupiedCourts.length} ocupadas`;
+    summaryLabel = `${freeLabel} · ${occupiedLabel}`;
+    summarySubtext = 'Ver detalhes';
+    summaryIsOccupied = false;
+  }
+
+  if (courts.length === 1) {
     return (
-      <div className="relative" ref={dropdownRef}>
-        <button
-          type="button"
-          onClick={() => setDropdownOpen((v) => !v)}
-          className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
-        >
-          <StatusDot isOccupied={false} />
-          <div className="text-left">
-            <p className="text-sm font-medium text-emerald-600 leading-tight">
-              {freeCourts.length} quadras livres
-            </p>
-            <p className="text-xs text-gray-500">Reserve agora!</p>
-          </div>
-          <ChevronDown
-            className={`w-3.5 h-3.5 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
-          />
-        </button>
-
-        {dropdownOpen && (
-          <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-2 space-y-1 min-w-[200px]">
-            {courts.map((c) => (
-              <CourtRow key={c.courtId} court={c} />
-            ))}
-          </div>
-        )}
+      <div className="flex items-center gap-1.5">
+        <StatusDot isOccupied={courts[0].isOccupied} />
+        <div className="text-left">
+          <p className={`text-sm font-medium leading-tight ${courts[0].isOccupied ? 'text-red-600' : 'text-emerald-600'}`}>
+            {summaryLabel}
+          </p>
+          {mixed ? null : <p className="text-xs text-gray-500">{summarySubtext}</p>}
+        </div>
       </div>
     );
   }
 
-  // Default: show each court individually
   return (
-    <div className="flex items-center gap-3">
-      {courts.map((c, i) => (
-        <div key={c.courtId} className="flex items-center gap-3">
-          {i > 0 && <div className="w-px h-8 bg-gray-200" />}
-          <CourtRow court={c} />
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setDropdownOpen((v) => !v)}
+        className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+      >
+        <StatusDot isOccupied={summaryIsOccupied} />
+        <div className="text-left">
+          <p className={`text-sm font-medium leading-tight ${allOccupied ? 'text-red-600' : 'text-emerald-600'}`}>
+            {summaryLabel}
+          </p>
+          <p className="text-xs text-gray-500">{summarySubtext}</p>
         </div>
-      ))}
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {dropdownOpen && (
+        <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-2 space-y-1 min-w-[200px]">
+          {courts.map((c) => (
+            <CourtRow key={c.courtId} court={c} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
