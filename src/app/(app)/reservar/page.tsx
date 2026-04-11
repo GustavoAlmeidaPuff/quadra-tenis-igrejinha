@@ -364,72 +364,71 @@ export default function ReservarPage() {
   return (
     <div className="max-w-md mx-auto h-[calc(100vh-8rem)] flex flex-col">
       {/* Court Selector */}
-      <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between">
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => {
-              if (visibleCourts.length > 1) setCourtDropdownOpen((v) => !v);
-            }}
-            className="flex items-center gap-1.5 group"
-          >
-            <span className="text-sm font-semibold text-gray-800">{selectedCourtName}</span>
+      <div className="bg-white border-b border-gray-200 relative">
+        <button
+          type="button"
+          onClick={() => {
+            if (visibleCourts.length > 1) setCourtDropdownOpen((v) => !v);
+          }}
+          className="w-full flex items-center justify-between px-5 py-3.5 group"
+        >
+          <span className="text-base font-bold text-gray-800">{selectedCourtName}</span>
+          <div className="flex items-center gap-2">
+            {visibleCourts.length === 1 && canManage && (
+              <Link
+                href={`/quadra/${selectedCourt}/gerenciar`}
+                onClick={(e) => e.stopPropagation()}
+                className="p-1.5 rounded-lg hover:bg-emerald-100 text-gray-400 hover:text-emerald-600 transition-colors"
+                title="Configurações da quadra"
+              >
+                <Settings className="w-4 h-4" />
+              </Link>
+            )}
             {visibleCourts.length > 1 && (
               <ChevronDown
-                className={`w-4 h-4 text-gray-400 transition-transform ${courtDropdownOpen ? 'rotate-180' : ''}`}
+                className={`w-5 h-5 text-gray-400 transition-transform ${courtDropdownOpen ? 'rotate-180' : ''}`}
               />
             )}
-          </button>
+          </div>
+        </button>
 
-          {courtDropdownOpen && visibleCourts.length > 1 && (
-            <>
-              {/* backdrop */}
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setCourtDropdownOpen(false)}
-              />
-              <div className="absolute left-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1 min-w-[180px]">
-                {visibleCourts.map((court) => (
-                  <div
-                    key={court.id}
-                    className={`flex items-center justify-between px-3 py-2 gap-3 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      selectedCourt === court.id ? 'text-emerald-700 font-semibold' : 'text-gray-700'
-                    }`}
-                    onClick={() => {
-                      setSelectedCourt(court.id);
-                      setCourtDropdownOpen(false);
-                    }}
-                  >
-                    <span className="text-sm">{court.name}</span>
-                    {canManage && (
-                      <Link
-                        href={`/quadra/${court.id}/gerenciar`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-1 rounded hover:bg-emerald-100 text-gray-400 hover:text-emerald-600 transition-colors"
-                        title="Configurações da quadra"
-                      >
-                        <Settings className="w-3.5 h-3.5" />
-                      </Link>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Gear icon for single court or when dropdown is closed */}
-        {visibleCourts.length === 1 && canManage && (
-          <Link
-            href={`/quadra/${selectedCourt}/gerenciar`}
-            className="p-1 rounded hover:bg-emerald-100 text-gray-400 hover:text-emerald-600 transition-colors"
-            title="Configurações da quadra"
-          >
-            <Settings className="w-4 h-4" />
-          </Link>
+        {courtDropdownOpen && visibleCourts.length > 1 && (
+          <>
+            {/* backdrop */}
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setCourtDropdownOpen(false)}
+            />
+            <div className="absolute left-0 right-0 top-full bg-white border-b border-gray-200 shadow-lg z-50">
+              {visibleCourts.map((court) => (
+                <div
+                  key={court.id}
+                  className={`flex items-center justify-between px-5 py-3.5 cursor-pointer hover:bg-gray-50 transition-colors border-t border-gray-100 ${
+                    selectedCourt === court.id ? 'text-emerald-700' : 'text-gray-700'
+                  }`}
+                  onClick={() => {
+                    setSelectedCourt(court.id);
+                    setCourtDropdownOpen(false);
+                  }}
+                >
+                  <span className={`text-base ${selectedCourt === court.id ? 'font-bold' : 'font-medium'}`}>
+                    {court.name}
+                  </span>
+                  {canManage && (
+                    <Link
+                      href={`/quadra/${court.id}/gerenciar`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-1.5 rounded-lg hover:bg-emerald-100 text-gray-400 hover:text-emerald-600 transition-colors"
+                      title="Configurações da quadra"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
         )}
-      </div>
-
       {/* Day Selector */}
       <div className="bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
