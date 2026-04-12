@@ -372,7 +372,7 @@ export default function ReservarPage() {
           }}
           className="w-full flex items-center justify-between px-5 py-3.5 group"
         >
-          <span className="text-base font-bold text-gray-800">{selectedCourtName}</span>
+          <span className="text-xl font-bold text-gray-800">{selectedCourtName}</span>
           <div className="flex items-center gap-2">
             {visibleCourts.length === 1 && canManage && (
               <Link
@@ -411,7 +411,7 @@ export default function ReservarPage() {
                     setCourtDropdownOpen(false);
                   }}
                 >
-                  <span className={`text-base ${selectedCourt === court.id ? 'font-bold' : 'font-medium'}`}>
+                  <span className={`text-xl ${selectedCourt === court.id ? 'font-bold' : 'font-medium'}`}>
                     {court.name}
                   </span>
                   {canManage && (
@@ -429,6 +429,8 @@ export default function ReservarPage() {
             </div>
           </>
         )}
+      </div>
+
       {/* Day Selector */}
       <div className="bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
