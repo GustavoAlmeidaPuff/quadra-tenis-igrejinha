@@ -88,6 +88,19 @@ service cloud.firestore {
       allow delete: if request.auth != null && 
                       request.auth.uid == resource.data.fromUserId;
     }
+
+    // Waitlist da landing page (lançamento do app nas lojas)
+    // Qualquer visitante NÃO autenticado pode submeter contato.
+    // Ninguém lê/edita/deleta pelo client — você consulta direto no Console.
+    match /waitlist/{docId} {
+      allow read, update, delete: if false;
+      allow create: if
+        request.resource.data.keys().hasOnly(['kind','contact','store','createdAt','userAgent','source'])
+        && request.resource.data.kind in ['whatsapp','email']
+        && request.resource.data.contact is string
+        && request.resource.data.contact.size() >= 5
+        && request.resource.data.contact.size() <= 120;
+    }
   }
 }
 ```
