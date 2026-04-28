@@ -434,17 +434,16 @@ export default function Landing() {
 /* -------------------- Subcomponentes -------------------- */
 
 function Logo({ small = false }: { small?: boolean }) {
-  const size = small ? 22 : 28;
+  const size = small ? 30 : 36;
   return (
-    <div
-      className="grid place-items-center rounded-xl bg-primary-500 text-[#0a1f17] shadow-[0_8px_30px_-10px_rgba(16,185,129,0.6)]"
-      style={{ width: size + 8, height: size + 8 }}
-    >
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
-        <path d="M3.5 9.2c4 .8 13 .8 17 0M3.5 14.8c4-.8 13-.8 17 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-    </div>
+    <img
+      src="/images/logo-white.svg"
+      alt="QuadraLivre"
+      width={size}
+      height={size}
+      className="object-contain [filter:brightness(0)_invert(1)]"
+      style={{ width: size, height: size }}
+    />
   );
 }
 
