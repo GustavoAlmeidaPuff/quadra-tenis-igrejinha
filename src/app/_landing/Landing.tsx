@@ -517,30 +517,37 @@ function PartnersMarquee() {
     { name: 'Climacar', file: 'climacar.png' },
     { name: 'Sanvitron', file: 'sanvitron.png' },
     { name: 'Rafitos', file: 'rafitos lettering.png' },
-    { name: 'Dev', file: 'dev.png' },
   ];
-  const loop = [...partners, ...partners];
+  // repete a lista o bastante pra garantir que UMA cópia seja larga o bastante
+  // pra cobrir telas grandes — depois duplicamos esse bloco pra fazer o loop infinito.
+  const repeatedOnce = Array.from({ length: 4 }, () => partners).flat();
+
+  const Track = () => (
+    <div className="flex shrink-0 items-center">
+      {repeatedOnce.map((p, i) => (
+        <div
+          key={`${p.name}-${i}`}
+          className="group flex h-20 flex-shrink-0 items-center justify-center px-10"
+          title={p.name}
+        >
+          <img
+            src={`/images/${encodeURIComponent(p.file)}`}
+            alt={p.name}
+            className="h-14 w-auto max-w-[160px] object-contain opacity-60 grayscale transition duration-300 group-hover:opacity-100 group-hover:grayscale-0"
+          />
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="relative mt-10 overflow-hidden">
-      {/* fades nas bordas */}
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-[#0a1f17] to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-[#0a1f17] to-transparent" />
 
-      <div className="flex w-max animate-[marquee_30s_linear_infinite] items-center gap-16 px-8">
-        {loop.map((p, i) => (
-          <div
-            key={`${p.name}-${i}`}
-            className="group flex h-20 flex-shrink-0 items-center justify-center"
-            title={p.name}
-          >
-            <img
-              src={`/images/${encodeURIComponent(p.file)}`}
-              alt={p.name}
-              className="h-14 w-auto max-w-[160px] object-contain opacity-60 grayscale transition duration-300 group-hover:opacity-100 group-hover:grayscale-0"
-            />
-          </div>
-        ))}
+      <div className="flex w-max animate-[marquee_40s_linear_infinite] items-center">
+        <Track />
+        <Track aria-hidden />
       </div>
     </div>
   );
