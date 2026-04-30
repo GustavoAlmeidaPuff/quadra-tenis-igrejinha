@@ -652,11 +652,11 @@ function TennisBall({ className = '' }: { className?: string }) {
 
 function Avatars() {
   const avatars = [
-    { src: '/images/avatars/1.jpg', alt: 'Jogador 1' },
-    { src: '/images/avatars/2.jpg', alt: 'Jogador 2' },
-    { src: '/images/avatars/3.jpg', alt: 'Jogador 3' },
-    { src: '/images/avatars/4.jpg', alt: 'Jogador 4' },
-    { src: '/images/avatars/5.jpg', alt: 'Jogador 5' },
+    { src: '/images/avatars/1.png', alt: 'Jogador 1' },
+    { src: '/images/avatars/2.png', alt: 'Jogador 2' },
+    { src: '/images/avatars/3.png', alt: 'Jogador 3' },
+    { src: '/images/avatars/4.png', alt: 'Jogador 4' },
+    { src: '/images/avatars/5.png', alt: 'Jogador 5' },
   ];
   return (
     <div className="flex -space-x-2">
