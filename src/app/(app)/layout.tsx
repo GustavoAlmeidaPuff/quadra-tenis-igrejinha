@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -10,6 +10,9 @@ import { DEVELOPER_EMAIL } from '@/lib/courts';
 import Header from '@/components/layout/Header';
 import BottomNav from '@/components/layout/BottomNav';
 import WelcomePopup from '@/components/ui/WelcomePopup';
+import ErrorState from '@/components/ui/ErrorState';
+import { useToast } from '@/components/ui/Toast';
+import { getFriendlyError, logError, type FriendlyError } from '@/lib/errors';
 
 export default function AppLayout({
   children,
@@ -17,9 +20,18 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const { showError } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
+  const [authError, setAuthError] = useState<FriendlyError | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+
+  const retry = useCallback(() => {
+    setAuthError(null);
+    setLoading(true);
+    setRetryKey((k) => k + 1);
+  }, []);
 
   useEffect(() => {
     if (!isFirebaseConfigured) {
@@ -38,38 +50,53 @@ export default function AppLayout({
         return;
       }
 
-      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+      try {
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
 
-      if (!userDoc.exists() || !userDoc.data().firstName) {
-        router.push('/onboarding');
-        return;
+        if (!userDoc.exists() || !userDoc.data().firstName) {
+          router.push('/onboarding');
+          return;
+        }
+
+        const data = userDoc.data();
+
+        if (!data.courtIds || data.courtIds.length === 0) {
+          router.push('/selecionar-quadra');
+          return;
+        }
+
+        setUser({
+          id: firebaseUser.uid,
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          pictureUrl: data.pictureUrl,
+          isAnonymous: data.isAnonymous || false,
+          isPrivate: data.isPrivate || false,
+          createdAt: data.createdAt,
+          welcomePopupSeen: data.welcomePopupSeen,
+          courtIds: data.courtIds,
+        });
+        setShowWelcomePopup(data.welcomePopupSeen !== true);
+        setAuthError(null);
+        setLoading(false);
+      } catch (err) {
+        logError('app-layout:loadUser', err);
+        setAuthError(getFriendlyError(err));
+        setLoading(false);
       }
-
-      const data = userDoc.data();
-
-      if (!data.courtIds || data.courtIds.length === 0) {
-        router.push('/selecionar-quadra');
-        return;
-      }
-
-      setUser({
-        id: firebaseUser.uid,
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        pictureUrl: data.pictureUrl,
-        isAnonymous: data.isAnonymous || false,
-        isPrivate: data.isPrivate || false,
-        createdAt: data.createdAt,
-        welcomePopupSeen: data.welcomePopupSeen,
-        courtIds: data.courtIds,
-      });
-      setShowWelcomePopup(data.welcomePopupSeen !== true);
-      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [router, isFirebaseConfigured]);
+  }, [router, retryKey]);
+
+  if (authError) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <ErrorState error={authError} onRetry={retry} fullPage />
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -91,8 +118,9 @@ export default function AppLayout({
         { welcomePopupSeen: true },
         { merge: true }
       );
-    } catch {
-      // Falha silenciosa; o popup já foi fechado localmente
+    } catch (err) {
+      logError('app-layout:welcomePopup', err);
+      showError(err, 'Não foi possível salvar');
     }
   };
 

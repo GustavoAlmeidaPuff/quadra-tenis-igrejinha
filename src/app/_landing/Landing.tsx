@@ -651,17 +651,24 @@ function TennisBall({ className = '' }: { className?: string }) {
 }
 
 function Avatars() {
-  const colors = ['#10b981', '#34d399', '#fbbf24', '#f97316', '#a7f3d0'];
+  const avatars = [
+    { src: '/images/avatars/1.png', alt: 'Jogador 1' },
+    { src: '/images/avatars/2.png', alt: 'Jogador 2' },
+    { src: '/images/avatars/3.png', alt: 'Jogador 3' },
+    { src: '/images/avatars/4.png', alt: 'Jogador 4' },
+    { src: '/images/avatars/5.png', alt: 'Jogador 5' },
+  ];
   return (
     <div className="flex -space-x-2">
-      {colors.map((c, i) => (
-        <div
+      {avatars.map((a, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
           key={i}
-          className="grid h-8 w-8 place-items-center rounded-full border-2 border-[#0a1f17] text-[10px] font-bold text-[#0a1f17]"
-          style={{ background: c }}
-        >
-          {String.fromCharCode(65 + i)}
-        </div>
+          src={a.src}
+          alt={a.alt}
+          className="h-8 w-8 rounded-full border-2 border-[#0a1f17] object-cover"
+          loading="lazy"
+        />
       ))}
     </div>
   );

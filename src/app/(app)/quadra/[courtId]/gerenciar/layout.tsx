@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
 import { canManageCourt } from '@/lib/permissions';
+import ErrorState from '@/components/ui/ErrorState';
+import { getFriendlyError, logError, type FriendlyError } from '@/lib/errors';
 
 export default function GerenciarLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -13,6 +15,14 @@ export default function GerenciarLayout({ children }: { children: React.ReactNod
   const courtId = params?.courtId as string;
   const [allowed, setAllowed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<FriendlyError | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+
+  const retry = useCallback(() => {
+    setError(null);
+    setLoading(true);
+    setRetryKey((k) => k + 1);
+  }, []);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -20,22 +30,31 @@ export default function GerenciarLayout({ children }: { children: React.ReactNod
         router.push('/login');
         return;
       }
+      try {
+        const courtSnap = await getDoc(doc(db, 'courts', courtId));
+        const managerIds: string[] = courtSnap.exists()
+          ? (courtSnap.data().managerIds ?? [])
+          : [];
 
-      const courtSnap = await getDoc(doc(db, 'courts', courtId));
-      const managerIds: string[] = courtSnap.exists()
-        ? (courtSnap.data().managerIds ?? [])
-        : [];
+        if (!canManageCourt(firebaseUser.uid, firebaseUser.email, managerIds)) {
+          router.push('/reservar');
+          return;
+        }
 
-      if (!canManageCourt(firebaseUser.uid, firebaseUser.email, managerIds)) {
-        router.push('/reservar');
-        return;
+        setAllowed(true);
+        setLoading(false);
+      } catch (err) {
+        logError('gerenciar-layout:loadCourt', err);
+        setError(getFriendlyError(err));
+        setLoading(false);
       }
-
-      setAllowed(true);
-      setLoading(false);
     });
     return () => unsub();
-  }, [router, courtId]);
+  }, [router, courtId, retryKey]);
+
+  if (error) {
+    return <ErrorState error={error} onRetry={retry} fullPage />;
+  }
 
   if (loading) {
     return (

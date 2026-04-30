@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
 import { Search, Check } from 'lucide-react';
+import ErrorState from '@/components/ui/ErrorState';
+import { useToast } from '@/components/ui/Toast';
+import { getFriendlyError, logError, type FriendlyError } from '@/lib/errors';
 
 interface CourtOption {
   id: string;
@@ -13,21 +16,34 @@ interface CourtOption {
 
 export default function SelecionarQuadraPage() {
   const router = useRouter();
+  const { showError } = useToast();
   const [courts, setCourts] = useState<CourtOption[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<FriendlyError | null>(null);
 
-  useEffect(() => {
-    getDocs(collection(db, 'courts')).then((snap) => {
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const snap = await getDocs(collection(db, 'courts'));
       const list: CourtOption[] = snap.docs
         .map((d) => ({ id: d.id, name: d.data().name as string }))
         .sort((a, b) => a.name.localeCompare(b.name));
       setCourts(list);
+    } catch (err) {
+      logError('selecionar-quadra:load', err);
+      setError(getFriendlyError(err));
+    } finally {
       setLoading(false);
-    });
+    }
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const filtered = search.trim()
     ? courts.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
@@ -54,6 +70,9 @@ export default function SelecionarQuadraPage() {
         { merge: true }
       );
       router.push('/home');
+    } catch (err) {
+      logError('selecionar-quadra:save', err);
+      showError(err);
     } finally {
       setSaving(false);
     }
@@ -83,6 +102,8 @@ export default function SelecionarQuadraPage() {
             <div className="flex justify-center py-10">
               <div className="animate-spin rounded-full h-8 w-8 border-2 border-emerald-600 border-t-transparent" />
             </div>
+          ) : error ? (
+            <ErrorState error={error} onRetry={load} />
           ) : filtered.length === 0 ? (
             <p className="text-center text-gray-400 py-8">Nenhuma quadra encontrada</p>
           ) : (
@@ -115,7 +136,7 @@ export default function SelecionarQuadraPage() {
 
         <button
           onClick={handleEnter}
-          disabled={selected.size === 0 || saving}
+          disabled={selected.size === 0 || saving || !!error}
           className="w-full bg-emerald-600 text-white rounded-xl px-6 py-3 font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving

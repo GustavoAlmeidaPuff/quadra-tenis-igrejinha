@@ -16,6 +16,9 @@ import { Court, CourtReservationRules, DurationMode } from '@/lib/types';
 import { isDeveloper } from '@/lib/permissions';
 import { ArrowLeft, UserMinus, UserPlus } from 'lucide-react';
 import Link from 'next/link';
+import ErrorState from '@/components/ui/ErrorState';
+import { useToast } from '@/components/ui/Toast';
+import { getFriendlyError, logError, type FriendlyError } from '@/lib/errors';
 
 interface UserBasic {
   id: string;
@@ -42,6 +45,9 @@ export default function GerenciarQuadraPage() {
   const params = useParams();
   const router = useRouter();
   const courtId = params?.courtId as string;
+  const { showError, showSuccess } = useToast();
+  const [pageError, setPageError] = useState<FriendlyError | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
   const [court, setCourt] = useState<Court | null>(null);
   const [managers, setManagers] = useState<UserBasic[]>([]);
@@ -106,39 +112,58 @@ export default function GerenciarQuadraPage() {
     if (currentUser) setCurrentUserEmail(currentUser.email ?? '');
 
     const fetchAll = async () => {
-      await loadCourt();
+      setPageError(null);
+      try {
+        await loadCourt();
 
-      const snap = await getDocs(collection(db, 'users'));
-      const users: UserBasic[] = snap.docs
-        .filter((d) => d.data().isAnonymous !== true)
-        .map((d) => ({
-          id: d.id,
-          firstName: d.data().firstName ?? '',
-          lastName: d.data().lastName ?? '',
-          email: d.data().email ?? '',
-        }));
-      setAllUsers(users);
-      setLoading(false);
+        const snap = await getDocs(collection(db, 'users'));
+        const users: UserBasic[] = snap.docs
+          .filter((d) => d.data().isAnonymous !== true)
+          .map((d) => ({
+            id: d.id,
+            firstName: d.data().firstName ?? '',
+            lastName: d.data().lastName ?? '',
+            email: d.data().email ?? '',
+          }));
+        setAllUsers(users);
+      } catch (err) {
+        logError('gerenciar:loadAll', err);
+        setPageError(getFriendlyError(err));
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchAll();
-  }, [courtId]);
+  }, [courtId, retryKey]);
 
   const handleAddManager = async (user: UserBasic) => {
     if (!court) return;
-    await updateDoc(doc(db, 'courts', courtId), {
-      managerIds: arrayUnion(user.id),
-    });
-    setSearchTerm('');
-    await loadCourt();
+    try {
+      await updateDoc(doc(db, 'courts', courtId), {
+        managerIds: arrayUnion(user.id),
+      });
+      setSearchTerm('');
+      await loadCourt();
+      showSuccess('Chefe de quadra adicionado');
+    } catch (err) {
+      logError('gerenciar:addManager', err);
+      showError(err, 'Não foi possível adicionar');
+    }
   };
 
   const handleRemoveManager = async (userId: string) => {
     if (!court) return;
-    await updateDoc(doc(db, 'courts', courtId), {
-      managerIds: arrayRemove(userId),
-    });
-    await loadCourt();
+    try {
+      await updateDoc(doc(db, 'courts', courtId), {
+        managerIds: arrayRemove(userId),
+      });
+      await loadCourt();
+      showSuccess('Chefe de quadra removido');
+    } catch (err) {
+      logError('gerenciar:removeManager', err);
+      showError(err, 'Não foi possível remover');
+    }
   };
 
   const handleSaveRules = async () => {
@@ -155,6 +180,9 @@ export default function GerenciarQuadraPage() {
       await updateDoc(doc(db, 'courts', courtId), { reservationRules: rules });
       setRulesSaved(true);
       setTimeout(() => setRulesSaved(false), 2500);
+    } catch (err) {
+      logError('gerenciar:saveRules', err);
+      showError(err, 'Não foi possível salvar as regras');
     } finally {
       setSavingRules(false);
     }
@@ -172,6 +200,20 @@ export default function GerenciarQuadraPage() {
         .filter((u) => !managers.some((m) => m.id === u.id))
         .slice(0, 5)
     : [];
+
+  if (pageError) {
+    return (
+      <ErrorState
+        error={pageError}
+        onRetry={() => {
+          setPageError(null);
+          setLoading(true);
+          setRetryKey((k) => k + 1);
+        }}
+        fullPage
+      />
+    );
+  }
 
   if (loading) {
     return (

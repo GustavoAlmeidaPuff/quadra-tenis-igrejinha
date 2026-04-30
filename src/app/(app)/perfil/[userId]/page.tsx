@@ -44,6 +44,8 @@ import {
 import Image from 'next/image';
 import Avatar from '@/components/layout/Avatar';
 import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
+import { useToast } from '@/components/ui/Toast';
+import { logError } from '@/lib/errors';
 import ModalNovaReserva from '@/components/reserva/ModalNovaReserva';
 import ReservationDetailModal from '@/components/reserva/ReservationDetailModal';
 import { User } from '@/lib/types';
@@ -77,6 +79,7 @@ function PatenteIcon({ icon, className }: { icon: string; className?: string }) 
 
 export default function PerfilUserIdPage({ params }: PageProps) {
   const router = useRouter();
+  const { showError, showToast } = useToast();
   const resolvedParams = use(params);
   const userIdParam = resolvedParams.userId;
   const currentUid = auth.currentUser?.uid ?? null;
@@ -340,14 +343,15 @@ export default function PerfilUserIdPage({ params }: PageProps) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg = (typeof data?.error === 'string' ? data.error : null) ?? 'Erro ao cancelar reserva';
-        alert(msg);
+        showToast({ variant: 'error', title: 'Não foi possível cancelar', description: msg });
         return;
       }
       setSelectedReservation(null);
       await refreshStats();
+      showToast({ variant: 'success', title: 'Reserva cancelada' });
     } catch (e) {
-      console.error(e);
-      alert('Erro ao cancelar reserva. Verifique sua conexão.');
+      logError('perfil:cancel', e);
+      showError(e, 'Não foi possível cancelar');
     } finally {
       setCancelling(false);
     }

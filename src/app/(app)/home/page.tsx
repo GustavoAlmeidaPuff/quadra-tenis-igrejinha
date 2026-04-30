@@ -12,11 +12,14 @@ import {
   type PartnerStat,
 } from '@/lib/queries/stats';
 import { getRandomColor } from '@/lib/utils';
+import { useToast } from '@/components/ui/Toast';
+import { logError } from '@/lib/errors';
 
 export default function HomePage() {
   const [userName, setUserName] = useState('');
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const { showError } = useToast();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -32,7 +35,8 @@ export default function HomePage() {
         const userStats = await getUserStats(user.uid);
         setStats(userStats);
       } catch (e) {
-        console.error('Erro ao carregar estatísticas:', e);
+        logError('home:loadStats', e);
+        showError(e, 'Não conseguimos carregar suas estatísticas');
         setStats({
           totalHours: 0,
           totalReservations: 0,
@@ -60,7 +64,7 @@ export default function HomePage() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [showError]);
 
   if (loading) {
     return (
