@@ -9,9 +9,9 @@ export interface User {
   isAnonymous: boolean;
   isPrivate?: boolean;
   createdAt: Timestamp;
-  /** Quando true, o popup de boas-vindas não é mais exibido. */
+  /** When true, the welcome popup is no longer shown. */
   welcomePopupSeen?: boolean;
-  /** IDs das quadras que o usuário escolheu ao entrar no app. */
+  /** Court IDs the user selected when joining the app. */
   courtIds?: string[];
 }
 
@@ -21,7 +21,7 @@ export interface Reservation {
   endAt: Timestamp;
   createdById: string;
   createdAt: Timestamp;
-  /** Quadra da reserva. Ausente em reservas antigas = 'quadra_1'. */
+  /** Court for this reservation. Missing on legacy rows = 'quadra_1'. */
   courtId?: string;
 }
 

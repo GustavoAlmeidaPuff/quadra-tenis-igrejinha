@@ -1,7 +1,7 @@
 {
-  "name": "QuadraLivre — Reservas para quadras de tênis",
+  "name": "QuadraLivre — Tennis court bookings",
   "short_name": "QuadraLivre",
-  "description": "Reserve horários e acompanhe a agenda em várias quadras de tênis num só app.",
+  "description": "Book slots and follow the schedule across multiple tennis courts in one app.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

@@ -61,7 +61,7 @@ export default function AppLayout({
         const data = userDoc.data();
 
         if (!data.courtIds || data.courtIds.length === 0) {
-          router.push('/selecionar-quadra');
+          router.push('/select-court');
           return;
         }
 
@@ -120,7 +120,7 @@ export default function AppLayout({
       );
     } catch (err) {
       logError('app-layout:welcomePopup', err);
-      showError(err, 'Não foi possível salvar');
+      showError(err, 'Could not save');
     }
   };
 

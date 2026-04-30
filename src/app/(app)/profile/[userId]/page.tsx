@@ -46,8 +46,8 @@ import Avatar from '@/components/layout/Avatar';
 import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
 import { useToast } from '@/components/ui/Toast';
 import { logError } from '@/lib/errors';
-import ModalNovaReserva from '@/components/reserva/ModalNovaReserva';
-import ReservationDetailModal from '@/components/reserva/ReservationDetailModal';
+import NewReservationModal from '@/components/reservation/NewReservationModal';
+import ReservationDetailModal from '@/components/reservation/ReservationDetailModal';
 import { User } from '@/lib/types';
 import {
   getUserStats,
@@ -56,7 +56,7 @@ import {
   type ProfileSummary,
   type ReservationListItem,
 } from '@/lib/queries/stats';
-import { getPatenteAtual } from '@/lib/patentes';
+import { getPatenteAtual } from '@/lib/patents';
 
 type PageProps = {
   params: Promise<{ userId: string }>;
@@ -308,7 +308,7 @@ export default function PerfilUserIdPage({ params }: PageProps) {
         }),
       }).catch((err) => console.error('Erro ao enviar email de desafio:', err));
       setShowDesafioModal(false);
-      router.push('/notificacoes');
+      router.push('/notifications');
     } catch (e) {
       console.error(e);
     } finally {
@@ -350,7 +350,7 @@ export default function PerfilUserIdPage({ params }: PageProps) {
       await refreshStats();
       showToast({ variant: 'success', title: 'Reserva cancelada' });
     } catch (e) {
-      logError('perfil:cancel', e);
+      logError('profile:cancel', e);
       showError(e, 'Não foi possível cancelar');
     } finally {
       setCancelling(false);
@@ -741,21 +741,21 @@ export default function PerfilUserIdPage({ params }: PageProps) {
               {/* Estatísticas e nível */}
               <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
                 <Link
-                  href={`/perfil/${userIdParam}/estatisticas`}
+                  href={`/profile/${userIdParam}/statistics`}
                   className="w-full flex items-center justify-center gap-2 py-4 text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   <BarChart2 className="w-4 h-4 text-gray-900" />
                   Estatísticas de jogo
                 </Link>
                 <Link
-                  href={`/perfil/${userIdParam}/nivel`}
+                  href={`/profile/${userIdParam}/level`}
                   className="w-full flex items-center justify-center gap-2 py-4 text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
                 >
                   <Trophy className="w-4 h-4 text-gray-900" />
                   Classificação
                 </Link>
                 <Link
-                  href={`/perfil/${userIdParam}/quadras`}
+                  href={`/profile/${userIdParam}/courts`}
                   className="w-full flex items-center justify-center gap-2 py-4 text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
                 >
                   <MapPin className="w-4 h-4 text-gray-900" />
@@ -782,7 +782,7 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                   Pague-me um café
                 </a>
                 <Link
-                  href="/aulas"
+                  href="/lessons"
                   className="w-full flex items-center justify-center py-4 text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
                 >
                   <span className="flex items-center gap-2">
@@ -798,7 +798,7 @@ export default function PerfilUserIdPage({ params }: PageProps) {
                   </span>
                 </Link>
                 <Link
-                  href="/parceiros"
+                  href="/partners"
                   className="w-full flex items-center justify-center gap-2 py-4 text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
                 >
                   <Users className="w-4 h-4 text-gray-900" />
@@ -911,7 +911,7 @@ export default function PerfilUserIdPage({ params }: PageProps) {
           )}
 
           {showEditReservationModal && (
-            <ModalNovaReserva
+            <NewReservationModal
               isOpen={showEditReservationModal}
               onClose={() => {
                 setShowEditReservationModal(false);

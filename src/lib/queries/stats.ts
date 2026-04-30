@@ -152,7 +152,7 @@ export async function getTotalHoursForUser(userId: string): Promise<number> {
   return Math.round(pastReservations.length * RESERVATION_DURATION_HOURS * 10) / 10;
 }
 
-/** Retorna jogadores com quem o usuário já jogou (parceiros de quadra), ordenados por frequência. */
+/** Players the user has played with (court partners), sorted by frequency. */
 export async function getRecommendedPartners(
   userId: string,
   limit = 10
@@ -347,7 +347,7 @@ export interface ProfileSummary {
   weekStreak: number;
 }
 
-/** Resumo rápido para o perfil: só números, sem participantes nem usuários. */
+/** Quick profile summary: numbers only, no participant/user hydration. */
 export async function getProfileSummary(userId: string): Promise<ProfileSummary> {
   const reservationIds = await getReservationIdsForUser(userId);
   const allReservations = await getReservationsByIds(Array.from(reservationIds));

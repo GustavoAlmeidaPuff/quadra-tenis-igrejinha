@@ -536,7 +536,7 @@ export default function NotificacoesPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-900">
-                      <Link href={`/perfil/${item.fromUserId}`} className="font-semibold hover:underline">
+                      <Link href={`/profile/${item.fromUserId}`} className="font-semibold hover:underline">
                         {item.fromUserName}
                       </Link>
                       <span className="text-gray-600"> te mencionou em um post</span>
@@ -558,7 +558,7 @@ export default function NotificacoesPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-900">
-                      <Link href={`/perfil/${item.fromUserId}`} className="font-semibold hover:underline">
+                      <Link href={`/profile/${item.fromUserId}`} className="font-semibold hover:underline">
                         {item.fromUserName}
                       </Link>
                       <span className="text-gray-600"> curtiu seu post</span>
@@ -576,7 +576,7 @@ export default function NotificacoesPage() {
               {item.type === 'received_challenge' && (
                 <>
                   <div className="flex items-start gap-3 mb-3">
-                    <Link href={`/perfil/${item.challenge.fromUserId}`}>
+                    <Link href={`/profile/${item.challenge.fromUserId}`}>
                       <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
                         {item.challenge.fromUserInitials}
                       </div>
@@ -585,7 +585,7 @@ export default function NotificacoesPage() {
                       <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 mb-0.5">
                         <Swords className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                         <Link
-                          href={`/perfil/${item.challenge.fromUserId}`}
+                          href={`/profile/${item.challenge.fromUserId}`}
                           className="font-semibold text-gray-900 hover:underline"
                         >
                           {item.challenge.fromUserName}
@@ -642,7 +642,7 @@ export default function NotificacoesPage() {
                         Você aceitou. Marque o horário do duelo.
                       </p>
                       <Link
-                        href={`/reservar?adicionarJogador=${encodeURIComponent(item.challenge.fromUserId)}&challengeId=${encodeURIComponent(item.challenge.id)}`}
+                        href={`/reserve?addPlayer=${encodeURIComponent(item.challenge.fromUserId)}&challengeId=${encodeURIComponent(item.challenge.id)}`}
                         className="block w-full text-center bg-emerald-600 text-white rounded-xl px-4 py-2 font-medium hover:bg-emerald-700 transition-colors"
                       >
                         Marcar horário

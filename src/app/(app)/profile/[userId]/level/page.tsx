@@ -11,7 +11,7 @@ import {
   getProgressoAteProxima,
   PATENTES,
   type PatenteInfo,
-} from '@/lib/patentes';
+} from '@/lib/patents';
 import { User } from '@/lib/types';
 
 type PageProps = {
@@ -80,7 +80,7 @@ export default function NivelPage({ params }: PageProps) {
       <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-6">
         <div className="bg-white px-4 py-4 flex items-center gap-3 border-b border-gray-200">
           <Link
-            href={`/perfil/${userId}`}
+            href={`/profile/${userId}`}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             aria-label="Voltar"
           >
@@ -101,7 +101,7 @@ export default function NivelPage({ params }: PageProps) {
       <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-6">
         <div className="bg-white px-4 py-4 flex items-center gap-3 border-b border-gray-200">
           <Link
-            href={`/perfil/${userId}`}
+            href={`/profile/${userId}`}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             aria-label="Voltar"
           >
@@ -129,7 +129,7 @@ export default function NivelPage({ params }: PageProps) {
     <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-6">
       <div className="bg-white px-4 py-4 flex items-center gap-3 border-b border-gray-200">
         <Link
-          href={`/perfil/${userId}`}
+          href={`/profile/${userId}`}
           className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           aria-label="Voltar"
         >

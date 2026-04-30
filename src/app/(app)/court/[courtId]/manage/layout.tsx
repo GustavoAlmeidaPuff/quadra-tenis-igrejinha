@@ -37,14 +37,14 @@ export default function GerenciarLayout({ children }: { children: React.ReactNod
           : [];
 
         if (!canManageCourt(firebaseUser.uid, firebaseUser.email, managerIds)) {
-          router.push('/reservar');
+          router.push('/reserve');
           return;
         }
 
         setAllowed(true);
         setLoading(false);
       } catch (err) {
-        logError('gerenciar-layout:loadCourt', err);
+        logError('manage-layout:loadCourt', err);
         setError(getFriendlyError(err));
         setLoading(false);
       }

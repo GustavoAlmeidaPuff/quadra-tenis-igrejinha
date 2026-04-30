@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { X, Search, UserPlus } from 'lucide-react';
 
-/** Hosts externos de avatar; em prod o next/image pode falhar se não estiverem no config. */
+/** External avatar hosts; next/image may fail in prod if hosts are not in config. */
 const EXTERNAL_AVATAR_HOSTS = ['i.ibb.co', 'i.imgur.com', 'lh3.googleusercontent.com', 'firebasestorage.googleapis.com'];
 
 function isExternalAvatarUrl(url: string): boolean {
@@ -29,23 +29,23 @@ interface User {
   pictureUrl?: string;
 }
 
-interface ModalNovaReservaProps {
+interface NewReservationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
   selectedDate?: Date;
   initialParticipantIds?: string[];
-  /** Quando preenchido (aceite de desafio), ao criar a reserva o desafio é marcado como aceito. */
+  /** When set (challenge accept flow), creating the reservation marks the challenge accepted. */
   challengeId?: string;
-  /** Quando preenchido, abre em modo edição: só altera participantes da reserva existente. */
+  /** When set, opens in edit mode: only updates participants on the existing reservation. */
   reservationId?: string;
-  /** Quadra pré-selecionada ao criar nova reserva. */
+  /** Pre-selected court when creating a new reservation. */
   initialCourtId?: CourtId;
-  /** Quadras disponíveis para seleção (das quais o usuário participa). */
+  /** Courts available to pick from (courts the user belongs to). */
   availableCourtIds?: string[];
 }
 
-export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedDate, initialParticipantIds = [], challengeId, reservationId, initialCourtId, availableCourtIds }: ModalNovaReservaProps) {
+export default function NewReservationModal({ isOpen, onClose, onSuccess, selectedDate, initialParticipantIds = [], challengeId, reservationId, initialCourtId, availableCourtIds }: NewReservationModalProps) {
   const isEditMode = Boolean(reservationId?.trim());
   const [date, setDate] = useState('');
   const [hour, setHour] = useState('19');
@@ -63,7 +63,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Janela de 7 dias: hoje até hoje+6 (igual ao reservationValidator)
+  // 7-day window: today through today+6 (same as reservationValidator)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const toYMD = (d: Date) =>
@@ -120,7 +120,7 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
     if (date < minDate || date > maxDate) setDate(minDate);
   }, [isOpen, date, minDate, maxDate]);
 
-  // Sincronizar court quando prop muda (ex.: usuário troca de aba no reservar page)
+  // Sync court when prop changes (e.g. user switches tab on the reserve page)
   useEffect(() => {
     if (!isEditMode && initialCourtId) {
       setSelectedCourtId(initialCourtId);

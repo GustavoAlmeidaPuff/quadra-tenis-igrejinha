@@ -1,182 +1,182 @@
-# Quadra Livre — Sistema de Reserva de Quadra de Tênis
+# Quadra Livre — Community tennis court booking
 
-Aplicação web **mobile-first** para gestão comunitária de quadras de tênis. Desenvolvida do zero com Next.js 15, Firebase e TypeScript, cobre todo o ciclo de uso: autenticação, reservas com validação de conflito, perfis sociais, desafios entre jogadores e painel de administração por quadra.
-
----
-
-## Funcionalidades
-
-### Autenticação e onboarding
-- Login via Google (Firebase Auth)
-- Fluxo de onboarding para novos usuários preencherem nome e dados do perfil
-- Redirecionamento automático baseado no estado de autenticação
-
-### Dashboard pessoal
-- Saudação personalizada com estatísticas em tempo real
-- Exibição da próxima reserva agendada
-- Sugestão inteligente de horário com base no histórico do usuário
-- Cards com total de horas jogadas, número de reservas e sequência de semanas ativas
-- Gráfico de barras de frequência por dia da semana
-- Lista de parceiros mais frequentes com link para o perfil de cada um
-
-### Agenda e reservas
-- Visualização em timeline (linha do tempo por hora) dos 7 próximos dias
-- Linha vermelha indicando o horário atual na agenda
-- Indicador visual nos dias que já possuem reservas
-- Modal de nova reserva com seletor de data, horário e participantes
-- Duração fixa de 1h30 por reserva
-- Seleção de quadra disponível para o usuário
-- Edição de participantes de uma reserva existente
-- Cancelamento de reserva pelo criador
-- Validação de conflito de horário feita no servidor (Firebase Admin SDK), com verificação de:
-  - Limite de 1 reserva por dia por usuário
-  - Limite de 4 reservas por semana
-  - Janela máxima de 7 dias à frente
-- Envio de e-mail de confirmação de reserva via Brevo
-
-### Perfis de usuário
-- Página pública de perfil com foto, nome e estatísticas resumidas
-- Sub-página de **estatísticas detalhadas**:
-  - Total de horas jogadas
-  - Frequência por dia da semana (gráfico de barras)
-  - Horas jogadas por mês (gráfico de barras)
-  - Horas jogadas por semana (gráfico de barras)
-  - Ranking dos parceiros mais frequentes com foto e quantidade de jogos
-- Sub-página de histórico de reservas por quadra
-
-### Feed social
-- Feed de posts da comunidade
-- Curtidas em posts
-- Comentários com suporte a menções (`@usuario`)
-- Notificação ao ser mencionado em um comentário
-- Notificação ao receber curtida em um post
-
-### Desafios entre jogadores
-- Enviar um desafio para outro jogador com mensagem e horário proposto
-- Aceitar ou recusar desafios recebidos diretamente pela página de notificações
-- Ao aceitar, uma reserva é criada automaticamente para os dois jogadores
-- Cancelar desafio enviado antes de ser respondido
-- Envio de e-mail de notificação de desafio via Brevo
-- Fluxo de "aceitar e marcar horário" para desafios sem horário definido
-
-### Notificações
-- Central de notificações em tempo real (Firestore `onSnapshot`)
-- Tipos: desafio recebido, desafio enviado, menção em post, curtida em post
-- Marcação automática como lido ao abrir a página
-- Exclusão individual de notificações (soft-delete com `hiddenByUserIds`, hard-delete quando ambos os lados ocultam)
-
-### Gestão de quadras (multi-court)
-- Suporte a múltiplas quadras com tab de seleção na agenda
-- Conflitos de horário verificados separadamente por quadra
-- Normalização de `courtId` para compatibilidade com registros antigos (`normalizeCourtId`)
-- Ícone de engrenagem na aba da quadra para chefes gerenciarem diretamente da agenda
-
-### Painel do chefe de quadra (`/quadra/[courtId]/gerenciar`)
-- Acesso restrito a gerentes da quadra (verificado via `managerIds[]` no Firestore)
-- Adicionar e remover outros gerentes da quadra
-- Guard de layout impedindo acesso não autorizado
-
-### Painel do desenvolvedor (`/admin`)
-- Acesso restrito ao e-mail do desenvolvedor
-- Criar quadras padrão no Firestore
-- Visualizar e gerenciar todas as quadras e seus chefes
-- Guard de layout impedindo acesso não autorizado
+**Mobile-first** web app for community tennis court management. Built with Next.js 15, Firebase, and TypeScript. It covers the full flow: authentication, conflict-checked bookings, social profiles, player challenges, and per-court admin.
 
 ---
 
-## Stack técnica
+## Features
 
-| Camada | Tecnologia |
+### Authentication and onboarding
+- Google sign-in (Firebase Auth)
+- Onboarding for new users to set name and profile data
+- Automatic redirects based on auth state
+
+### Personal dashboard
+- Personalized greeting with near real-time stats
+- Next upcoming reservation
+- Smart time suggestion based on user history
+- Cards for total hours played, reservation count, and active-week streak
+- Bar chart of weekday play frequency
+- List of most frequent partners with links to each profile
+
+### Schedule and reservations
+- Timeline view (hour-by-hour) for the next 7 days
+- Red line for current time on the schedule
+- Visual indicators on days that already have bookings
+- New reservation modal with date, time, and participant picker
+- Fixed duration of 1h30 per reservation
+- Court selection from courts available to the user
+- Edit participants on an existing reservation
+- Cancel reservation (creator only)
+- Server-side slot conflict checks (Firebase Admin SDK), including:
+  - At most 1 reservation per day per user
+  - At most 4 reservations per week
+  - Up to 7 days ahead
+- Booking confirmation email via Brevo
+
+### User profiles
+- Public profile with photo, name, and summary stats
+- **Detailed statistics** subpage:
+  - Total hours played
+  - Weekday frequency (bar chart)
+  - Hours per month (bar chart)
+  - Hours per week (bar chart)
+  - Ranking of top partners with photo and match count
+- Subpage with reservation history per court
+
+### Social feed
+- Community post feed
+- Post likes
+- Comments with `@mention` support
+- Notification when mentioned in a comment
+- Notification when someone likes your post
+
+### Player challenges
+- Send a challenge to another player with message and proposed time
+- Accept or decline from the notifications page
+- On accept, a reservation is created for both players
+- Cancel a sent challenge before it is answered
+- Challenge notification email via Brevo
+- Flow to accept and pick a time for challenges without a fixed slot
+
+### Notifications
+- Real-time notification center (Firestore `onSnapshot`)
+- Types: challenge received/sent, mention in post, like on post
+- Auto-mark as read when opening the page
+- Per-notification delete (soft-delete with `hiddenByUserIds`, hard-delete when both sides hide)
+
+### Multi-court management
+- Multiple courts with tab selection on the schedule
+- Slot conflicts checked per court
+- `courtId` normalization for legacy data (`normalizeCourtId`)
+- Gear icon on the court tab for managers to open settings from the schedule
+
+### Court manager panel (`/court/[courtId]/manage`)
+- Restricted to court managers (`managerIds[]` in Firestore)
+- Add and remove other managers
+- Layout guard blocking unauthorized access
+
+### Developer panel (`/admin`)
+- Restricted to the developer email
+- Create default courts in Firestore
+- View and manage all courts and their managers
+- Layout guard blocking unauthorized access
+
+---
+
+## Tech stack
+
+| Layer | Technology |
 |---|---|
 | Framework | Next.js 15 (App Router) + React 19 |
-| Linguagem | TypeScript |
-| Estilização | Tailwind CSS |
-| Autenticação | Firebase Auth (Google) |
-| Banco de dados | Firestore (Firebase) |
+| Language | TypeScript |
+| Styling | Tailwind CSS |
+| Auth | Firebase Auth (Google) |
+| Database | Firestore (Firebase) |
 | Backend/API | Next.js Route Handlers + Firebase Admin SDK |
-| Upload de imagens | Firebase Storage |
-| E-mail transacional | Brevo (ex-Sendinblue) |
-| Ícones | Lucide React |
+| Image upload | Firebase Storage |
+| Transactional email | Brevo (formerly Sendinblue) |
+| Icons | Lucide React |
 | Drag and drop | dnd-kit |
-| Datas | date-fns |
+| Dates | date-fns |
 
 ---
 
-## Arquitetura
+## Architecture
 
 ```
 src/
 ├── app/
-│   ├── (auth)/                    # Páginas sem layout autenticado
+│   ├── (auth)/                    # Unauthenticated pages
 │   │   ├── login/
 │   │   ├── onboarding/
-│   │   └── selecionar-quadra/
-│   ├── (app)/                     # App autenticado (com header e nav)
+│   │   └── select-court/
+│   ├── (app)/                     # Authenticated app (header + nav)
 │   │   ├── home/                  # Dashboard
-│   │   ├── reservar/              # Agenda e nova reserva
-│   │   ├── social/                # Feed de posts
-│   │   ├── notificacoes/          # Central de notificações
-│   │   ├── perfil/
+│   │   ├── reserve/               # Schedule and new reservation
+│   │   ├── social/                # Post feed
+│   │   ├── notifications/       # Notification center
+│   │   ├── profile/
 │   │   │   └── [userId]/
-│   │   │       ├── page.tsx       # Perfil público
-│   │   │       ├── estatisticas/  # Gráficos e métricas
-│   │   │       ├── quadras/       # Histórico por quadra
-│   │   │       └── nivel/         # Nível do jogador
-│   │   ├── quadra/[courtId]/
-│   │   │   └── gerenciar/         # Painel do chefe de quadra
-│   │   ├── aulas/
+│   │   │       ├── page.tsx       # Public profile
+│   │   │       ├── statistics/    # Charts and metrics
+│   │   │       ├── courts/        # History per court
+│   │   │       └── level/         # Player rank / level
+│   │   ├── court/[courtId]/
+│   │   │   └── manage/            # Court manager panel
+│   │   ├── lessons/
 │   │   ├── cafe/
-│   │   └── parceiros/
-│   ├── admin/                     # Painel do desenvolvedor
+│   │   └── partners/
+│   ├── admin/                     # Developer panel
 │   └── api/
 │       ├── reservations/          # POST, DELETE, PATCH + check-slot
-│       ├── notify-challenge/      # Envio de e-mail de desafio
-│       └── upload-image/          # Upload para Firebase Storage
+│       ├── notify-challenge/      # Challenge email
+│       └── upload-image/          # Upload to Firebase Storage
 ├── components/
 │   ├── layout/                    # Header, BottomNav, CourtStatus, Avatar
-│   └── reserva/                   # ModalNovaReserva, ReservationDetailModal
+│   └── reservation/               # NewReservationModal, ReservationDetailModal
 └── lib/
-    ├── firebase/                  # Client SDK e Admin SDK
-    ├── queries/                   # Funções de consulta (stats, etc.)
-    ├── validators/                # Validação das regras de negócio
-    ├── courts.ts                  # Constantes e DEVELOPER_EMAIL
-    ├── permissions.ts             # Helpers isDeveloper, isCourtManager, canManageCourt
-    ├── types.ts                   # Interfaces TypeScript
-    └── utils.ts                   # Funções utilitárias
+    ├── firebase/                  # Client SDK and Admin SDK
+    ├── queries/                   # Query helpers (stats, etc.)
+    ├── validators/                # Business rule validation
+    ├── courts.ts                  # Constants and DEVELOPER_EMAIL
+    ├── permissions.ts             # isDeveloper, isCourtManager, canManageCourt
+    ├── types.ts                   # TypeScript interfaces
+    └── utils.ts                   # Utilities
 ```
 
-### Coleções no Firestore
+### Firestore collections
 
-| Coleção | Descrição |
+| Collection | Description |
 |---|---|
-| `users` | Dados de perfil dos usuários |
-| `reservations` | Reservas (startAt, endAt, courtId, createdById) |
-| `reservationParticipants` | Participantes de cada reserva |
-| `courts` | Quadras com nome e lista de gerentes (`managerIds[]`) |
-| `challenges` | Desafios entre jogadores |
-| `posts` | Posts do feed social |
-| `notifications` | Notificações de menção e curtida |
+| `users` | User profile data |
+| `reservations` | Reservations (startAt, endAt, courtId, createdById) |
+| `reservationParticipants` | Participants per reservation |
+| `courts` | Courts with name and manager list (`managerIds[]`) |
+| `challenges` | Challenges between players |
+| `posts` | Social feed posts |
+| `notifications` | Mention and like notifications |
 
 ---
 
-## Configuração local
+## Local setup
 
-### Pré-requisitos
+### Prerequisites
 - Node.js 18+
-- Projeto no Firebase com Firestore, Auth (Google) e Storage habilitados
-- Conta no Brevo (para e-mails)
+- Firebase project with Firestore, Auth (Google), and Storage enabled
+- Brevo account (for emails)
 
-### Instalação
+### Install
 
 ```bash
-git clone <url-do-repo>
-cd reservar-tennis-igrejinha
+git clone <repo-url>
+cd quadra-tenis-igrejinha
 npm install
 ```
 
-### Variáveis de ambiente
+### Environment variables
 
-Crie um arquivo `.env.local` na raiz:
+Create `.env.local` in the project root:
 
 ```env
 # Firebase (client)
@@ -188,41 +188,41 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
 NEXT_PUBLIC_FIREBASE_APP_ID=
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
 
-# Firebase Admin (para as API routes)
-# Em desenvolvimento: caminho para o arquivo JSON da chave de serviço
+# Firebase Admin (API routes)
+# Local dev: path to service account JSON file
 FIREBASE_SERVICE_ACCOUNT_PATH=./serviceAccountKey.json
-# Em produção (Vercel): conteúdo do JSON em uma única linha
+# Production (Vercel): JSON content as a single line
 # FIREBASE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
 
-# Brevo (e-mails transacionais)
+# Brevo (transactional email)
 BREVO_API_KEY=
 BREVO_SENDER_EMAIL=
 BREVO_SENDER_NAME=
 ```
 
-> A chave de serviço do Firebase Admin é gerada em: **Firebase Console → Configurações do projeto → Contas de serviço → Gerar nova chave privada**
+> Generate the Firebase Admin service account key in **Firebase Console → Project settings → Service accounts → Generate new private key**.
 
-### Rodando em desenvolvimento
+### Development
 
 ```bash
 npm run dev
 ```
 
-Acesse `http://localhost:3000`
+Open `http://localhost:3000`.
 
 ---
 
 ## Deploy (Vercel)
 
-1. Conecte o repositório à Vercel
-2. Adicione todas as variáveis `NEXT_PUBLIC_*` nas configurações
-3. Para o Firebase Admin em produção, adicione a variável `FIREBASE_SERVICE_ACCOUNT_KEY` com o conteúdo do JSON minificado em uma linha (não use `FIREBASE_SERVICE_ACCOUNT_PATH` na Vercel)
-4. Adicione as variáveis do Brevo
-5. Faça o deploy
+1. Connect the repository to Vercel
+2. Add all `NEXT_PUBLIC_*` variables in project settings
+3. For Firebase Admin in production, set `FIREBASE_SERVICE_ACCOUNT_KEY` with minified one-line JSON (do not use `FIREBASE_SERVICE_ACCOUNT_PATH` on Vercel)
+4. Add Brevo variables
+5. Deploy
 
 ---
 
-## Regras de segurança (Firestore)
+## Firestore security rules (reference)
 
 ```javascript
 rules_version = '2';
@@ -258,9 +258,9 @@ service cloud.firestore {
 
 ---
 
-## Primeiro uso (desenvolvedor)
+## First-time developer setup
 
-1. Faça login com o e-mail configurado como `DEVELOPER_EMAIL` em `src/lib/courts.ts`
-2. Acesse `/admin`
-3. Clique em **"Criar quadras padrão"** para criar as quadras no Firestore
-4. Adicione chefes de quadra conforme necessário
+1. Sign in with the email configured as `DEVELOPER_EMAIL` in `src/lib/courts.ts`
+2. Open `/admin`
+3. Click **“Create default courts”** to seed courts in Firestore
+4. Add court managers as needed

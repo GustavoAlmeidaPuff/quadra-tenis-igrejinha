@@ -1,6 +1,6 @@
-# Security Rules do Firestore
+# Firestore security rules
 
-Cole estas regras no Firebase Console (Firestore Database > Rules):
+Paste these rules in the Firebase Console (Firestore Database → Rules):
 
 ```javascript
 rules_version = '2';
@@ -8,55 +8,45 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Usuários
+    // Users
     match /users/{userId} {
-      // Qualquer pessoa autenticada pode ler perfis públicos
+      // Any authenticated user can read public profiles
       allow read: if request.auth != null;
-      // Apenas o próprio usuário pode criar/editar seu perfil
+      // Only the signed-in user can create/update their profile
       allow create, update: if request.auth != null && request.auth.uid == userId;
-      allow delete: if false; // Não permitir deletar usuários
+      allow delete: if false; // Do not allow deleting users from the client
     }
     
-    // Reservas
+    // Reservations
     match /reservations/{reservationId} {
-      // Qualquer pessoa autenticada pode ler reservas
       allow read: if request.auth != null;
-      // Apenas usuários autenticados podem criar reservas
       allow create: if request.auth != null;
-      // Apenas o criador pode deletar sua reserva
       allow delete: if request.auth != null && 
                       request.auth.uid == resource.data.createdById;
-      // Não permitir updates diretos (usar delete + create)
+      // No direct updates (use delete + create)
       allow update: if false;
     }
     
-    // Participantes de reservas
+    // Reservation participants
     match /reservationParticipants/{participantId} {
-      // Qualquer pessoa autenticada pode ler
       allow read: if request.auth != null;
-      // Apenas usuários autenticados podem criar
       allow create: if request.auth != null;
-      // Apenas criadores de reservas podem deletar participantes
       allow delete: if request.auth != null;
       allow update: if false;
     }
     
     // Posts
     match /posts/{postId} {
-      // Qualquer pessoa autenticada pode ler
       allow read: if request.auth != null;
-      // Apenas usuários autenticados podem criar
       allow create: if request.auth != null;
-      // Autor pode editar/deletar; qualquer autenticado pode atualizar só likedBy (curtir) ou commentCount (comentário)
+      // Author can edit/delete; any authenticated user can update only likedBy (like) or commentCount (comment)
       allow update: if request.auth != null && (
         request.auth.uid == resource.data.authorId
         || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy'])
         || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount'])
       );
-      // Apenas o autor pode deletar
       allow delete: if request.auth != null && request.auth.uid == resource.data.authorId;
 
-      // Comentários do post (subcoleção)
       match /comments/{commentId} {
         allow read: if request.auth != null;
         allow create: if request.auth != null;
@@ -64,24 +54,18 @@ service cloud.firestore {
       }
     }
     
-    // Notificações (ex.: menção em post/comentário, curtida)
+    // Notifications (e.g. mention in post/comment, like)
     match /notifications/{notificationId} {
-      // Só o destinatário pode ler e apagar
       allow read, delete: if request.auth != null && request.auth.uid == resource.data.toUserId;
-      // Qualquer autenticado pode criar (ao mencionar ou curtir)
       allow create: if request.auth != null;
-      // Só o destinatário pode atualizar, e apenas o campo read (marcar como lida)
       allow update: if request.auth != null && request.auth.uid == resource.data.toUserId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
     }
 
-    // Desafios
+    // Challenges
     match /challenges/{challengeId} {
-      // Apenas usuários autenticados podem ler desafios onde são envolvidos
       allow read: if request.auth != null;
-      // Apenas usuários autenticados podem criar
       allow create: if request.auth != null;
-      // Apenas destinatário ou remetente podem atualizar (aceitar/recusar)
       allow update: if request.auth != null && 
                       (request.auth.uid == resource.data.toUserId || 
                        request.auth.uid == resource.data.fromUserId);
@@ -89,21 +73,15 @@ service cloud.firestore {
                       request.auth.uid == resource.data.fromUserId;
     }
 
-    // Quadras
+    // Courts
     match /courts/{courtId} {
-      // Qualquer usuário autenticado pode ler dados da quadra
-      // (necessário pra ver nome, managerIds, configurações de reserva, etc.)
       allow read: if request.auth != null;
-      // Apenas chefes de quadra (presentes em managerIds) podem editar a quadra
       allow update: if request.auth != null
         && request.auth.uid in resource.data.managerIds;
-      // Criação e exclusão só pelo Console (não pelo client)
       allow create, delete: if false;
     }
 
-    // Waitlist da landing page (lançamento do app nas lojas)
-    // Qualquer visitante NÃO autenticado pode submeter contato.
-    // Ninguém lê/edita/deleta pelo client — você consulta direto no Console.
+    // Landing waitlist (app store launch)
     match /waitlist/{docId} {
       allow read, update, delete: if false;
       allow create: if
@@ -117,20 +95,20 @@ service cloud.firestore {
 }
 ```
 
-**Como aplicar:**
-1. Acesse: https://console.firebase.google.com/
-2. Selecione seu projeto: **quadra-livre-igrejinha**
-3. Vá em **Firestore Database** → **Rules**
-4. **Substitua todo o conteúdo** do editor pelas regras do bloco acima (incluindo a parte de **Posts** com a subcoleção **comments** e a permissão de **commentCount**).
-5. Clique em **Publicar**.
+**How to apply:**
+1. Open https://console.firebase.google.com/
+2. Select your project: **quadra-livre-igrejinha**
+3. Go to **Firestore Database** → **Rules**
+4. Replace the editor contents with the rules above (including **Posts** with nested **comments** and **commentCount** update rules).
+5. Click **Publish**.
 
-**Índices para notificações:**  
-- Listar notificações: query com `toUserId`, `type` e `orderBy('createdAt', 'desc')` — use o link do console se o Firestore pedir o índice.
-- Badge e marcar como lida: query com `toUserId` e `read == false`. Se o Firestore pedir um índice composto para essa query, crie com coleção `notifications`, campos `toUserId` (Crescente) e `read` (Crescente), escopo Coleta.
+**Indexes for notifications:**  
+- List notifications: query with `toUserId`, `type`, and `orderBy('createdAt', 'desc')` — use the Console link if Firestore asks for a composite index.
+- Badge and mark read: query with `toUserId` and `read == false`. If Firestore requests a composite index, create it with collection `notifications`, fields `toUserId` (Ascending) and `read` (Ascending), collection scope.
 
-**Se aparecer "Missing or insufficient permissions" ao curtir ou comentar:**  
-As regras no Console estão desatualizadas. É obrigatório que o bloco **Posts** tenha:
-- `allow update` com `hasOnly(['likedBy'])` e `hasOnly(['commentCount'])`;
-- o bloco aninhado **match /comments/{commentId}** com `allow read, create` para usuário autenticado.
+**If you see “Missing or insufficient permissions” when liking or commenting:**  
+The rules in the Console are outdated. The **Posts** block must include:
+- `allow update` with `hasOnly(['likedBy'])` and `hasOnly(['commentCount'])`;
+- nested **match /comments/{commentId}** with `allow read, create` for authenticated users.
 
-Copie as regras completas deste arquivo e publique de novo no Firebase Console.
+Copy the full rules from this file and publish again in the Firebase Console.

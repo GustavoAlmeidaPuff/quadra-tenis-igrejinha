@@ -122,7 +122,7 @@ export default function HomePage() {
             Reservar para {stats.reservationSuggestion.label}
           </p>
           <Link
-            href={`/reservar?date=${stats.reservationSuggestion.nextDateISO}&hour=${stats.reservationSuggestion.hour}`}
+            href={`/reserve?date=${stats.reservationSuggestion.nextDateISO}&hour=${stats.reservationSuggestion.hour}`}
             className="inline-flex items-center gap-2 text-sm font-medium text-emerald-600 hover:text-emerald-700"
           >
             Reservar
@@ -192,7 +192,7 @@ export default function HomePage() {
             {(stats?.topPartners ?? []).map((partner: PartnerStat) => (
               <Link
                 key={partner.userId}
-                href={`/perfil/${partner.userId}`}
+                href={`/profile/${partner.userId}`}
                 className="flex items-center justify-between hover:bg-gray-50 rounded-lg p-1 -m-1 transition-colors"
               >
                 <div className="flex items-center gap-3">

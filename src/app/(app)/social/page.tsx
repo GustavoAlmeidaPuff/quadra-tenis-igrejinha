@@ -737,7 +737,7 @@ export default function SocialPage() {
                             {filteredUsersForSearch.map((u) => (
                               <li key={u.id}>
                                 <Link
-                                  href={`/perfil/${u.id}`}
+                                  href={`/profile/${u.id}`}
                                   onClick={() => {
                                     setSearchOpen(false);
                                     setPeopleSearchTerm('');
@@ -794,7 +794,7 @@ export default function SocialPage() {
                             {recommendedPartners.map((u) => (
                               <li key={u.id}>
                                 <Link
-                                  href={`/perfil/${u.id}`}
+                                  href={`/profile/${u.id}`}
                                   onClick={() => {
                                     setSearchOpen(false);
                                     setPeopleSearchTerm('');
@@ -933,7 +933,7 @@ export default function SocialPage() {
                 className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm relative"
               >
                 <div className="flex items-start gap-3">
-                  <Link href={`/perfil/${post.authorId}`}>
+                  <Link href={`/profile/${post.authorId}`}>
                     {post.author.pictureUrl ? (
                       <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
                         <Image
@@ -955,7 +955,7 @@ export default function SocialPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <Link
-                        href={`/perfil/${post.authorId}`}
+                        href={`/profile/${post.authorId}`}
                         className="font-semibold text-gray-900 hover:underline"
                       >
                         {post.author.name}
@@ -1169,7 +1169,7 @@ export default function SocialPage() {
                                   const isDeleting = deletingCommentKey === menuKey;
                                   return (
                                     <li key={comment.id} className="flex gap-2">
-                                      <Link href={`/perfil/${comment.authorId}`} className="flex-shrink-0">
+                                      <Link href={`/profile/${comment.authorId}`} className="flex-shrink-0">
                                         {comment.author.pictureUrl ? (
                                           <div className="w-8 h-8 rounded-full overflow-hidden">
                                             <Image
@@ -1191,7 +1191,7 @@ export default function SocialPage() {
                                       <div className="flex-1 min-w-0">
                                         <div className="flex items-baseline gap-2 flex-wrap">
                                           <Link
-                                            href={`/perfil/${comment.authorId}`}
+                                            href={`/profile/${comment.authorId}`}
                                             className="font-medium text-gray-900 text-sm hover:underline"
                                           >
                                             {comment.author.name}
@@ -1341,7 +1341,7 @@ export default function SocialPage() {
                   {ranking.map((entry, index) => (
                     <li key={entry.id}>
                       <Link
-                        href={`/perfil/${entry.id}`}
+                        href={`/profile/${entry.id}`}
                         className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
                       >
                         <span className="w-8 text-center font-bold text-gray-400 text-sm flex-shrink-0">
@@ -1463,7 +1463,7 @@ export default function SocialPage() {
                         return (
                           <li key={userId}>
                             <Link
-                              href={`/perfil/${userId}`}
+                              href={`/profile/${userId}`}
                               onClick={() => setLikesModalPostId(null)}
                               className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
                             >

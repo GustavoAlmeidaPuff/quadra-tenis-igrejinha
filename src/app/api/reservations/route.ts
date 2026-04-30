@@ -130,14 +130,14 @@ export async function POST(request: NextRequest) {
         toEmail: userEmail,
         toName: creatorName,
         startAt,
-        reservarUrl: `${APP_BASE_URL}/reservar`,
+        reservarUrl: `${APP_BASE_URL}/reserve`,
         courtName,
       }).catch((err) => console.error('Erro ao enviar email de confirmação da reserva:', err));
     }
 
     // Enviar email aos participantes adicionados (exceto quem desafiou em caso de aceite de desafio)
     if (participantIds && Array.isArray(participantIds)) {
-      const reservarUrl = `${APP_BASE_URL}/reservar`;
+      const reservarUrl = `${APP_BASE_URL}/reserve`;
       for (const pId of participantIds) {
         if (challengerUserId && pId === challengerUserId) continue; // já recebe "desafio aceito"
         const pSnap = await adminDb.collection('users').doc(pId).get();
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
           toName: challengerName,
           accepterName: creatorName,
           startAt,
-          reservarUrl: `${APP_BASE_URL}/reservar`,
+          reservarUrl: `${APP_BASE_URL}/reserve`,
           courtName,
         }).catch((err) => console.error('Erro ao enviar email de desafio aceito:', err));
       }

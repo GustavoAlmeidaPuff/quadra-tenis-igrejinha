@@ -13,9 +13,9 @@ export const viewport: Viewport = {
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://teniscreas.vercel.app";
 
-const siteTitle = "QuadraLivre — Reservas e agenda para quadras de tênis";
+const siteTitle = "QuadraLivre — Tennis court bookings and schedule";
 const siteDescription =
-  "Reserve horários, organize partidas e acompanhe a agenda em várias quadras de tênis num só lugar.";
+  "Book slots, organize matches, and follow the schedule across multiple tennis courts in one place.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -25,11 +25,10 @@ export const metadata: Metadata = {
   },
   description: siteDescription,
   keywords: [
-    "tênis",
-    "quadra de tênis",
-    "reserva de quadra",
-    "agenda",
-    "marcação de horário",
+    "tennis",
+    "tennis court",
+    "court booking",
+    "schedule",
     "QuadraLivre",
   ],
   manifest: "/manifest.json",

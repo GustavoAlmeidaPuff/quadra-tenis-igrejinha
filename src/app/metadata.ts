@@ -10,8 +10,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "QuadraLivre — Reservas e agenda para quadras de tênis",
+  title: "QuadraLivre — Tennis court bookings and schedule",
   description:
-    "Reserve horários, organize partidas e acompanhe a agenda em várias quadras de tênis num só lugar.",
+    "Book slots, organize matches, and follow the schedule across multiple tennis courts in one place.",
   manifest: "/manifest.json",
 };

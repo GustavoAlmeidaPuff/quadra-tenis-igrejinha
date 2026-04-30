@@ -14,7 +14,7 @@ export default function PerfilRedirectPage() {
         router.replace('/login');
         return;
       }
-      router.replace(`/perfil/${user.uid}`);
+      router.replace(`/profile/${user.uid}`);
     });
     return () => unsubscribe();
   }, [router]);

@@ -253,7 +253,7 @@ export async function PATCH(
           toName: pName,
           creatorName,
           startAt,
-          reservarUrl: `${APP_BASE_URL}/reservar`,
+          reservarUrl: `${APP_BASE_URL}/reserve`,
           courtName: getCourtName(existingCourtId),
         }).catch((err) => console.error('Erro ao enviar email para participante:', err));
       }

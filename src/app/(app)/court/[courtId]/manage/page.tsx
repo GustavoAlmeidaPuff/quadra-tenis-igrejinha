@@ -70,7 +70,7 @@ export default function GerenciarQuadraPage() {
   const loadCourt = async () => {
     const snap = await getDoc(doc(db, 'courts', courtId));
     if (!snap.exists()) {
-      router.push('/reservar');
+      router.push('/reserve');
       return;
     }
     const data = snap.data() as Omit<Court, 'id'>;
@@ -127,7 +127,7 @@ export default function GerenciarQuadraPage() {
           }));
         setAllUsers(users);
       } catch (err) {
-        logError('gerenciar:loadAll', err);
+        logError('manage:loadAll', err);
         setPageError(getFriendlyError(err));
       } finally {
         setLoading(false);
@@ -147,7 +147,7 @@ export default function GerenciarQuadraPage() {
       await loadCourt();
       showSuccess('Chefe de quadra adicionado');
     } catch (err) {
-      logError('gerenciar:addManager', err);
+      logError('manage:addManager', err);
       showError(err, 'Não foi possível adicionar');
     }
   };
@@ -161,7 +161,7 @@ export default function GerenciarQuadraPage() {
       await loadCourt();
       showSuccess('Chefe de quadra removido');
     } catch (err) {
-      logError('gerenciar:removeManager', err);
+      logError('manage:removeManager', err);
       showError(err, 'Não foi possível remover');
     }
   };
@@ -181,7 +181,7 @@ export default function GerenciarQuadraPage() {
       setRulesSaved(true);
       setTimeout(() => setRulesSaved(false), 2500);
     } catch (err) {
-      logError('gerenciar:saveRules', err);
+      logError('manage:saveRules', err);
       showError(err, 'Não foi possível salvar as regras');
     } finally {
       setSavingRules(false);
@@ -223,7 +223,7 @@ export default function GerenciarQuadraPage() {
     );
   }
 
-  const backHref = isDeveloper(currentUserEmail) ? '/admin' : '/reservar';
+  const backHref = isDeveloper(currentUserEmail) ? '/admin' : '/reserve';
 
   const currentFixedTotal = fixedHours * 60 + fixedMins;
   const currentMaxTotal = maxHours * 60 + maxMinsExtra;

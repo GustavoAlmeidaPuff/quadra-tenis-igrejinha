@@ -1,9 +1,9 @@
 import Landing from './_landing/Landing';
 
 export const metadata = {
-  title: 'QuadraLivre — Reservas de tênis em Igrejinha e Três Coroas',
+  title: 'QuadraLivre — Tennis in Igrejinha and Três Coroas',
   description:
-    'O app que organiza as quadras de tênis da serra. Mais de 100 jogadores ativos em Igrejinha-RS e Três Coroas-RS. Em breve nas lojas.',
+    'The app that organizes tennis courts in the Serra region. 100+ active players in Igrejinha-RS and Três Coroas-RS. Coming soon to app stores.',
 };
 
 export default function RootPage() {
