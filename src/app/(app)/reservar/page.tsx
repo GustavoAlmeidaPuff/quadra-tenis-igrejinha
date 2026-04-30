@@ -12,6 +12,8 @@ import ReservationDetailModal from '@/components/reserva/ReservationDetailModal'
 import { COURTS, CourtId, normalizeCourtId } from '@/lib/courts';
 import { canManageCourt } from '@/lib/permissions';
 import Link from 'next/link';
+import { useToast } from '@/components/ui/Toast';
+import { logError } from '@/lib/errors';
 
 interface DayTab {
   date: Date;
@@ -31,6 +33,7 @@ interface ReservationWithParticipants extends Reservation {
 
 export default function ReservarPage() {
   const searchParams = useSearchParams();
+  const { showError, showToast } = useToast();
   const [userCourtIds, setUserCourtIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedCourt, setSelectedCourt] = useState<CourtId>('quadra_1');
@@ -51,13 +54,18 @@ export default function ReservarPage() {
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
-    getDoc(doc(db, 'users', user.uid)).then((snap) => {
-      if (!snap.exists()) return;
-      const ids: string[] = snap.data().courtIds ?? [];
-      setUserCourtIds(ids);
-      const available = COURTS.filter((c) => ids.includes(c.id));
-      if (available.length > 0) setSelectedCourt(available[0].id);
-    });
+    getDoc(doc(db, 'users', user.uid))
+      .then((snap) => {
+        if (!snap.exists()) return;
+        const ids: string[] = snap.data().courtIds ?? [];
+        setUserCourtIds(ids);
+        const available = COURTS.filter((c) => ids.includes(c.id));
+        if (available.length > 0) setSelectedCourt(available[0].id);
+      })
+      .catch((err) => {
+        logError('reservar:loadUserCourts', err);
+        showError(err, 'Não foi possível carregar suas quadras');
+      });
   }, []);
 
   const [challengeId, setChallengeId] = useState<string | null>(null);
@@ -75,12 +83,16 @@ export default function ReservarPage() {
       const user = auth.currentUser;
       if (!user) { setCanManage(false); return; }
 
-      const courtSnap = await getDoc(doc(db, 'courts', selectedCourt));
-      const managerIds: string[] = courtSnap.exists()
-        ? (courtSnap.data().managerIds ?? [])
-        : [];
-
-      setCanManage(canManageCourt(user.uid, user.email, managerIds));
+      try {
+        const courtSnap = await getDoc(doc(db, 'courts', selectedCourt));
+        const managerIds: string[] = courtSnap.exists()
+          ? (courtSnap.data().managerIds ?? [])
+          : [];
+        setCanManage(canManageCourt(user.uid, user.email, managerIds));
+      } catch (err) {
+        logError('reservar:checkPermission', err);
+        setCanManage(canManageCourt(user.uid, user.email, []));
+      }
     };
     checkPermission();
   }, [selectedCourt]);
@@ -170,7 +182,14 @@ export default function ReservarPage() {
         orderBy('startAt', 'asc')
       );
 
-      const snapshot = await getDocs(q);
+      let snapshot;
+      try {
+        snapshot = await getDocs(q);
+      } catch (err) {
+        logError('reservar:fetchDaysWithReservations', err);
+        showError(err, 'Não foi possível carregar a agenda');
+        return;
+      }
       const hasRes: Set<string> = new Set();
 
       for (const d of snapshot.docs) {
@@ -220,7 +239,14 @@ export default function ReservarPage() {
         orderBy('startAt', 'asc')
       );
 
-      const snapshot = await getDocs(q);
+      let snapshot;
+      try {
+        snapshot = await getDocs(q);
+      } catch (err) {
+        logError('reservar:fetchReservations', err);
+        showError(err, 'Não foi possível carregar as reservas');
+        return;
+      }
       const reservationsData: ReservationWithParticipants[] = [];
       const dayStartMs = startOfDay.getTime();
       const dayEndMs = endOfDay.getTime() + 1;
@@ -290,15 +316,16 @@ export default function ReservarPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg = (typeof data?.error === 'string' ? data.error : null) ?? 'Erro ao cancelar reserva';
-        alert(msg);
+        showToast({ variant: 'error', title: 'Não foi possível cancelar', description: msg });
         return;
       }
       setSelectedReservation(null);
       setReservations((prev) => prev.filter((r) => r.id !== reservationId));
       setReservationsRefreshKey((k) => k + 1);
+      showToast({ variant: 'success', title: 'Reserva cancelada' });
     } catch (e) {
-      console.error(e);
-      alert('Erro ao cancelar reserva. Verifique sua conexão.');
+      logError('reservar:cancel', e);
+      showError(e, 'Não foi possível cancelar');
     } finally {
       setCancelling(false);
     }
@@ -315,15 +342,16 @@ export default function ReservarPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg = (typeof data?.error === 'string' ? data.error : null) ?? 'Erro ao sair da reserva';
-        alert(msg);
+        showToast({ variant: 'error', title: 'Não foi possível sair', description: msg });
         return;
       }
       setSelectedReservation(null);
       setReservations((prev) => prev.filter((r) => r.id !== reservationId));
       setReservationsRefreshKey((k) => k + 1);
+      showToast({ variant: 'success', title: 'Você saiu da reserva' });
     } catch (e) {
-      console.error(e);
-      alert('Erro ao sair da reserva. Verifique sua conexão.');
+      logError('reservar:leave', e);
+      showError(e, 'Não foi possível sair');
     } finally {
       setLeaving(false);
     }

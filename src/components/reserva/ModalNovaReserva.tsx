@@ -17,6 +17,7 @@ function isExternalAvatarUrl(url: string): boolean {
 import { collection, getDocs, getDoc, doc, query, where, updateDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
 import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
+import { getFriendlyError, logError } from '@/lib/errors';
 import { COURTS, CourtId, normalizeCourtId, DEVELOPER_EMAIL } from '@/lib/courts';
 import { CourtReservationRules, DurationMode } from '@/lib/types';
 
@@ -387,8 +388,9 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
         onSuccess?.();
         onClose();
       } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Erro ao atualizar reserva';
-        setError(message);
+        logError('modal-reserva:update', error);
+        const friendly = getFriendlyError(error);
+        setError(friendly.message);
       } finally {
         setLoading(false);
       }
@@ -453,8 +455,9 @@ export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedD
       onSuccess?.();
       onClose();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Erro ao criar reserva';
-      setError(message);
+      logError('modal-reserva:create', error);
+      const friendly = getFriendlyError(error);
+      setError(friendly.message);
     } finally {
       setLoading(false);
     }

@@ -89,6 +89,18 @@ service cloud.firestore {
                       request.auth.uid == resource.data.fromUserId;
     }
 
+    // Quadras
+    match /courts/{courtId} {
+      // Qualquer usuário autenticado pode ler dados da quadra
+      // (necessário pra ver nome, managerIds, configurações de reserva, etc.)
+      allow read: if request.auth != null;
+      // Apenas chefes de quadra (presentes em managerIds) podem editar a quadra
+      allow update: if request.auth != null
+        && request.auth.uid in resource.data.managerIds;
+      // Criação e exclusão só pelo Console (não pelo client)
+      allow create, delete: if false;
+    }
+
     // Waitlist da landing page (lançamento do app nas lojas)
     // Qualquer visitante NÃO autenticado pode submeter contato.
     // Ninguém lê/edita/deleta pelo client — você consulta direto no Console.

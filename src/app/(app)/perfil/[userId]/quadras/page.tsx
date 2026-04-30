@@ -1,10 +1,13 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client';
 import { ArrowLeft, Check } from 'lucide-react';
+import ErrorState from '@/components/ui/ErrorState';
+import { useToast } from '@/components/ui/Toast';
+import { getFriendlyError, logError, type FriendlyError } from '@/lib/errors';
 
 interface CourtOption {
   id: string;
@@ -23,14 +26,17 @@ export default function MinhasQuadrasPage({ params }: PageProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<FriendlyError | null>(null);
+  const { showError } = useToast();
 
   const isMe = userId === auth.currentUser?.uid || userId === 'me';
 
-  useEffect(() => {
-    const load = async () => {
-      const uid = userId === 'me' ? auth.currentUser?.uid : userId;
-      if (!uid) return;
-
+  const load = useCallback(async () => {
+    const uid = userId === 'me' ? auth.currentUser?.uid : userId;
+    if (!uid) return;
+    setLoading(true);
+    setError(null);
+    try {
       const [courtsSnap, userSnap] = await Promise.all([
         getDocs(collection(db, 'courts')),
         getDoc(doc(db, 'users', uid)),
@@ -43,9 +49,15 @@ export default function MinhasQuadrasPage({ params }: PageProps) {
 
       const courtIds: string[] = userSnap.data()?.courtIds ?? [];
       setSelected(new Set(courtIds));
+    } catch (err) {
+      logError('minhas-quadras:load', err);
+      setError(getFriendlyError(err));
+    } finally {
       setLoading(false);
-    };
+    }
+  }, [userId]);
 
+  useEffect(() => {
     if (userId === 'me' && !auth.currentUser) {
       const unsub = auth.onAuthStateChanged((u) => {
         if (u) load();
@@ -53,7 +65,7 @@ export default function MinhasQuadrasPage({ params }: PageProps) {
       return () => unsub();
     }
     load();
-  }, [userId]);
+  }, [userId, load]);
 
   const toggle = (id: string) => {
     if (!isMe) return;
@@ -77,6 +89,9 @@ export default function MinhasQuadrasPage({ params }: PageProps) {
         { merge: true }
       );
       router.back();
+    } catch (err) {
+      logError('minhas-quadras:save', err);
+      showError(err);
     } finally {
       setSaving(false);
     }
@@ -100,6 +115,8 @@ export default function MinhasQuadrasPage({ params }: PageProps) {
           <div className="flex justify-center py-10">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-emerald-600 border-t-transparent" />
           </div>
+        ) : error ? (
+          <ErrorState error={error} onRetry={load} />
         ) : courts.length === 0 ? (
           <p className="text-center text-gray-400 py-8">Nenhuma quadra disponível.</p>
         ) : (
@@ -130,7 +147,7 @@ export default function MinhasQuadrasPage({ params }: PageProps) {
           })
         )}
 
-        {isMe && !loading && (
+        {isMe && !loading && !error && (
           <button
             onClick={handleSave}
             disabled={selected.size === 0 || saving}
