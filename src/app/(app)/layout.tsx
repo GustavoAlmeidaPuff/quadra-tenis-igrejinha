@@ -120,7 +120,7 @@ export default function AppLayout({
       );
     } catch (err) {
       logError('app-layout:welcomePopup', err);
-      showError(err, 'Não foi possível salvar');
+      showError(err, 'Could not save');
     }
   };
 

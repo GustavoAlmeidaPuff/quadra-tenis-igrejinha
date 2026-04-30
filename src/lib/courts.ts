@@ -13,7 +13,7 @@ export function getCourtName(courtId: string): string {
   return COURTS.find((c) => c.id === courtId)?.name ?? courtId;
 }
 
-/** Backward compat: reservas sem courtId pertencem à quadra_1. */
+/** Backward compat: reservations without courtId belong to quadra_1. */
 export function normalizeCourtId(courtId: string | undefined | null): CourtId {
   if (courtId === 'quadra_2') return 'quadra_2';
   return 'quadra_1';

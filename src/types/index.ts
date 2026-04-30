@@ -17,7 +17,7 @@ export interface Reservation {
   endAt: Timestamp;
   createdById: string;
   createdAt: Timestamp;
-  /** Quadra da reserva. Ausente em reservas antigas = 'quadra_1'. */
+  /** Court for this reservation. Missing on legacy rows = 'quadra_1'. */
   courtId?: string;
 }
 

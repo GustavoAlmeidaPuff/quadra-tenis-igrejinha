@@ -9,128 +9,128 @@ export interface FriendlyError {
 
 const FIRESTORE_MESSAGES: Record<string, FriendlyError> = {
   'permission-denied': {
-    title: 'Sem permissão',
+    title: 'Permission denied',
     message:
-      'Você não tem permissão para fazer essa ação. Se isso parece um erro, tente sair e entrar de novo.',
+      'You don’t have permission to do that. If this seems wrong, try signing out and back in.',
   },
   unauthenticated: {
-    title: 'Sessão expirada',
-    message: 'Sua sessão expirou. Faça login novamente para continuar.',
+    title: 'Session expired',
+    message: 'Your session expired. Sign in again to continue.',
   },
   unavailable: {
-    title: 'Serviço indisponível',
+    title: 'Service unavailable',
     message:
-      'Não conseguimos falar com o servidor agora. Verifique sua internet e tente de novo em instantes.',
+      'We couldn’t reach the server. Check your connection and try again shortly.',
   },
   'deadline-exceeded': {
-    title: 'Demorou demais',
+    title: 'Taking too long',
     message:
-      'A operação demorou mais que o esperado. Verifique sua conexão e tente novamente.',
+      'The operation took longer than expected. Check your connection and try again.',
   },
   'not-found': {
-    title: 'Não encontrado',
-    message: 'O que você buscou não foi encontrado ou foi removido.',
+    title: 'Not found',
+    message: 'What you looked for wasn’t found or was removed.',
   },
   'already-exists': {
-    title: 'Já existe',
-    message: 'Isso já existe no sistema. Atualize a página e tente de novo.',
+    title: 'Already exists',
+    message: 'This already exists. Refresh the page and try again.',
   },
   'resource-exhausted': {
-    title: 'Limite atingido',
-    message: 'O sistema está sobrecarregado. Tente de novo em alguns minutos.',
+    title: 'Limit reached',
+    message: 'The system is overloaded. Try again in a few minutes.',
   },
   'failed-precondition': {
-    title: 'Não foi possível concluir',
+    title: 'Could not complete',
     message:
-      'A ação não pôde ser feita no estado atual. Atualize a página e tente de novo.',
+      'This action couldn’t be completed in the current state. Refresh and try again.',
   },
   cancelled: {
-    title: 'Cancelado',
-    message: 'A operação foi cancelada.',
+    title: 'Cancelled',
+    message: 'The operation was cancelled.',
   },
   'data-loss': {
-    title: 'Erro nos dados',
-    message: 'Algo deu errado com os dados. Tente novamente.',
+    title: 'Data error',
+    message: 'Something went wrong with the data. Please try again.',
   },
   internal: {
-    title: 'Erro interno',
-    message: 'Tivemos um problema no servidor. Tente novamente em instantes.',
+    title: 'Internal error',
+    message: 'We hit a server problem. Try again shortly.',
   },
 };
 
 const AUTH_MESSAGES: Record<string, FriendlyError> = {
   'auth/invalid-credential': {
-    title: 'E-mail ou senha incorretos',
-    message: 'Verifique seus dados e tente novamente.',
+    title: 'Incorrect email or password',
+    message: 'Check your details and try again.',
   },
   'auth/wrong-password': {
-    title: 'Senha incorreta',
-    message: 'A senha digitada não confere.',
+    title: 'Incorrect password',
+    message: 'The password you entered doesn’t match.',
   },
   'auth/user-not-found': {
-    title: 'Usuário não encontrado',
-    message: 'Não encontramos uma conta com esse e-mail.',
+    title: 'User not found',
+    message: 'We couldn’t find an account with that email.',
   },
   'auth/email-already-in-use': {
-    title: 'E-mail já cadastrado',
-    message: 'Já existe uma conta com esse e-mail. Tente fazer login.',
+    title: 'Email already registered',
+    message: 'An account with this email already exists. Try signing in.',
   },
   'auth/invalid-email': {
-    title: 'E-mail inválido',
-    message: 'O formato do e-mail não está correto.',
+    title: 'Invalid email',
+    message: 'The email format doesn’t look valid.',
   },
   'auth/weak-password': {
-    title: 'Senha fraca',
-    message: 'Use uma senha com pelo menos 6 caracteres.',
+    title: 'Weak password',
+    message: 'Use a password with at least 6 characters.',
   },
   'auth/too-many-requests': {
-    title: 'Muitas tentativas',
+    title: 'Too many attempts',
     message:
-      'Você tentou várias vezes seguidas. Aguarde alguns minutos antes de tentar de novo.',
+      'You tried several times in a row. Wait a few minutes before trying again.',
   },
   'auth/network-request-failed': {
-    title: 'Sem conexão',
-    message: 'Não conseguimos conectar. Verifique sua internet e tente de novo.',
+    title: 'No connection',
+    message: 'We couldn’t connect. Check your internet and try again.',
   },
   'auth/popup-closed-by-user': {
-    title: 'Login cancelado',
-    message: 'A janela de login foi fechada antes de concluir.',
+    title: 'Sign-in cancelled',
+    message: 'The sign-in window was closed before finishing.',
   },
   'auth/requires-recent-login': {
-    title: 'Faça login novamente',
-    message: 'Por segurança, você precisa entrar de novo para fazer essa ação.',
+    title: 'Sign in again',
+    message: 'For security, sign in again to do this action.',
   },
 };
 
 const STORAGE_MESSAGES: Record<string, FriendlyError> = {
   'storage/unauthorized': {
-    title: 'Sem permissão',
-    message: 'Você não tem permissão para enviar este arquivo.',
+    title: 'Permission denied',
+    message: 'You don’t have permission to upload this file.',
   },
   'storage/canceled': {
-    title: 'Envio cancelado',
-    message: 'O envio do arquivo foi cancelado.',
+    title: 'Upload cancelled',
+    message: 'The file upload was cancelled.',
   },
   'storage/quota-exceeded': {
-    title: 'Limite de armazenamento',
-    message: 'Espaço de armazenamento esgotado. Avise o suporte.',
+    title: 'Storage limit',
+    message: 'Storage space is full. Contact support.',
   },
   'storage/retry-limit-exceeded': {
-    title: 'Falha no envio',
-    message: 'Não conseguimos enviar o arquivo. Verifique sua conexão.',
+    title: 'Upload failed',
+    message: 'We couldn’t upload the file. Check your connection.',
   },
 };
 
 const GENERIC: FriendlyError = {
-  title: 'Algo deu errado',
+  title: 'Something went wrong',
   message:
-    'Ocorreu um erro inesperado. Tente novamente em instantes — se continuar, entre em contato com o suporte.',
+    'An unexpected error occurred. Try again shortly — if it persists, contact support.',
 };
 
 const NETWORK: FriendlyError = {
-  title: 'Sem conexão',
+  title: 'No connection',
   message:
-    'Você parece estar offline. Verifique sua internet e tente novamente.',
+    'You appear to be offline. Check your internet and try again.',
 };
 
 function isOffline(): boolean {

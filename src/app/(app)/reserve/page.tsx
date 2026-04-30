@@ -77,7 +77,7 @@ export default function ReservarPage() {
   const [editingReservationId, setEditingReservationId] = useState<string | null>(null);
   const scrollToHourRef = useRef<number | null>(null);
 
-  // Verificar se o usuário atual pode gerenciar a quadra selecionada
+  // Whether the current user can manage the selected court
   useEffect(() => {
     const checkPermission = async () => {
       const user = auth.currentUser;
