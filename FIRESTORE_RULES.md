@@ -96,18 +96,21 @@ service cloud.firestore {
 ```
 
 **How to apply:**
-1. Open https://console.firebase.google.com/
+
+1. Open [https://console.firebase.google.com/](https://console.firebase.google.com/)
 2. Select your project: **quadra-livre-igrejinha**
 3. Go to **Firestore Database** → **Rules**
 4. Replace the editor contents with the rules above (including **Posts** with nested **comments** and **commentCount** update rules).
 5. Click **Publish**.
 
 **Indexes for notifications:**  
+
 - List notifications: query with `toUserId`, `type`, and `orderBy('createdAt', 'desc')` — use the Console link if Firestore asks for a composite index.
 - Badge and mark read: query with `toUserId` and `read == false`. If Firestore requests a composite index, create it with collection `notifications`, fields `toUserId` (Ascending) and `read` (Ascending), collection scope.
 
 **If you see “Missing or insufficient permissions” when liking or commenting:**  
 The rules in the Console are outdated. The **Posts** block must include:
+
 - `allow update` with `hasOnly(['likedBy'])` and `hasOnly(['commentCount'])`;
 - nested **match /comments/{commentId}** with `allow read, create` for authenticated users.
 

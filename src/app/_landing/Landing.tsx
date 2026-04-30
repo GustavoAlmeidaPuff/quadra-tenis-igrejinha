@@ -157,8 +157,7 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-5">
           <div className="grid grid-cols-1 gap-12 md:grid-cols-2 md:items-center">
             <div>
-              <SectionTag>Por que existe</SectionTag>
-              <h2 className="mt-3 text-3xl font-bold leading-tight md:text-4xl">
+              <h2 className="text-3xl font-bold leading-tight md:text-4xl">
                 Marcar quadra na serra virou uma{' '}
                 <span className="text-primary-300">rede social de tênis</span>.
               </h2>
@@ -171,13 +170,12 @@ export default function Landing() {
                 <Bullet>Reserva em tempo real, sem briga por horário</Bullet>
                 <Bullet>Convide até 3 parceiros e organize a partida</Bullet>
                 <Bullet>Veja seu nível, conquistas e patente</Bullet>
-                <Bullet>Feed da galera e desafios entre jogadores</Bullet>
+                <Bullet>Feed de posts e desafios entre jogadores</Bullet>
               </ul>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <StatCard value="+100" label="jogadores ativos" />
               <StatCard value="2" label="cidades cobertas" accent />
-              <StatCard value="6" label="quadras parceiras" />
               <StatCard value="24/7" label="reservas no app" accent />
             </div>
           </div>
@@ -187,8 +185,7 @@ export default function Landing() {
       {/* PARCEIROS / FORNECEDORES */}
       <section className="relative z-10 border-y border-white/5 bg-black/30 py-14">
         <div className="mx-auto max-w-6xl px-5 text-center">
-          <SectionTag center>Quem apoia o projeto</SectionTag>
-          <h3 className="mx-auto mt-3 max-w-xl text-lg font-semibold text-white/80 md:text-xl">
+          <h3 className="mx-auto max-w-xl text-lg font-semibold text-white/80 md:text-xl">
             Parceiros e fornecedores que mantêm o tênis vivo na nossa região
           </h3>
         </div>
@@ -200,8 +197,7 @@ export default function Landing() {
       <section id="mockup" className="relative z-10 py-24">
         <div className="mx-auto max-w-6xl px-5">
           <div className="text-center">
-            <SectionTag center>Como funciona</SectionTag>
-            <h2 className="mx-auto mt-3 max-w-2xl text-3xl font-bold leading-tight md:text-4xl">
+            <h2 className="mx-auto max-w-2xl text-3xl font-bold leading-tight md:text-4xl">
               Da intenção ao saque em <span className="text-primary-300">menos de 30 segundos</span>.
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-white/65">
@@ -258,8 +254,7 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-5">
           <div className="grid grid-cols-1 items-center gap-12 md:grid-cols-2">
             <div>
-              <SectionTag>Onde está rolando</SectionTag>
-              <h2 className="mt-3 text-3xl font-bold leading-tight md:text-4xl">
+              <h2 className="text-3xl font-bold leading-tight md:text-4xl">
                 Feito na serra,{' '}
                 <span className="text-primary-300">pra quem joga aqui</span>.
               </h2>
@@ -444,19 +439,6 @@ function Logo({ small = false }: { small?: boolean }) {
       className="object-contain [filter:brightness(0)_invert(1)]"
       style={{ width: size, height: size }}
     />
-  );
-}
-
-function SectionTag({ children, center = false }: { children: React.ReactNode; center?: boolean }) {
-  return (
-    <div
-      className={`inline-flex items-center gap-2 rounded-full border border-primary-400/25 bg-primary-400/5 px-3 py-1 text-xs font-medium uppercase tracking-wider text-primary-300 ${
-        center ? 'mx-auto' : ''
-      }`}
-    >
-      <span className="h-1 w-1 rounded-full bg-primary-400" />
-      {children}
-    </div>
   );
 }
 
