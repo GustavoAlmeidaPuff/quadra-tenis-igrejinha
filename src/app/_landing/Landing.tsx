@@ -925,7 +925,7 @@ function ReservationMockup() {
           <div className="h-2.5 w-2.5 rounded-full bg-amber-400/60" />
           <div className="h-2.5 w-2.5 rounded-full bg-emerald-400/60" />
           <div className="ml-3 rounded-md bg-white/5 px-3 py-0.5 text-[10px] text-white/40">
-            quadralivre.app/reservar
+            quadralivre.app/reserve
           </div>
         </div>
 

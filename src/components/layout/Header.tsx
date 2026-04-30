@@ -53,7 +53,7 @@ export default function Header({ user }: HeaderProps) {
   return (
     <header className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-40 safe-area-top">
       <div className="flex items-center justify-between h-16 px-4 max-w-md mx-auto">
-        <Link href="/perfil" className="flex items-center gap-1 hover:opacity-90 transition-opacity">
+        <Link href="/profile" className="flex items-center gap-1 hover:opacity-90 transition-opacity">
           <Avatar user={user} size="sm" />
           <ChevronDown className="w-4 h-4 text-gray-600" strokeWidth={2.5} />
         </Link>
@@ -61,7 +61,7 @@ export default function Header({ user }: HeaderProps) {
         <CourtsStatusSummary courtIds={user.courtIds ?? []} />
 
         <Link
-          href="/notificacoes"
+          href="/notifications"
           className="relative p-2 hover:bg-gray-100 rounded-full transition-colors"
         >
           <Bell className="w-5 h-5 text-gray-700" />

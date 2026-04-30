@@ -7,8 +7,8 @@ import { db, auth } from '@/lib/firebase/client';
 import { Plus, ChevronLeft, ChevronRight, Settings, ChevronDown } from 'lucide-react';
 import { formatTime } from '@/lib/utils';
 import { Reservation } from '@/lib/types';
-import ModalNovaReserva from '@/components/reserva/ModalNovaReserva';
-import ReservationDetailModal from '@/components/reserva/ReservationDetailModal';
+import NewReservationModal from '@/components/reservation/NewReservationModal';
+import ReservationDetailModal from '@/components/reservation/ReservationDetailModal';
 import { COURTS, CourtId, normalizeCourtId } from '@/lib/courts';
 import { canManageCourt } from '@/lib/permissions';
 import Link from 'next/link';
@@ -63,7 +63,7 @@ export default function ReservarPage() {
         if (available.length > 0) setSelectedCourt(available[0].id);
       })
       .catch((err) => {
-        logError('reservar:loadUserCourts', err);
+        logError('reserve:loadUserCourts', err);
         showError(err, 'Não foi possível carregar suas quadras');
       });
   }, []);
@@ -90,7 +90,7 @@ export default function ReservarPage() {
           : [];
         setCanManage(canManageCourt(user.uid, user.email, managerIds));
       } catch (err) {
-        logError('reservar:checkPermission', err);
+        logError('reserve:checkPermission', err);
         setCanManage(canManageCourt(user.uid, user.email, []));
       }
     };
@@ -98,17 +98,17 @@ export default function ReservarPage() {
   }, [selectedCourt]);
 
   useEffect(() => {
-    const adicionarJogador = searchParams.get('adicionarJogador');
+    const addPlayer = searchParams.get('addPlayer');
     const challenge = searchParams.get('challengeId');
-    if (adicionarJogador?.trim()) {
-      setInitialParticipantIds([adicionarJogador.trim()]);
+    if (addPlayer?.trim()) {
+      setInitialParticipantIds([addPlayer.trim()]);
       setShowModal(true);
     }
     if (challenge?.trim()) {
       setChallengeId(challenge.trim());
     }
-    if (adicionarJogador?.trim() || challenge?.trim()) {
-      window.history.replaceState({}, '', '/reservar');
+    if (addPlayer?.trim() || challenge?.trim()) {
+      window.history.replaceState({}, '', '/reserve');
     }
   }, [searchParams]);
 
@@ -186,7 +186,7 @@ export default function ReservarPage() {
       try {
         snapshot = await getDocs(q);
       } catch (err) {
-        logError('reservar:fetchDaysWithReservations', err);
+        logError('reserve:fetchDaysWithReservations', err);
         showError(err, 'Não foi possível carregar a agenda');
         return;
       }
@@ -243,7 +243,7 @@ export default function ReservarPage() {
       try {
         snapshot = await getDocs(q);
       } catch (err) {
-        logError('reservar:fetchReservations', err);
+        logError('reserve:fetchReservations', err);
         showError(err, 'Não foi possível carregar as reservas');
         return;
       }
@@ -324,7 +324,7 @@ export default function ReservarPage() {
       setReservationsRefreshKey((k) => k + 1);
       showToast({ variant: 'success', title: 'Reserva cancelada' });
     } catch (e) {
-      logError('reservar:cancel', e);
+      logError('reserve:cancel', e);
       showError(e, 'Não foi possível cancelar');
     } finally {
       setCancelling(false);
@@ -350,7 +350,7 @@ export default function ReservarPage() {
       setReservationsRefreshKey((k) => k + 1);
       showToast({ variant: 'success', title: 'Você saiu da reserva' });
     } catch (e) {
-      logError('reservar:leave', e);
+      logError('reserve:leave', e);
       showError(e, 'Não foi possível sair');
     } finally {
       setLeaving(false);
@@ -404,7 +404,7 @@ export default function ReservarPage() {
           <div className="flex items-center gap-2">
             {visibleCourts.length === 1 && canManage && (
               <Link
-                href={`/quadra/${selectedCourt}/gerenciar`}
+                href={`/court/${selectedCourt}/manage`}
                 onClick={(e) => e.stopPropagation()}
                 className="p-1.5 rounded-lg hover:bg-emerald-100 text-gray-400 hover:text-emerald-600 transition-colors"
                 title="Configurações da quadra"
@@ -444,7 +444,7 @@ export default function ReservarPage() {
                   </span>
                   {canManage && (
                     <Link
-                      href={`/quadra/${court.id}/gerenciar`}
+                      href={`/court/${court.id}/manage`}
                       onClick={(e) => e.stopPropagation()}
                       className="p-1.5 rounded-lg hover:bg-emerald-100 text-gray-400 hover:text-emerald-600 transition-colors"
                       title="Configurações da quadra"
@@ -597,7 +597,7 @@ export default function ReservarPage() {
 
       {/* Modal nova reserva */}
       {showModal && (
-        <ModalNovaReserva
+        <NewReservationModal
           isOpen={showModal}
           onClose={() => {
             setShowModal(false);
@@ -642,7 +642,7 @@ export default function ReservarPage() {
 
       {/* Modal editar participantes */}
       {showEditReservationModal && (
-        <ModalNovaReserva
+        <NewReservationModal
           isOpen={showEditReservationModal}
           onClose={() => {
             setShowEditReservationModal(false);

@@ -49,7 +49,7 @@ export function PostContent({ content, className = '' }: PostContentProps) {
         part.type === 'mention' && part.userId ? (
           <Link
             key={i}
-            href={`/perfil/${part.userId}`}
+            href={`/profile/${part.userId}`}
             className="text-blue-600 hover:text-blue-700 hover:underline font-medium"
           >
             @{part.text}

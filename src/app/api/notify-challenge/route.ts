@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, hasAdminCredentials } from '@/lib/firebase/admin';
 import { sendChallengeNotificationEmail } from '@/lib/brevo';
 
-const NOTIFICATIONS_URL = 'https://teniscreas.vercel.app/notificacoes';
+const NOTIFICATIONS_URL = 'https://teniscreas.vercel.app/notifications';
 
 export async function POST(request: NextRequest) {
   if (!hasAdminCredentials) {

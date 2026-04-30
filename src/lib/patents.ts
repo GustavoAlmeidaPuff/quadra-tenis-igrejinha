@@ -1,6 +1,6 @@
 /**
- * Patentes baseadas em horas jogadas.
- * Calibrado para ~1x/semana × 1,5h = 6h/mês → ~1,5 ano até Profissional (100h).
+ * Ranks (patentes) based on hours played.
+ * Calibrated for ~1×/week × 1.5h ≈ 6h/month → ~1.5 years to Professional (100h).
  */
 export const PATENTES = [
   { id: 'iniciante', nome: 'Iniciante', horasRequeridas: 0, icon: 'target' },

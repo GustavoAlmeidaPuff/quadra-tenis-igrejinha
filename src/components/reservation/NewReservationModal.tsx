@@ -29,7 +29,7 @@ interface User {
   pictureUrl?: string;
 }
 
-interface ModalNovaReservaProps {
+interface NewReservationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
@@ -45,7 +45,7 @@ interface ModalNovaReservaProps {
   availableCourtIds?: string[];
 }
 
-export default function ModalNovaReserva({ isOpen, onClose, onSuccess, selectedDate, initialParticipantIds = [], challengeId, reservationId, initialCourtId, availableCourtIds }: ModalNovaReservaProps) {
+export default function NewReservationModal({ isOpen, onClose, onSuccess, selectedDate, initialParticipantIds = [], challengeId, reservationId, initialCourtId, availableCourtIds }: NewReservationModalProps) {
   const isEditMode = Boolean(reservationId?.trim());
   const [date, setDate] = useState('');
   const [hour, setHour] = useState('19');

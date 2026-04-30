@@ -34,7 +34,7 @@ export default function SelecionarQuadraPage() {
         .sort((a, b) => a.name.localeCompare(b.name));
       setCourts(list);
     } catch (err) {
-      logError('selecionar-quadra:load', err);
+      logError('select-court:load', err);
       setError(getFriendlyError(err));
     } finally {
       setLoading(false);
@@ -71,7 +71,7 @@ export default function SelecionarQuadraPage() {
       );
       router.push('/home');
     } catch (err) {
-      logError('selecionar-quadra:save', err);
+      logError('select-court:save', err);
       showError(err);
     } finally {
       setSaving(false);

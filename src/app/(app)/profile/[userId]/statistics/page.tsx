@@ -44,7 +44,7 @@ export default function EstatisticasPage({ params }: PageProps) {
       <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-6">
         <div className="bg-white px-4 py-4 flex items-center gap-3 border-b border-gray-200">
           <Link
-            href={`/perfil/${userId}`}
+            href={`/profile/${userId}`}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             aria-label="Voltar"
           >
@@ -65,7 +65,7 @@ export default function EstatisticasPage({ params }: PageProps) {
       <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-6">
         <div className="bg-white px-4 py-4 flex items-center gap-3 border-b border-gray-200">
           <Link
-            href={`/perfil/${userId}`}
+            href={`/profile/${userId}`}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             aria-label="Voltar"
           >
@@ -100,7 +100,7 @@ export default function EstatisticasPage({ params }: PageProps) {
     <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-6">
       <div className="bg-white px-4 py-4 flex items-center gap-3 border-b border-gray-200">
         <Link
-          href={`/perfil/${userId}`}
+          href={`/profile/${userId}`}
           className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           aria-label="Voltar"
         >
@@ -234,7 +234,7 @@ export default function EstatisticasPage({ params }: PageProps) {
               {(stats?.topPartners ?? []).map((partner: PartnerStat, index: number) => (
                 <li key={partner.userId}>
                   <Link
-                    href={`/perfil/${partner.userId}`}
+                    href={`/profile/${partner.userId}`}
                     className="flex items-center gap-3 p-2 -mx-2 rounded-xl hover:bg-gray-50 transition-colors"
                   >
                     <span className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm bg-primary-500">
