@@ -123,16 +123,6 @@ export default function CafePage() {
                   </Link>
                   , e estudante antes de qualquer coisa. Sempre aberto a um bom feedback!
                 </p>
-                <p className="mt-3 text-sm">
-                  <a
-                    href="https://www.linkedin.com/in/gustavo-almeida-bb1088264/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-emerald-600 hover:text-emerald-700 underline font-medium"
-                  >
-                    Meu LinkedIn
-                  </a>
-                </p>
               </div>
             </div>
           </div>
