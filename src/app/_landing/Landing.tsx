@@ -1076,33 +1076,41 @@ function CourtIllustration() {
   return (
     <div className="relative aspect-[5/4] w-full overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-emerald-900/40 to-[#0a1f17]">
       <CourtLines className="absolute inset-0 h-full w-full" />
-      {/* Pinos das cidades */}
-      <CityPin top="30%" left="34%" name="Igrejinha" />
-      <CityPin top="58%" left="62%" name="Três Coroas" />
-      {/* trail */}
-      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+      {/* Trail (renderizado antes dos pinos para ficar atrás deles) */}
+      <svg
+        className="pointer-events-none absolute inset-0 h-full w-full"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+      >
         <path
-          d="M34 30 Q 50 10 62 58"
+          d="M30 40 Q 50 22 70 58"
           stroke="#34d399"
           strokeWidth="0.4"
           strokeDasharray="1 1.5"
           fill="none"
         />
       </svg>
+      {/* Pinos das cidades, em lados opostos da rede e dentro da quadra */}
+      <CityPin top="40%" left="30%" name="Igrejinha" />
+      <CityPin top="58%" left="70%" name="Três Coroas" />
     </div>
   );
 }
 
 function CityPin({ top, left, name }: { top: string; left: string; name: string }) {
+  // Container fica do tamanho exato da bolinha (h-5 w-5) e é centralizado
+  // em (top, left). O label é posicionado em absolute logo abaixo, sem
+  // afetar o tamanho/posição da bolinha.
   return (
-    <div className="absolute -translate-x-1/2 -translate-y-full" style={{ top, left }}>
-      <div className="relative">
-        <div className="absolute inset-0 animate-ping rounded-full bg-primary-400/40" />
-        <div className="relative grid h-5 w-5 place-items-center rounded-full bg-primary-400 ring-4 ring-primary-500/30">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#0a1f17]" />
-        </div>
+    <div
+      className="absolute -translate-x-1/2 -translate-y-1/2"
+      style={{ top, left }}
+    >
+      <div className="relative grid h-5 w-5 place-items-center rounded-full bg-primary-400 ring-4 ring-primary-500/30">
+        <span className="absolute inset-0 animate-ping rounded-full bg-primary-400/40" />
+        <span className="relative h-1.5 w-1.5 rounded-full bg-[#0a1f17]" />
       </div>
-      <div className="mt-2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/60 px-2 py-1 text-[11px] font-medium text-white backdrop-blur">
+      <div className="absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/60 px-2 py-1 text-[11px] font-medium text-white backdrop-blur">
         {name}
       </div>
     </div>
