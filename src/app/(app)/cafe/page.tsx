@@ -122,7 +122,7 @@ export default function CafePage() {
                   >
                     bibliotech.tech
                   </Link>
-                  , e estudante antes de tudo. Sempre aberto a um bom feedback!
+                  . Sempre aberto a um bom feedback!
                 </p>
                 <p className="mt-3 text-sm">
                   <a
