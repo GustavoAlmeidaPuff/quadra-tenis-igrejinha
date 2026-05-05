@@ -1110,13 +1110,35 @@ function CityPin({ top, left, name }: { top: string; left: string; name: string 
 }
 
 function CourtLines({ className = '' }: { className?: string }) {
+  // Quadra de tênis vista de cima (rede vertical no meio).
+  // Proporções aproximadas das medidas oficiais (duplas 13:6) dentro de um
+  // viewBox 200x160 alinhado ao container aspect-[5/4].
+  const stroke = '#a7f3d0';
   return (
     <svg viewBox="0 0 200 160" preserveAspectRatio="none" className={className}>
-      <rect x="20" y="20" width="160" height="120" fill="none" stroke="#a7f3d0" strokeWidth="1" />
-      <line x1="100" y1="20" x2="100" y2="140" stroke="#a7f3d0" strokeWidth="1" />
-      <line x1="20" y1="80" x2="180" y2="80" stroke="#a7f3d0" strokeWidth="0.5" strokeDasharray="2 2" />
-      <rect x="40" y="55" width="120" height="50" fill="none" stroke="#a7f3d0" strokeWidth="0.6" />
-      <line x1="40" y1="80" x2="160" y2="80" stroke="#a7f3d0" strokeWidth="0.6" />
+      {/* Quadra de duplas (linha externa) */}
+      <rect x="22" y="44" width="156" height="72" fill="none" stroke={stroke} strokeWidth="1" />
+      {/* Linhas laterais de simples */}
+      <line x1="22" y1="53" x2="178" y2="53" stroke={stroke} strokeWidth="0.6" />
+      <line x1="22" y1="107" x2="178" y2="107" stroke={stroke} strokeWidth="0.6" />
+      {/* Rede no centro (tracejada para diferenciar das linhas) */}
+      <line
+        x1="100"
+        y1="44"
+        x2="100"
+        y2="116"
+        stroke={stroke}
+        strokeWidth="0.9"
+        strokeDasharray="2 1.5"
+      />
+      {/* Linhas de saque (paralelas à rede, só entre as linhas de simples) */}
+      <line x1="58" y1="53" x2="58" y2="107" stroke={stroke} strokeWidth="0.6" />
+      <line x1="142" y1="53" x2="142" y2="107" stroke={stroke} strokeWidth="0.6" />
+      {/* Linha central de saque (entre as duas linhas de saque) */}
+      <line x1="58" y1="80" x2="142" y2="80" stroke={stroke} strokeWidth="0.6" />
+      {/* Marcas centrais nas linhas de fundo */}
+      <line x1="22" y1="80" x2="27" y2="80" stroke={stroke} strokeWidth="0.6" />
+      <line x1="173" y1="80" x2="178" y2="80" stroke={stroke} strokeWidth="0.6" />
     </svg>
   );
 }
