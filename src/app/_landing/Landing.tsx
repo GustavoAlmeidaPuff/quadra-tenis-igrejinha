@@ -126,7 +126,7 @@ export default function Landing() {
             <StoreButton store="app" onClick={() => setOpen('app')} />
           </div>
 
-          <div className="mt-6 flex items-center gap-4 text-sm text-white/60">
+          <div className="mt-6 flex items-center gap-3 text-xs text-white/60 md:gap-4 md:text-sm">
             <Avatars />
             <span>
               <strong className="text-white">+100 jogadores</strong> já reservando direto pelo app
@@ -627,16 +627,21 @@ function Avatars() {
   ];
   return (
     <div className="flex -space-x-2">
-      {avatars.map((a, i) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={i}
-          src={a.src}
-          alt={a.alt}
-          className="h-8 w-8 rounded-full border-2 border-[#0a1f17] object-cover"
-          loading="lazy"
-        />
-      ))}
+      {avatars.map((a, i) => {
+        // No mobile mostramos só os 3 primeiros para o bloco caber melhor;
+        // no desktop (md+) seguem todos os 5 visíveis.
+        const hideOnMobile = i >= 3 ? 'hidden md:inline-block' : '';
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={i}
+            src={a.src}
+            alt={a.alt}
+            className={`h-7 w-7 rounded-full border-2 border-[#0a1f17] object-cover md:h-8 md:w-8 ${hideOnMobile}`}
+            loading="lazy"
+          />
+        );
+      })}
     </div>
   );
 }
