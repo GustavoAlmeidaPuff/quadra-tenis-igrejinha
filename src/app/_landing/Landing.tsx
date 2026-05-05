@@ -162,9 +162,9 @@ export default function Landing() {
                 <span className="text-primary-300">rede social de tênis</span>.
               </h2>
               <p className="mt-5 text-white/70">
-                Antes era um grupão no WhatsApp, mensagens se perdendo, dois caras marcando o mesmo
-                horário e confusão na hora de jogar. A gente resolveu isso com um app simples,
-                feito pra jogador, por gente que joga.
+                Antes era um grupão no WhatsApp, mensagens se perdendo, dois jogadores marcando o
+                mesmo horario.... e confusão na hora de jogar. A gente resolveu isso com um app
+                simples, desenvolvido por um jogador, para jogadores.
               </p>
               <ul className="mt-6 space-y-3 text-white/80">
                 <Bullet>Reserva em tempo real, sem briga por horário</Bullet>
