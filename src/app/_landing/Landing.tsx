@@ -211,7 +211,7 @@ export default function Landing() {
               Em tempo real: quem tá jogando agora, quem reservou, e onde tem espaço livre no dia.
             </Step>
             <Step number="2" title="Toca e reserva">
-              30 min, 1h, 2h — escolhe a duração que faz sentido pro teu treino. Sem regra de slot fixo.
+              Escolhe a duração que faz sentido pro teu treino. Sem regra de slot fixo.
             </Step>
             <Step number="3" title="Chama a galera e bora jogar">
               Marca os parceiros direto no app. Todo mundo recebe lembrete antes do horário.
@@ -223,25 +223,10 @@ export default function Landing() {
               <ReservationMockup />
             </div>
             <div className="md:col-span-5">
-              <h3 className="text-2xl font-bold">A interface que faz a galera abrir todo dia</h3>
-              <p className="mt-4 text-white/70">
-                A tela de reservas é o coração do app. Uma agenda visual, com cores honestas:
-                <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-primary-500/20 px-2 py-0.5 text-xs font-medium text-primary-300">
-                  livre
-                </span>
-                ,
-                <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-white/70">
-                  reservado
-                </span>{' '}
-                e
-                <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-400/20 px-2 py-0.5 text-xs font-medium text-amber-300">
-                  você
-                </span>
-                . Sem firula, sem 50 cliques.
-              </p>
+              <h3 className="text-2xl font-bold">a interface de reserva</h3>
               <ul className="mt-6 space-y-3 text-white/80">
                 <Bullet>Troca de quadra num menu só</Bullet>
-                <Bullet>Reserva em 2 toques</Bullet>
+                <Bullet>Sugestoes de reservas toda semana</Bullet>
                 <Bullet>Lembrete antes do horário</Bullet>
               </ul>
             </div>
