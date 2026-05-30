@@ -88,10 +88,12 @@ export async function GET(request: NextRequest) {
       const startStr = conflict.startAt.toDate().toLocaleTimeString('pt-BR', {
         hour: '2-digit',
         minute: '2-digit',
+        timeZone: 'America/Sao_Paulo',
       });
       const endStr = conflict.endAt.toDate().toLocaleTimeString('pt-BR', {
         hour: '2-digit',
         minute: '2-digit',
+        timeZone: 'America/Sao_Paulo',
       });
 
       return NextResponse.json({
