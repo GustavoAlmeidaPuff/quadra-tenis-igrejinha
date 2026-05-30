@@ -4,7 +4,11 @@
       "Bash(npx tsc:*)",
       "Bash(npx create-expo-app@latest . --template tabs)",
       "Bash(npx expo:*)",
-      "Bash(ls \"C:\\\\Users\\\\gualm\\\\OneDrive\\\\Documentos\\\\code\\\\quadra-livre-app\\\\app\\\\\\(tabs\\)\"\")"
+      "Bash(ls \"C:\\\\Users\\\\gualm\\\\OneDrive\\\\Documentos\\\\code\\\\quadra-livre-app\\\\app\\\\\\(tabs\\)\"\")",
+      "Bash(ls \"C:/Users/Global Cards/Documents/code/\" 2>/dev/null)",
+      "Read(//c/Users/Global Cards/.claude/**)",
+      "Read(//c/Users/Global Cards/AppData/Local/**)",
+      "Bash(ls /tmp/claude-*)"
     ]
   }
 }
