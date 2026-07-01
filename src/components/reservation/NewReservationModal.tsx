@@ -20,6 +20,7 @@ import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
 import { getFriendlyError, logError } from '@/lib/errors';
 import { COURTS, CourtId, normalizeCourtId, DEVELOPER_EMAIL } from '@/lib/courts';
 import { CourtReservationRules, DurationMode } from '@/lib/types';
+import { getRecommendedPartners, type PartnerStat } from '@/lib/queries/stats';
 
 interface User {
   id: string;
@@ -43,9 +44,11 @@ interface NewReservationModalProps {
   initialCourtId?: CourtId;
   /** Courts available to pick from (courts the user belongs to). */
   availableCourtIds?: string[];
+  /** Pre-selected start hour ("00"–"23") — usado pela sugestão da home para deixar pronto pra confirmar. */
+  initialHour?: string;
 }
 
-export default function NewReservationModal({ isOpen, onClose, onSuccess, selectedDate, initialParticipantIds = [], challengeId, reservationId, initialCourtId, availableCourtIds }: NewReservationModalProps) {
+export default function NewReservationModal({ isOpen, onClose, onSuccess, selectedDate, initialParticipantIds = [], challengeId, reservationId, initialCourtId, availableCourtIds, initialHour }: NewReservationModalProps) {
   const isEditMode = Boolean(reservationId?.trim());
   const [date, setDate] = useState('');
   const [hour, setHour] = useState('19');
@@ -60,6 +63,7 @@ export default function NewReservationModal({ isOpen, onClose, onSuccess, select
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [selectedParticipants, setSelectedParticipants] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [recommendedPartners, setRecommendedPartners] = useState<PartnerStat[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -127,6 +131,13 @@ export default function NewReservationModal({ isOpen, onClose, onSuccess, select
     }
   }, [initialCourtId, isEditMode]);
 
+  // Pré-selecionar a hora quando aberto pela sugestão da home (deixa pronto pra confirmar).
+  useEffect(() => {
+    if (!isOpen || isEditMode || !initialHour) return;
+    const h = parseInt(initialHour, 10);
+    if (h >= 0 && h <= 23) setHour(h.toString().padStart(2, '0'));
+  }, [isOpen, initialHour, isEditMode]);
+
   useEffect(() => {
     const fetchUsers = async () => {
       const user = auth.currentUser;
@@ -162,12 +173,22 @@ export default function NewReservationModal({ isOpen, onClose, onSuccess, select
 
       setAllUsers(users);
       setFilteredUsers(users);
+
+      // Parceiros mais frequentes para sugestão rápida (só na criação).
+      if (!isEditMode) {
+        try {
+          const partners = await getRecommendedPartners(user.uid, 6);
+          setRecommendedPartners(partners);
+        } catch (e) {
+          logError('modal-reserva:recommendedPartners', e);
+        }
+      }
     };
 
     if (isOpen) {
       fetchUsers();
     }
-  }, [isOpen]);
+  }, [isOpen, isEditMode]);
 
   useEffect(() => {
     if (!isOpen || initialParticipantIds.length === 0) {
@@ -650,6 +671,52 @@ export default function NewReservationModal({ isOpen, onClose, onSuccess, select
                 </span>
               </div>
             )}
+
+            {/* Sugestões: quem você mais joga */}
+            {(() => {
+              const suggestions = recommendedPartners.filter(
+                (p) => !selectedParticipants.some((s) => s.id === p.userId)
+              );
+              if (suggestions.length === 0) return null;
+              return (
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-gray-500 mb-2">Quem você mais joga</p>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestions.map((p) => {
+                      const user = allUsers.find((u) => u.id === p.userId);
+                      if (!user) return null;
+                      return (
+                        <button
+                          key={p.userId}
+                          type="button"
+                          onClick={() => addParticipant(user)}
+                          className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full border border-gray-200 bg-white hover:border-emerald-400 hover:bg-emerald-50 transition-colors"
+                        >
+                          {p.pictureUrl ? (
+                            <span className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
+                              <Image
+                                src={p.pictureUrl}
+                                alt={p.name}
+                                width={24}
+                                height={24}
+                                className="object-cover w-full h-full"
+                                unoptimized={isExternalAvatarUrl(p.pictureUrl)}
+                              />
+                            </span>
+                          ) : (
+                            <span className="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center text-white font-semibold text-[10px] flex-shrink-0">
+                              {p.initials}
+                            </span>
+                          )}
+                          <span className="text-sm font-medium text-gray-800">{p.name}</span>
+                          <span className="text-emerald-600 text-lg leading-none">+</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Selected Participants */}
             {selectedParticipants.map((participant) => (

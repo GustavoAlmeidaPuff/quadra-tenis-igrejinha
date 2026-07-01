@@ -43,6 +43,7 @@ export default function ReservarPage() {
   const [showModal, setShowModal] = useState(false);
   const [reservationsRefreshKey, setReservationsRefreshKey] = useState(0);
   const [initialParticipantIds, setInitialParticipantIds] = useState<string[]>([]);
+  const [suggestionHour, setSuggestionHour] = useState<string | undefined>(undefined);
   const [now, setNow] = useState(() => new Date());
   const [canManage, setCanManage] = useState(false);
 
@@ -133,6 +134,7 @@ export default function ReservarPage() {
 
     const dateParam = searchParams.get('date');
     const hourParam = searchParams.get('hour');
+    const bookParam = searchParams.get('book');
     if (dateParam && hourParam !== null && hourParam !== '') {
       const parsed = new Date(dateParam + 'T12:00:00');
       if (!Number.isNaN(parsed.getTime())) {
@@ -141,7 +143,15 @@ export default function ReservarPage() {
         if (day) {
           setSelectedDate(day.date);
           const h = parseInt(hourParam, 10);
-          if (h >= 0 && h <= 23) scrollToHourRef.current = h;
+          if (h >= 0 && h <= 23) {
+            scrollToHourRef.current = h;
+            // Vindo da sugestão da home (book=1): abre o modal já preenchido pra confirmar.
+            if (bookParam === '1') {
+              setSuggestionHour(h.toString().padStart(2, '0'));
+              setShowModal(true);
+              window.history.replaceState({}, '', '/reserve');
+            }
+          }
         } else {
           setSelectedDate(daysArray[0].date);
         }
@@ -603,6 +613,7 @@ export default function ReservarPage() {
             setShowModal(false);
             setInitialParticipantIds([]);
             setChallengeId(null);
+            setSuggestionHour(undefined);
           }}
           onSuccess={() => setReservationsRefreshKey((k) => k + 1)}
           selectedDate={selectedDate}
@@ -610,6 +621,7 @@ export default function ReservarPage() {
           challengeId={challengeId ?? undefined}
           initialCourtId={selectedCourt}
           availableCourtIds={userCourtIds}
+          initialHour={suggestionHour}
         />
       )}
 

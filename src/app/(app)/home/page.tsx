@@ -122,7 +122,7 @@ export default function HomePage() {
             Reservar para {stats.reservationSuggestion.label}
           </p>
           <Link
-            href={`/reserve?date=${stats.reservationSuggestion.nextDateISO}&hour=${stats.reservationSuggestion.hour}`}
+            href={`/reserve?date=${stats.reservationSuggestion.nextDateISO}&hour=${stats.reservationSuggestion.hour}&book=1`}
             className="inline-flex items-center gap-2 text-sm font-medium text-emerald-600 hover:text-emerald-700"
           >
             Reservar
