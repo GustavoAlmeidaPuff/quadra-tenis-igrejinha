@@ -126,7 +126,7 @@ export default function Landing() {
             <StoreButton store="app" onClick={() => setOpen('app')} />
           </div>
 
-          <div className="mt-6 flex items-center gap-4 text-sm text-white/60">
+          <div className="mt-6 flex items-center gap-3 text-xs text-white/60 md:gap-4 md:text-sm">
             <Avatars />
             <span>
               <strong className="text-white">+100 jogadores</strong> já reservando direto pelo app
@@ -162,9 +162,9 @@ export default function Landing() {
                 <span className="text-primary-300">rede social de tênis</span>.
               </h2>
               <p className="mt-5 text-white/70">
-                Antes era um grupão no WhatsApp, mensagens se perdendo, dois caras marcando o mesmo
-                horário e confusão na hora de jogar. A gente resolveu isso com um app simples,
-                feito pra jogador, por gente que joga.
+                Antes era um grupão no WhatsApp, mensagens se perdendo, dois jogadores marcando o
+                mesmo horario.... e confusão na hora de jogar. A gente resolveu isso com um app
+                simples, desenvolvido por um jogador, para jogadores.
               </p>
               <ul className="mt-6 space-y-3 text-white/80">
                 <Bullet>Reserva em tempo real, sem briga por horário</Bullet>
@@ -211,7 +211,7 @@ export default function Landing() {
               Em tempo real: quem tá jogando agora, quem reservou, e onde tem espaço livre no dia.
             </Step>
             <Step number="2" title="Toca e reserva">
-              30 min, 1h, 2h — escolhe a duração que faz sentido pro teu treino. Sem regra de slot fixo.
+              Escolhe a duração que faz sentido pro teu treino. Sem regra de slot fixo.
             </Step>
             <Step number="3" title="Chama a galera e bora jogar">
               Marca os parceiros direto no app. Todo mundo recebe lembrete antes do horário.
@@ -223,25 +223,10 @@ export default function Landing() {
               <ReservationMockup />
             </div>
             <div className="md:col-span-5">
-              <h3 className="text-2xl font-bold">A interface que faz a galera abrir todo dia</h3>
-              <p className="mt-4 text-white/70">
-                A tela de reservas é o coração do app. Uma agenda visual, com cores honestas:
-                <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-primary-500/20 px-2 py-0.5 text-xs font-medium text-primary-300">
-                  livre
-                </span>
-                ,
-                <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-white/70">
-                  reservado
-                </span>{' '}
-                e
-                <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-400/20 px-2 py-0.5 text-xs font-medium text-amber-300">
-                  você
-                </span>
-                . Sem firula, sem 50 cliques.
-              </p>
+              <h3 className="text-2xl font-bold">a interface de reserva</h3>
               <ul className="mt-6 space-y-3 text-white/80">
                 <Bullet>Troca de quadra num menu só</Bullet>
-                <Bullet>Reserva em 2 toques</Bullet>
+                <Bullet>Sugestoes de reservas toda semana</Bullet>
                 <Bullet>Lembrete antes do horário</Bullet>
               </ul>
             </div>
@@ -642,16 +627,21 @@ function Avatars() {
   ];
   return (
     <div className="flex -space-x-2">
-      {avatars.map((a, i) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={i}
-          src={a.src}
-          alt={a.alt}
-          className="h-8 w-8 rounded-full border-2 border-[#0a1f17] object-cover"
-          loading="lazy"
-        />
-      ))}
+      {avatars.map((a, i) => {
+        // No mobile mostramos só os 3 primeiros para o bloco caber melhor;
+        // no desktop (md+) seguem todos os 5 visíveis.
+        const hideOnMobile = i >= 3 ? 'hidden md:inline-block' : '';
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={i}
+            src={a.src}
+            alt={a.alt}
+            className={`h-7 w-7 rounded-full border-2 border-[#0a1f17] object-cover md:h-8 md:w-8 ${hideOnMobile}`}
+            loading="lazy"
+          />
+        );
+      })}
     </div>
   );
 }
@@ -1091,33 +1081,41 @@ function CourtIllustration() {
   return (
     <div className="relative aspect-[5/4] w-full overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-emerald-900/40 to-[#0a1f17]">
       <CourtLines className="absolute inset-0 h-full w-full" />
-      {/* Pinos das cidades */}
-      <CityPin top="30%" left="34%" name="Igrejinha" />
-      <CityPin top="58%" left="62%" name="Três Coroas" />
-      {/* trail */}
-      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+      {/* Trail (renderizado antes dos pinos para ficar atrás deles) */}
+      <svg
+        className="pointer-events-none absolute inset-0 h-full w-full"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+      >
         <path
-          d="M34 30 Q 50 10 62 58"
+          d="M30 40 Q 50 22 70 58"
           stroke="#34d399"
           strokeWidth="0.4"
           strokeDasharray="1 1.5"
           fill="none"
         />
       </svg>
+      {/* Pinos das cidades, em lados opostos da rede e dentro da quadra */}
+      <CityPin top="40%" left="30%" name="Igrejinha" />
+      <CityPin top="58%" left="70%" name="Três Coroas" />
     </div>
   );
 }
 
 function CityPin({ top, left, name }: { top: string; left: string; name: string }) {
+  // Container fica do tamanho exato da bolinha (h-5 w-5) e é centralizado
+  // em (top, left). O label é posicionado em absolute logo abaixo, sem
+  // afetar o tamanho/posição da bolinha.
   return (
-    <div className="absolute -translate-x-1/2 -translate-y-full" style={{ top, left }}>
-      <div className="relative">
-        <div className="absolute inset-0 animate-ping rounded-full bg-primary-400/40" />
-        <div className="relative grid h-5 w-5 place-items-center rounded-full bg-primary-400 ring-4 ring-primary-500/30">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#0a1f17]" />
-        </div>
+    <div
+      className="absolute -translate-x-1/2 -translate-y-1/2"
+      style={{ top, left }}
+    >
+      <div className="relative grid h-5 w-5 place-items-center rounded-full bg-primary-400 ring-4 ring-primary-500/30">
+        <span className="absolute inset-0 animate-ping rounded-full bg-primary-400/40" />
+        <span className="relative h-1.5 w-1.5 rounded-full bg-[#0a1f17]" />
       </div>
-      <div className="mt-2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/60 px-2 py-1 text-[11px] font-medium text-white backdrop-blur">
+      <div className="absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/60 px-2 py-1 text-[11px] font-medium text-white backdrop-blur">
         {name}
       </div>
     </div>
@@ -1125,13 +1123,35 @@ function CityPin({ top, left, name }: { top: string; left: string; name: string 
 }
 
 function CourtLines({ className = '' }: { className?: string }) {
+  // Quadra de tênis vista de cima (rede vertical no meio).
+  // Proporções aproximadas das medidas oficiais (duplas 13:6) dentro de um
+  // viewBox 200x160 alinhado ao container aspect-[5/4].
+  const stroke = '#a7f3d0';
   return (
     <svg viewBox="0 0 200 160" preserveAspectRatio="none" className={className}>
-      <rect x="20" y="20" width="160" height="120" fill="none" stroke="#a7f3d0" strokeWidth="1" />
-      <line x1="100" y1="20" x2="100" y2="140" stroke="#a7f3d0" strokeWidth="1" />
-      <line x1="20" y1="80" x2="180" y2="80" stroke="#a7f3d0" strokeWidth="0.5" strokeDasharray="2 2" />
-      <rect x="40" y="55" width="120" height="50" fill="none" stroke="#a7f3d0" strokeWidth="0.6" />
-      <line x1="40" y1="80" x2="160" y2="80" stroke="#a7f3d0" strokeWidth="0.6" />
+      {/* Quadra de duplas (linha externa) */}
+      <rect x="22" y="44" width="156" height="72" fill="none" stroke={stroke} strokeWidth="1" />
+      {/* Linhas laterais de simples */}
+      <line x1="22" y1="53" x2="178" y2="53" stroke={stroke} strokeWidth="0.6" />
+      <line x1="22" y1="107" x2="178" y2="107" stroke={stroke} strokeWidth="0.6" />
+      {/* Rede no centro (tracejada para diferenciar das linhas) */}
+      <line
+        x1="100"
+        y1="44"
+        x2="100"
+        y2="116"
+        stroke={stroke}
+        strokeWidth="0.9"
+        strokeDasharray="2 1.5"
+      />
+      {/* Linhas de saque (paralelas à rede, só entre as linhas de simples) */}
+      <line x1="58" y1="53" x2="58" y2="107" stroke={stroke} strokeWidth="0.6" />
+      <line x1="142" y1="53" x2="142" y2="107" stroke={stroke} strokeWidth="0.6" />
+      {/* Linha central de saque (entre as duas linhas de saque) */}
+      <line x1="58" y1="80" x2="142" y2="80" stroke={stroke} strokeWidth="0.6" />
+      {/* Marcas centrais nas linhas de fundo */}
+      <line x1="22" y1="80" x2="27" y2="80" stroke={stroke} strokeWidth="0.6" />
+      <line x1="173" y1="80" x2="178" y2="80" stroke={stroke} strokeWidth="0.6" />
     </svg>
   );
 }

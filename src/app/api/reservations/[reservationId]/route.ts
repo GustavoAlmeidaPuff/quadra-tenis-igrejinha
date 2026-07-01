@@ -200,8 +200,8 @@ export async function PATCH(
         }
         const namesText = names.join(' e ');
         const verb = names.length === 1 ? 'vai jogar' : 'vão jogar';
-        const startStr = conflictData.startAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        const endStr = conflictData.endAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const startStr = conflictData.startAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+        const endStr = conflictData.endAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
         return NextResponse.json(
           { error: `${namesText} ${verb} das ${startStr} às ${endStr}, tente outro horário.` },
           { status: 400 }

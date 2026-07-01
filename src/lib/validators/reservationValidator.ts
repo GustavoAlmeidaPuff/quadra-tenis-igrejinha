@@ -119,16 +119,18 @@ export async function validateReservation(
     return {
       valid: false,
       error: {
-        message: `${namesText} ${verb} das ${conflict.startAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} às ${conflict.endAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}, tente outro horário.`,
+        message: `${namesText} ${verb} das ${conflict.startAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })} às ${conflict.endAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}, tente outro horário.`,
         conflictingReservation: {
           participants: participantNames,
           startTime: conflict.startAt.toDate().toLocaleTimeString('pt-BR', {
             hour: '2-digit',
             minute: '2-digit',
+            timeZone: 'America/Sao_Paulo',
           }),
           endTime: conflict.endAt.toDate().toLocaleTimeString('pt-BR', {
             hour: '2-digit',
             minute: '2-digit',
+            timeZone: 'America/Sao_Paulo',
           }),
         },
       },
