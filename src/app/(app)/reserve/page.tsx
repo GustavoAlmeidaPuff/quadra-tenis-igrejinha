@@ -11,6 +11,8 @@ import NewReservationModal from '@/components/reservation/NewReservationModal';
 import ReservationDetailModal from '@/components/reservation/ReservationDetailModal';
 import { COURTS, CourtId, normalizeCourtId } from '@/lib/courts';
 import { canManageCourt } from '@/lib/permissions';
+import { useWeather, hourKey } from '@/lib/weather';
+import WeatherBadge from '@/components/ui/WeatherBadge';
 import Link from 'next/link';
 import { useToast } from '@/components/ui/Toast';
 import { logError } from '@/lib/errors';
@@ -46,6 +48,9 @@ export default function ReservarPage() {
   const [suggestionHour, setSuggestionHour] = useState<string | undefined>(undefined);
   const [now, setNow] = useState(() => new Date());
   const [canManage, setCanManage] = useState(false);
+
+  // Previsão do tempo da quadra selecionada (cache de 1h, falha em silêncio).
+  const { hours: weather } = useWeather(selectedCourt);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 60_000);
@@ -519,7 +524,7 @@ export default function ReservarPage() {
               style={{ top: nowLineTop }}
               aria-hidden
             >
-              <div className="w-14 flex-shrink-0 flex justify-center">
+              <div className="w-16 flex-shrink-0 flex justify-center">
                 <span className="text-xs font-semibold text-red-600 tabular-nums bg-white px-1.5 py-0.5 rounded border border-red-200 shadow-sm">
                   {`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`}
                 </span>
@@ -563,8 +568,9 @@ export default function ReservarPage() {
                 id={hour >= 0 && hour <= 23 ? `slot-${hour}` : undefined}
                 className="flex gap-3 h-16 border-b border-gray-100"
               >
-                <div className="w-14 flex-shrink-0 text-xs text-gray-500 pt-1">
-                  {time}
+                <div className="w-16 flex-shrink-0 pt-1 flex flex-col gap-0.5">
+                  <span className="text-xs text-gray-500">{time}</span>
+                  <WeatherBadge hour={weather[hourKey(selectedDate, hour)]} />
                 </div>
                 <div className="flex-1 relative min-h-0 overflow-visible">
                   {reservation && (
@@ -594,6 +600,16 @@ export default function ReservarPage() {
               </div>
             );
           })}
+
+          {/* Atribuição exigida pela licença CC BY 4.0 da Open-Meteo. */}
+          <a
+            href="https://open-meteo.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block pt-4 text-center text-[11px] text-gray-400 underline"
+          >
+            Dados meteorológicos por Open-Meteo.com
+          </a>
         </div>
       </div>
 

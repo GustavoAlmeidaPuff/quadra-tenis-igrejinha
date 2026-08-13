@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { X, Search, UserPlus } from 'lucide-react';
 
@@ -21,6 +21,8 @@ import { getFriendlyError, logError } from '@/lib/errors';
 import { COURTS, CourtId, normalizeCourtId, DEVELOPER_EMAIL } from '@/lib/courts';
 import { CourtReservationRules, DurationMode } from '@/lib/types';
 import { getRecommendedPartners, type PartnerStat } from '@/lib/queries/stats';
+import { useWeather, summarizeRange, mapWeatherCode } from '@/lib/weather';
+import WeatherBadge from '@/components/ui/WeatherBadge';
 
 interface User {
   id: string;
@@ -348,6 +350,21 @@ export default function NewReservationModal({ isOpen, onClose, onSuccess, select
     return `${endHour}:${endMinute}`;
   };
 
+  // Tempo previsto para o intervalo da reserva — null fora dos 7 dias ou sem rede.
+  const { hours: weather } = useWeather(selectedCourtId);
+  const forecast = useMemo(() => {
+    if (!date) return null;
+    const [y, mo, d] = date.split('-').map(Number);
+    const start = new Date(y, mo - 1, d, parseInt(hour), parseInt(minute), 0, 0);
+    if (Number.isNaN(start.getTime())) return null;
+    const end =
+      durationMode === 'fixed'
+        ? new Date(start.getTime() + fixedMinutes * 60_000)
+        : new Date(y, mo - 1, d, parseInt(endHour), parseInt(endMinute), 0, 0);
+    if (Number.isNaN(end.getTime()) || end <= start) return null;
+    return summarizeRange(weather, start, end);
+  }, [weather, date, hour, minute, endHour, endMinute, durationMode, fixedMinutes]);
+
   const getEndAtISO = (dateStr: string): string | null => {
     if (durationMode === 'fixed') return null; // API computes it
     const [y, mo, d] = dateStr.split('-').map(Number);
@@ -635,6 +652,20 @@ export default function NewReservationModal({ isOpen, onClose, onSuccess, select
                   ))}
                 </select>
               </div>
+            </div>
+          )}
+
+          {forecast && (
+            <div className="flex items-center gap-2 -mt-2">
+              <WeatherBadge hour={forecast} iconSize={16} showChance={false} />
+              <p
+                className={`text-xs ${
+                  forecast.rainChance >= 50 ? 'text-amber-600 font-semibold' : 'text-gray-600'
+                }`}
+              >
+                {mapWeatherCode(forecast.code, forecast.isDay).label} · {forecast.rainChance}% de
+                chance de chuva · {forecast.tempC}°
+              </p>
             </div>
           )}
 
