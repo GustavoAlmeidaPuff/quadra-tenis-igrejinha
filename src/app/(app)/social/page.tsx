@@ -25,7 +25,8 @@ import { Search, MoreVertical, Pencil, Trash2, LayoutList, Trophy, Clock, ImageP
 import Link from 'next/link';
 import Image from 'next/image';
 import { getRandomColor } from '@/lib/utils';
-import { getTotalHoursForUser, getRecommendedPartners } from '@/lib/queries/stats';
+import { getRecommendedPartners } from '@/lib/queries/stats';
+import { getHoursRanking, type HoursRankingEntry } from '@/lib/ranking';
 import { MENTION_REGEX } from '@/components/social/MentionTextarea';
 import { MentionTextarea } from '@/components/social/MentionTextarea';
 import { PostContent } from '@/components/social/PostContent';
@@ -85,14 +86,7 @@ interface SearchableUser {
   email?: string;
 }
 
-interface RankingEntry {
-  id: string;
-  name: string;
-  initials: string;
-  pictureUrl?: string | null;
-  hours: number;
-  createdAt: Date;
-}
+type RankingEntry = HoursRankingEntry;
 
 function formatTimeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -367,39 +361,7 @@ export default function SocialPage() {
     setRankingLoading(true);
     const loadRanking = async () => {
       try {
-        const usersSnap = await getDocs(collection(db, 'users'));
-        const users: Array<{ id: string; name: string; initials: string; pictureUrl?: string | null; createdAt: Date }> = [];
-
-        for (const d of usersSnap.docs) {
-          const data = d.data();
-          if (data.isAnonymous === true) continue;
-          const firstName = data.firstName ?? '';
-          const lastName = data.lastName ?? '';
-          const name = `${firstName} ${lastName}`.trim() || 'Jogador';
-          const createdAt = data.createdAt?.toDate?.() ?? new Date(0);
-          users.push({
-            id: d.id,
-            name,
-            initials: `${(firstName || '?')[0]}${(lastName || '?')[0]}`.toUpperCase(),
-            pictureUrl: data.pictureUrl ?? null,
-            createdAt,
-          });
-        }
-
-        const hoursResults = await Promise.all(
-          users.map((u) => getTotalHoursForUser(u.id))
-        );
-        const entries: RankingEntry[] = users.map((u, i) => ({
-          ...u,
-          hours: hoursResults[i],
-        }));
-
-        entries.sort((a, b) => {
-          if (b.hours !== a.hours) return b.hours - a.hours;
-          return a.createdAt.getTime() - b.createdAt.getTime();
-        });
-
-        setRanking(entries);
+        setRanking((await getHoursRanking()).entries);
       } catch (e) {
         console.error(e);
         setRanking([]);
