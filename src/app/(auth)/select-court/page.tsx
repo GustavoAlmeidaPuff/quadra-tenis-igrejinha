@@ -8,6 +8,10 @@ import { Search, Check } from 'lucide-react';
 import ErrorState from '@/components/ui/ErrorState';
 import { useToast } from '@/components/ui/Toast';
 import { getFriendlyError, logError, type FriendlyError } from '@/lib/errors';
+import { COURTS } from '@/lib/courts';
+
+/** Deve casar com o fade da tela equivalente no app nativo. */
+const FADE_MS = 420;
 
 interface CourtOption {
   id: string;
@@ -23,6 +27,14 @@ export default function SelecionarQuadraPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<FriendlyError | null>(null);
+  const [entered, setEntered] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+
+  // Fade de entrada: sobe opaco no primeiro paint e transiciona pra visível.
+  useEffect(() => {
+    const t = setTimeout(() => setEntered(true), 20);
+    return () => clearTimeout(t);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -30,9 +42,10 @@ export default function SelecionarQuadraPage() {
     try {
       const snap = await getDocs(collection(db, 'courts'));
       const list: CourtOption[] = snap.docs
-        .map((d) => ({ id: d.id, name: d.data().name as string }))
+        .map((d) => ({ id: d.id, name: (d.data().name as string) ?? d.id }))
         .sort((a, b) => a.name.localeCompare(b.name));
-      setCourts(list);
+      // Se a coleção ainda não tiver nome nos docs, o registro estático salva a tela.
+      setCourts(list.length ? list : COURTS.map((c) => ({ id: c.id, name: c.name })));
     } catch (err) {
       logError('select-court:load', err);
       setError(getFriendlyError(err));
@@ -69,18 +82,24 @@ export default function SelecionarQuadraPage() {
         { courtIds: Array.from(selected) },
         { merge: true }
       );
-      router.push('/home');
+      // Some suavemente antes de trocar de página, igual ao app nativo.
+      setLeaving(true);
+      setTimeout(() => router.push('/home'), FADE_MS);
     } catch (err) {
       logError('select-court:save', err);
       showError(err);
-    } finally {
       setSaving(false);
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-gradient-to-b from-emerald-50 to-white">
-      <div className="w-full max-w-md space-y-6">
+      <div
+        className={`w-full max-w-md space-y-6 transition-opacity ease-out ${
+          entered && !leaving ? 'opacity-100' : 'opacity-0'
+        }`}
+        style={{ transitionDuration: `${FADE_MS}ms` }}
+      >
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-gray-900">Escolha sua quadra</h1>
           <p className="text-gray-600">Selecione uma ou mais quadras em que você joga</p>
