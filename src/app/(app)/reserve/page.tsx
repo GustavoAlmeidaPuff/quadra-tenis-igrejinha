@@ -37,8 +37,11 @@ export default function ReservarPage() {
   const searchParams = useSearchParams();
   const { showError, showToast } = useToast();
   const [userCourtIds, setUserCourtIds] = useState<string[]>([]);
+  const [courtsLoaded, setCourtsLoaded] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedCourt, setSelectedCourt] = useState<CourtId>('quadra_1');
+  // Fica nulo até saber em quais quadras o usuário está: nunca assumir uma quadra
+  // padrão, senão a agenda carrega a de outra quadra antes da resposta chegar.
+  const [selectedCourt, setSelectedCourt] = useState<CourtId | null>(null);
   const [days, setDays] = useState<DayTab[]>([]);
   const [reservations, setReservations] = useState<ReservationWithParticipants[]>([]);
   const [scrollIndex, setScrollIndex] = useState(0);
@@ -59,19 +62,19 @@ export default function ReservarPage() {
 
   useEffect(() => {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user) { setCourtsLoaded(true); return; }
     getDoc(doc(db, 'users', user.uid))
       .then((snap) => {
-        if (!snap.exists()) return;
-        const ids: string[] = snap.data().courtIds ?? [];
-        setUserCourtIds(ids);
-        const available = COURTS.filter((c) => ids.includes(c.id));
-        if (available.length > 0) setSelectedCourt(available[0].id);
+        const ids: string[] = snap.exists() ? (snap.data().courtIds ?? []) : [];
+        const available = getUserCourts(ids);
+        setUserCourtIds(available.map((c) => c.id));
+        setSelectedCourt(available.length > 0 ? available[0].id : null);
       })
       .catch((err) => {
         logError('reserve:loadUserCourts', err);
         showError(err, 'Não foi possível carregar suas quadras');
-      });
+      })
+      .finally(() => setCourtsLoaded(true));
   }, []);
 
   const [challengeId, setChallengeId] = useState<string | null>(null);
@@ -87,7 +90,7 @@ export default function ReservarPage() {
   useEffect(() => {
     const checkPermission = async () => {
       const user = auth.currentUser;
-      if (!user) { setCanManage(false); return; }
+      if (!user || !selectedCourt) { setCanManage(false); return; }
 
       try {
         const courtSnap = await getDoc(doc(db, 'courts', selectedCourt));
@@ -181,6 +184,15 @@ export default function ReservarPage() {
 
   useEffect(() => {
     if (days.length === 0) return;
+    if (!selectedCourt) {
+      setDaysWithReservations(new Set());
+      return;
+    }
+
+    // Só a busca mais recente pode escrever no estado: sem isso, a resposta lenta
+    // da quadra anterior chega depois e marca os dias da quadra errada.
+    let cancelled = false;
+    const courtForThisFetch = selectedCourt;
 
     const fetchDaysWithReservations = async () => {
       const startOfFirst = new Date(days[0].date);
@@ -201,15 +213,17 @@ export default function ReservarPage() {
       try {
         snapshot = await getDocs(q);
       } catch (err) {
+        if (cancelled) return;
         logError('reserve:fetchDaysWithReservations', err);
         showError(err, 'Não foi possível carregar a agenda');
         return;
       }
+      if (cancelled) return;
       const hasRes: Set<string> = new Set();
 
       for (const d of snapshot.docs) {
         const data = d.data();
-        if (normalizeCourtId(data.courtId) !== selectedCourt) continue;
+        if (normalizeCourtId(data.courtId) !== courtForThisFetch) continue;
 
         const resStart = data.startAt?.toDate?.()?.getTime?.() ?? 0;
         const resEnd = data.endAt?.toDate?.()?.getTime?.() ?? 0;
@@ -226,14 +240,25 @@ export default function ReservarPage() {
           }
         }
       }
+      if (cancelled) return;
       setDaysWithReservations(hasRes);
     };
 
     fetchDaysWithReservations();
+    return () => { cancelled = true; };
   }, [days, reservationsRefreshKey, selectedCourt]);
 
   useEffect(() => {
     if (!selectedDate) return;
+    if (!selectedCourt) {
+      setReservations([]);
+      return;
+    }
+
+    // Mesma proteção da busca acima: a agenda de Igrejinha não pode aparecer
+    // sob o nome de Três Coroas só porque a resposta dela chegou atrasada.
+    let cancelled = false;
+    const courtForThisFetch = selectedCourt;
 
     const fetchReservations = async () => {
       const startOfDay = new Date(selectedDate);
@@ -258,10 +283,12 @@ export default function ReservarPage() {
       try {
         snapshot = await getDocs(q);
       } catch (err) {
+        if (cancelled) return;
         logError('reserve:fetchReservations', err);
         showError(err, 'Não foi possível carregar as reservas');
         return;
       }
+      if (cancelled) return;
       const reservationsData: ReservationWithParticipants[] = [];
       const dayStartMs = startOfDay.getTime();
       const dayEndMs = endOfDay.getTime() + 1;
@@ -269,7 +296,7 @@ export default function ReservarPage() {
       for (const d of snapshot.docs) {
         const data = d.data();
 
-        if (normalizeCourtId(data.courtId) !== selectedCourt) continue;
+        if (normalizeCourtId(data.courtId) !== courtForThisFetch) continue;
 
         const resStart = data.startAt?.toDate?.()?.getTime?.() ?? 0;
         const resEnd = data.endAt?.toDate?.()?.getTime?.() ?? 0;
@@ -281,6 +308,7 @@ export default function ReservarPage() {
             where('reservationId', '==', d.id)
           )
         );
+        if (cancelled) return;
         const names: string[] = [];
         const ids: string[] = [];
         for (const pDoc of participantsSnap.docs) {
@@ -304,10 +332,12 @@ export default function ReservarPage() {
         });
       }
 
+      if (cancelled) return;
       setReservations(reservationsData);
     };
 
     fetchReservations();
+    return () => { cancelled = true; };
   }, [selectedDate, reservationsRefreshKey, selectedCourt]);
 
   const visibleDays = days.slice(scrollIndex, scrollIndex + 6);
@@ -400,9 +430,31 @@ export default function ReservarPage() {
       ? Math.max(0, hoursFromMidnight * ROW_HEIGHT_PX)
       : null;
 
-  const visibleCourts = COURTS.filter((court) => userCourtIds.includes(court.id));
+  const visibleCourts = getUserCourts(userCourtIds);
   const selectedCourtName = visibleCourts.find((c) => c.id === selectedCourt)?.name ?? '';
   const [courtDropdownOpen, setCourtDropdownOpen] = useState(false);
+
+  if (!courtsLoaded) {
+    return (
+      <div className="max-w-md mx-auto h-[calc(100vh-8rem)] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-emerald-600 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!selectedCourt) {
+    return (
+      <div className="max-w-md mx-auto h-[calc(100vh-8rem)] flex flex-col items-center justify-center px-6 text-center gap-3">
+        <p className="text-gray-600">Você ainda não está em nenhuma quadra.</p>
+        <Link
+          href="/profile/me/courts"
+          className="text-emerald-600 font-medium hover:text-emerald-700"
+        >
+          Escolher minhas quadras
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-md mx-auto h-[calc(100vh-8rem)] flex flex-col">

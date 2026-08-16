@@ -18,7 +18,7 @@ import { collection, getDocs, getDoc, doc, query, where, updateDoc } from 'fireb
 import { db, auth } from '@/lib/firebase/client';
 import ErrorWithSupportLink from '@/components/ui/ErrorWithSupportLink';
 import { getFriendlyError, logError } from '@/lib/errors';
-import { COURTS, CourtId, normalizeCourtId, DEVELOPER_EMAIL } from '@/lib/courts';
+import { COURTS, CourtId, normalizeCourtId, getUserCourts, DEVELOPER_EMAIL } from '@/lib/courts';
 import { CourtReservationRules, DurationMode } from '@/lib/types';
 import { getRecommendedPartners, type PartnerStat } from '@/lib/queries/stats';
 import { useWeather, summarizeRange, mapWeatherCode } from '@/lib/weather';
@@ -52,12 +52,19 @@ interface NewReservationModalProps {
 
 export default function NewReservationModal({ isOpen, onClose, onSuccess, selectedDate, initialParticipantIds = [], challengeId, reservationId, initialCourtId, availableCourtIds, initialHour }: NewReservationModalProps) {
   const isEditMode = Boolean(reservationId?.trim());
+  // Quadras que o usuário pode escolher. Sem a lista (ex.: modo edição) cai em COURTS.
+  const selectableCourts = availableCourtIds ? getUserCourts(availableCourtIds) : COURTS;
+  // Nunca começar numa quadra que o usuário não participa — a reserva iria pra quadra errada.
+  const defaultCourtId: CourtId =
+    (initialCourtId && selectableCourts.some((c) => c.id === initialCourtId) ? initialCourtId : null) ??
+    selectableCourts[0]?.id ??
+    'quadra_1';
   const [date, setDate] = useState('');
   const [hour, setHour] = useState('19');
   const [minute, setMinute] = useState('00');
   const [endHour, setEndHour] = useState('20');
   const [endMinute, setEndMinute] = useState('30');
-  const [selectedCourtId, setSelectedCourtId] = useState<CourtId>(initialCourtId ?? 'quadra_1');
+  const [selectedCourtId, setSelectedCourtId] = useState<CourtId>(defaultCourtId);
   const [courtIdFromReservation, setCourtIdFromReservation] = useState<CourtId | null>(null);
   const [courtRules, setCourtRules] = useState<CourtReservationRules | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -126,12 +133,12 @@ export default function NewReservationModal({ isOpen, onClose, onSuccess, select
     if (date < minDate || date > maxDate) setDate(minDate);
   }, [isOpen, date, minDate, maxDate]);
 
-  // Sync court when prop changes (e.g. user switches tab on the reserve page)
+  // Sync court when prop changes (e.g. user switches tab on the reserve page).
+  // Mantém a seleção sempre dentro das quadras do usuário.
   useEffect(() => {
-    if (!isEditMode && initialCourtId) {
-      setSelectedCourtId(initialCourtId);
-    }
-  }, [initialCourtId, isEditMode]);
+    if (isEditMode) return;
+    setSelectedCourtId(defaultCourtId);
+  }, [defaultCourtId, isEditMode]);
 
   // Pré-selecionar a hora quando aberto pela sugestão da home (deixa pronto pra confirmar).
   useEffect(() => {
@@ -540,7 +547,7 @@ export default function NewReservationModal({ isOpen, onClose, onSuccess, select
               </div>
             ) : (
               <div className="flex gap-2">
-                {COURTS.filter((c) => !availableCourtIds || availableCourtIds.includes(c.id)).map((court) => (
+                {selectableCourts.map((court) => (
                   <button
                     key={court.id}
                     type="button"
