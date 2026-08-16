@@ -13,6 +13,19 @@ export function getCourtName(courtId: string): string {
   return COURTS.find((c) => c.id === courtId)?.name ?? courtId;
 }
 
+export function isCourtId(courtId: string | undefined | null): courtId is CourtId {
+  return COURTS.some((c) => c.id === courtId);
+}
+
+/**
+ * Quadras em que o usuário joga, na ordem de COURTS. Ids desconhecidos são
+ * descartados — a tela só pode mostrar quadra que o usuário realmente participa.
+ */
+export function getUserCourts(courtIds: readonly string[] | undefined | null) {
+  const ids = Array.isArray(courtIds) ? courtIds : [];
+  return COURTS.filter((c) => ids.includes(c.id));
+}
+
 /** Backward compat: reservations without courtId belong to quadra_1. */
 export function normalizeCourtId(courtId: string | undefined | null): CourtId {
   if (courtId === 'quadra_2') return 'quadra_2';

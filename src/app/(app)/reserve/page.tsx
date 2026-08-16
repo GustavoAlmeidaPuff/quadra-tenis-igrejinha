@@ -9,7 +9,7 @@ import { formatTime } from '@/lib/utils';
 import { Reservation } from '@/lib/types';
 import NewReservationModal from '@/components/reservation/NewReservationModal';
 import ReservationDetailModal from '@/components/reservation/ReservationDetailModal';
-import { COURTS, CourtId, normalizeCourtId } from '@/lib/courts';
+import { CourtId, normalizeCourtId, getUserCourts } from '@/lib/courts';
 import { canManageCourt } from '@/lib/permissions';
 import { useWeather, hourKey } from '@/lib/weather';
 import WeatherBadge from '@/components/ui/WeatherBadge';

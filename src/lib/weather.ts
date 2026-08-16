@@ -228,8 +228,12 @@ function writeCache(courtId: string, hours: WeatherHours): void {
 /**
  * Previsão da quadra, com cache de 1h. Troca de quadra refaz a busca (cada quadra
  * tem o próprio cache). `refresh()` ignora o TTL.
+ *
+ * `courtId` nulo significa "quadra ainda não conhecida" (ex.: as quadras do usuário
+ * ainda estão carregando) — nesse caso não busca nada, para não mostrar a previsão
+ * de uma quadra que não é a do usuário.
  */
-export function useWeather(courtId: string): { hours: WeatherHours; refresh: () => void } {
+export function useWeather(courtId: string | null): { hours: WeatherHours; refresh: () => void } {
   const [hours, setHours] = useState<WeatherHours>({});
   // Cada carregamento pega um token; só o mais recente pode escrever no estado.
   // Impede que uma busca lenta da quadra anterior sobrescreva a quadra atual.
@@ -238,6 +242,10 @@ export function useWeather(courtId: string): { hours: WeatherHours; refresh: () 
   const load = useCallback(
     async (force: boolean) => {
       const token = ++tokenRef.current;
+      if (!courtId) {
+        setHours({});
+        return;
+      }
       const cached = readCache(courtId);
       // Troca atômica: ou mostra o cache da quadra nova, ou esvazia — nunca mistura quadras.
       setHours(cached?.hours ?? {});
