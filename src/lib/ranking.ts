@@ -31,11 +31,17 @@ function getInitials(firstName?: string, lastName?: string): string {
 }
 
 /**
+ * Depois disso o cache é considerado furado — provavelmente o job diário parou.
+ * Melhor pagar o cálculo ao vivo do que mostrar horas de semanas atrás.
+ */
+const MAX_CACHE_AGE_MS = 36 * 60 * 60 * 1000;
+
+/**
  * Lê o ranking pré-calculado, se existir.
  *
- * O documento é gravado por um job diário; o cliente só lê. Enquanto esse job
- * não existir, isto devolve null e cai no cálculo ao vivo de
- * computeHoursRanking(), que continua correto — só mais lento.
+ * O documento é gravado uma vez por dia pelo cron `/api/cron/ranking`; o cliente
+ * só lê. Se o documento não existir ou estiver velho, isto devolve null e cai no
+ * cálculo ao vivo de computeHoursRanking(), que continua correto — só mais lento.
  */
 async function readCachedRanking(): Promise<HoursRanking | null> {
   try {
@@ -45,12 +51,20 @@ async function readCachedRanking(): Promise<HoursRanking | null> {
     const raw = data?.entries;
     if (!Array.isArray(raw) || raw.length === 0) return null;
 
+    const computedAt: Date | null = data?.computedAt?.toDate?.() ?? null;
+    if (computedAt && Date.now() - computedAt.getTime() > MAX_CACHE_AGE_MS) return null;
+
     return {
-      computedAt: data?.computedAt?.toDate?.() ?? null,
+      computedAt,
       entries: raw.map((e) => ({
         id: String(e.id),
         name: String(e.name ?? 'Jogador'),
-        initials: String(e.initials ?? '?'),
+        // Derivar das partes preserva o formato desta plataforma; `initials`
+        // gravado no documento é só fallback para docs antigos.
+        initials:
+          e.firstName || e.lastName
+            ? getInitials(e.firstName, e.lastName)
+            : String(e.initials ?? '?'),
         pictureUrl: e.pictureUrl ?? null,
         hours: Number(e.hours ?? 0),
         // Só existe para o desempate, que já veio resolvido na ordem gravada.
