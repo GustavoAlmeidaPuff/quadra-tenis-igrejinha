@@ -15,6 +15,7 @@ import {
 import { db } from '@/lib/firebase/client';
 import { Reservation } from '@/lib/types';
 import { normalizeCourtId, getCourtName, COURTS, CourtId } from '@/lib/courts';
+import { isTournamentReservation } from '@/lib/tournaments';
 import { ChevronDown } from 'lucide-react';
 
 interface CourtInfo {
@@ -116,7 +117,10 @@ export default function CourtsStatusSummary({ courtIds }: Props) {
             const end = data.endAt.toMillis();
             if (now >= start && now < end) {
               occupied = true;
-              names = await fetchParticipantNames(d.id);
+              // Bloco de campeonato aparece pelo nome do campeonato.
+              names = isTournamentReservation(data)
+                ? [data.tournamentName ?? 'Campeonato']
+                : await fetchParticipantNames(d.id);
               break;
             }
           }

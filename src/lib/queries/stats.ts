@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { formatTime } from '@/lib/utils';
+import { isPlayedReservation } from '@/lib/tournaments';
 
 const RESERVATION_DURATION_HOURS = 1.5;
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -131,6 +132,9 @@ async function getReservationsByIds(
     const snap = await getDocs(q);
     snap.docs.forEach((d) => {
       const data = d.data();
+      // Bloqueios de quadra (campeonato, "Quem anima?") não são partidas do
+      // usuário — quem os criou não pode vê-los no próprio perfil.
+      if (!isPlayedReservation(data)) return;
       reservations.push({
         id: d.id,
         startAt: data.startAt?.toDate?.() ?? new Date(),

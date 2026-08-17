@@ -1,12 +1,17 @@
 'use client';
 
-import { X, Trash2, Pencil, LogOut } from 'lucide-react';
+import { X, Trash2, Pencil, LogOut, Trophy } from 'lucide-react';
 
 export interface ReservationDetailItem {
   id: string;
   dateLabel: string;
   time: string;
   participants: string[];
+  /** Preenchido quando o bloco é de um campeonato (quadra reservada pelo chefe). */
+  tournament?: {
+    name: string;
+    periodLabel?: string;
+  };
 }
 
 interface ReservationDetailModalProps {
@@ -36,6 +41,49 @@ export default function ReservationDetailModal({
 
   const hasMultipleParticipants = item.participants.length > 1;
   const busy = cancelling || leaving;
+  const tournament = item.tournament;
+
+  if (tournament) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+        <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-purple-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Campeonato</h3>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              aria-label="Fechar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="space-y-2 mb-6">
+            <p className="font-semibold text-purple-900">{tournament.name}</p>
+            <p className="font-medium text-gray-900 capitalize">{item.dateLabel}</p>
+            <p className="text-sm text-gray-500">{item.time}</p>
+            {tournament.periodLabel && (
+              <p className="text-sm text-gray-600">{tournament.periodLabel}</p>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mb-4">
+            A quadra está reservada para o campeonato neste horário. Fale com o chefe de
+            quadra para mudanças.
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-3 rounded-xl bg-purple-600 text-white font-medium hover:bg-purple-700 transition-colors"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">

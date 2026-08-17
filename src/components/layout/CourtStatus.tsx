@@ -5,6 +5,7 @@ import { collection, query, where, orderBy, onSnapshot, getDocs, getDoc, doc, Ti
 import { db } from '@/lib/firebase/client';
 import { Reservation } from '@/lib/types';
 import { normalizeCourtId, getCourtName, CourtId } from '@/lib/courts';
+import { isTournamentReservation } from '@/lib/tournaments';
 
 interface CourtStatusProps {
   courtId?: CourtId;
@@ -60,7 +61,10 @@ export default function CourtStatus({ courtId = 'quadra_1', showLabel = true, cl
 
     if (currentReservation) {
       setIsOccupied(true);
-      const names = await fetchParticipantNames(currentReservation.id);
+      // Bloco de campeonato aparece pelo nome do campeonato, não por jogadores.
+      const names = isTournamentReservation(currentReservation)
+        ? [currentReservation.tournamentName ?? 'Campeonato']
+        : await fetchParticipantNames(currentReservation.id);
       setParticipantNames(names);
     } else {
       setIsOccupied(false);

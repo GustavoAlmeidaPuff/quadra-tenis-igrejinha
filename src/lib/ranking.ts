@@ -1,5 +1,6 @@
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
+import { isPlayedReservation } from '@/lib/tournaments';
 
 /** Mesma constante de src/lib/queries/stats.ts — toda reserva conta como 1h30 jogada. */
 const RESERVATION_DURATION_HOURS = 1.5;
@@ -97,11 +98,12 @@ export async function computeHoursRanking(): Promise<HoursRankingEntry[]> {
   const now = Date.now();
 
   // Reservas que já aconteceram e são jogo de verdade. Blocos 'organizing' do
-  // "Quem anima?" moram na mesma coleção e não podem virar horas jogadas.
+  // "Quem anima?" e blocos de campeonato moram na mesma coleção e não podem
+  // virar horas jogadas de quem os criou.
   const playedReservations = new Map<string, { createdById: string }>();
   for (const d of reservationsSnap.docs) {
     const data = d.data();
-    if (data.type === 'organizing') continue;
+    if (!isPlayedReservation(data)) continue;
     const endAt = data.endAt?.toDate?.();
     if (!endAt || endAt.getTime() > now) continue;
     playedReservations.set(d.id, { createdById: data.createdById ?? '' });

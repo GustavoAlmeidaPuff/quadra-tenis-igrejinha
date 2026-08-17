@@ -3,6 +3,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { adminDb, hasAdminCredentials } from '@/lib/firebase/admin';
 import { sendParticipantAddedEmail } from '@/lib/brevo';
 import { normalizeCourtId, getCourtName } from '@/lib/courts';
+import { formatConflictMessage } from '@/lib/reservationConflicts';
 
 export async function DELETE(
   request: NextRequest,
@@ -189,21 +190,30 @@ export async function PATCH(
 
       if (conflictDoc) {
         const conflictData = conflictDoc.data();
-        const participants = await adminDb
-          .collection('reservationParticipants')
-          .where('reservationId', '==', conflictDoc.id)
-          .get();
         const names: string[] = [];
-        for (const p of participants.docs) {
-          const u = await adminDb.collection('users').doc(p.data().userId).get();
-          names.push(u.exists ? (u.data()?.firstName ?? 'Jogador') : 'Jogador');
+        // Bloco de campeonato não tem participante para listar.
+        if (!conflictData.type) {
+          const participants = await adminDb
+            .collection('reservationParticipants')
+            .where('reservationId', '==', conflictDoc.id)
+            .get();
+          for (const p of participants.docs) {
+            const u = await adminDb.collection('users').doc(p.data().userId).get();
+            names.push(u.exists ? (u.data()?.firstName ?? 'Jogador') : 'Jogador');
+          }
         }
-        const namesText = names.join(' e ');
-        const verb = names.length === 1 ? 'vai jogar' : 'vão jogar';
-        const startStr = conflictData.startAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
-        const endStr = conflictData.endAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
         return NextResponse.json(
-          { error: `${namesText} ${verb} das ${startStr} às ${endStr}, tente outro horário.` },
+          {
+            error: formatConflictMessage(
+              {
+                startAt: conflictData.startAt.toDate(),
+                endAt: conflictData.endAt.toDate(),
+                type: conflictData.type,
+                tournamentName: conflictData.tournamentName,
+              },
+              names
+            ),
+          },
           { status: 400 }
         );
       }

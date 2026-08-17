@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { collection, query, where, getDocs, getDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/client';
-import { Plus, ChevronLeft, ChevronRight, Settings, ChevronDown } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Settings, ChevronDown, Trophy } from 'lucide-react';
 import { formatTime } from '@/lib/utils';
 import { Reservation } from '@/lib/types';
+import { isTournamentReservation } from '@/lib/tournaments';
 import NewReservationModal from '@/components/reservation/NewReservationModal';
 import ReservationDetailModal from '@/components/reservation/ReservationDetailModal';
 import { CourtId, normalizeCourtId, getUserCourts } from '@/lib/courts';
@@ -32,6 +33,9 @@ interface ReservationWithParticipants extends Reservation {
   participants: string[];
   participantIds: string[];
 }
+
+/** Altura de uma hora na timeline, em pixels. */
+const ROW_HEIGHT_PX = 64;
 
 export default function ReservarPage() {
   const searchParams = useSearchParams();
@@ -302,24 +306,29 @@ export default function ReservarPage() {
         const resEnd = data.endAt?.toDate?.()?.getTime?.() ?? 0;
         if (resEnd <= dayStartMs || resStart > dayEndMs) continue;
 
-        const participantsSnap = await getDocs(
-          query(
-            collection(db, 'reservationParticipants'),
-            where('reservationId', '==', d.id)
-          )
-        );
-        if (cancelled) return;
         const names: string[] = [];
         const ids: string[] = [];
-        for (const pDoc of participantsSnap.docs) {
-          const userId = pDoc.data().userId;
-          if (userId) {
-            ids.push(userId);
-            const userSnap = await getDoc(doc(db, 'users', userId));
-            const u = userSnap.exists() ? userSnap.data() : {};
-            names.push(`${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim() || 'Jogador');
+
+        // Bloco de campeonato não tem participante: evita as leituras à toa.
+        if (!isTournamentReservation(data)) {
+          const participantsSnap = await getDocs(
+            query(
+              collection(db, 'reservationParticipants'),
+              where('reservationId', '==', d.id)
+            )
+          );
+          if (cancelled) return;
+          for (const pDoc of participantsSnap.docs) {
+            const userId = pDoc.data().userId;
+            if (userId) {
+              ids.push(userId);
+              const userSnap = await getDoc(doc(db, 'users', userId));
+              const u = userSnap.exists() ? userSnap.data() : {};
+              names.push(`${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim() || 'Jogador');
+            }
           }
         }
+
         reservationsData.push({
           id: d.id,
           startAt: data.startAt,
@@ -327,6 +336,10 @@ export default function ReservarPage() {
           createdById: data.createdById,
           createdAt: data.createdAt,
           courtId: data.courtId,
+          type: data.type,
+          tournamentId: data.tournamentId,
+          tournamentName: data.tournamentName,
+          periodLabel: data.periodLabel,
           participants: names.length > 0 ? names : ['—'],
           participantIds: ids,
         });
@@ -420,7 +433,12 @@ export default function ReservarPage() {
     timeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
   }
 
-  const ROW_HEIGHT_PX = 64;
+  // Limites do dia mostrado — usados para recortar blocos que passam da meia-noite.
+  const timelineDayStart = new Date(selectedDate);
+  timelineDayStart.setHours(0, 0, 0, 0);
+  const timelineDayStartMs = timelineDayStart.getTime();
+  const timelineDayEndMs = timelineDayStartMs + 24 * 60 * 60 * 1000;
+
   const isSelectedToday =
     selectedDate && now && selectedDate.toDateString() === now.toDateString();
   const hoursFromMidnight =
@@ -595,24 +613,28 @@ export default function ReservarPage() {
               const resStart = res.startAt.toDate();
               const resEnd = res.endAt.toDate();
               if (resStart >= slotEnd || resEnd <= slotStart) return false;
-              const dayStart = new Date(selectedDate);
-              dayStart.setHours(0, 0, 0, 0);
               const firstSlotHour =
-                resStart >= dayStart ? resStart.getHours() : 0;
+                resStart.getTime() >= timelineDayStartMs ? resStart.getHours() : 0;
               return hour === firstSlotHour;
             });
 
-            const resStart = reservation ? reservation.startAt.toDate() : null;
-            const resEnd = reservation ? reservation.endAt.toDate() : null;
+            // O bloco é recortado no dia visível: campeonato que vira a noite
+            // (ou reserva que cruza a meia-noite) não pode desenhar a parte que
+            // pertence ao dia anterior ou ao seguinte.
             const slotStartMs = slotStart.getTime();
-            const durationMinutes = resStart && resEnd
-              ? (resEnd.getTime() - resStart.getTime()) / (1000 * 60)
+            const visibleStartMs = reservation
+              ? Math.max(reservation.startAt.toDate().getTime(), timelineDayStartMs)
               : 0;
-            const startOffsetMinutes = resStart
-              ? (resStart.getTime() - slotStartMs) / (1000 * 60)
+            const visibleEndMs = reservation
+              ? Math.min(reservation.endAt.toDate().getTime(), timelineDayEndMs)
               : 0;
-            const topPx = startOffsetMinutes * (ROW_HEIGHT_PX / 60);
-            const heightPx = durationMinutes * (ROW_HEIGHT_PX / 60);
+            const topPx = reservation
+              ? ((visibleStartMs - slotStartMs) / (1000 * 60)) * (ROW_HEIGHT_PX / 60)
+              : 0;
+            const heightPx = reservation
+              ? ((visibleEndMs - visibleStartMs) / (1000 * 60)) * (ROW_HEIGHT_PX / 60)
+              : 0;
+            const isTournament = reservation ? isTournamentReservation(reservation) : false;
 
             return (
               <div
@@ -633,18 +655,41 @@ export default function ReservarPage() {
                       <button
                         type="button"
                         onClick={() => setSelectedReservation(reservation)}
-                        className={`absolute inset-0 w-full text-left rounded-r-lg p-2 shadow-sm border-l-4 transition-opacity hover:opacity-90 cursor-pointer flex flex-col justify-center ${
-                          auth.currentUser && reservation.participantIds.includes(auth.currentUser.uid)
-                            ? 'bg-gradient-to-r from-emerald-100 to-emerald-50 border-emerald-500'
-                            : 'bg-gradient-to-r from-yellow-100 to-yellow-50 border-yellow-500'
+                        className={`absolute inset-0 w-full text-left rounded-r-lg p-2 shadow-sm border-l-4 transition-opacity hover:opacity-90 cursor-pointer flex flex-col ${
+                          isTournament ? 'justify-start' : 'justify-center'
+                        } ${
+                          isTournament
+                            ? 'bg-gradient-to-r from-purple-100 to-purple-50 border-purple-600'
+                            : auth.currentUser && reservation.participantIds.includes(auth.currentUser.uid)
+                              ? 'bg-gradient-to-r from-emerald-100 to-emerald-50 border-emerald-500'
+                              : 'bg-gradient-to-r from-yellow-100 to-yellow-50 border-yellow-500'
                         }`}
                       >
-                        <div className="font-medium text-sm text-gray-900 truncate">
-                          {reservation.participants.join(', ')}
-                        </div>
-                        <div className="text-xs text-gray-600">
-                          {formatTime(reservation.startAt.toDate())} – {formatTime(reservation.endAt.toDate())}
-                        </div>
+                        {isTournament ? (
+                          <>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Trophy className="w-3.5 h-3.5 text-purple-700 flex-shrink-0" />
+                              <span className="font-semibold text-sm text-purple-900 truncate">
+                                {reservation.tournamentName ?? 'Campeonato'}
+                              </span>
+                            </div>
+                            <div className="text-xs text-purple-700">
+                              {reservation.periodLabel
+                                ? `${reservation.periodLabel} · `
+                                : ''}
+                              {formatTime(reservation.startAt.toDate())} – {formatTime(reservation.endAt.toDate())}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="font-medium text-sm text-gray-900 truncate">
+                              {reservation.participants.join(', ')}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              {formatTime(reservation.startAt.toDate())} – {formatTime(reservation.endAt.toDate())}
+                            </div>
+                          </>
+                        )}
                       </button>
                     </div>
                   )}
@@ -701,6 +746,12 @@ export default function ReservarPage() {
             dateLabel: getDateLabel(selectedReservation),
             time: `${formatTime(selectedReservation.startAt.toDate())} - ${formatTime(selectedReservation.endAt.toDate())}`,
             participants: selectedReservation.participants,
+            tournament: isTournamentReservation(selectedReservation)
+              ? {
+                  name: selectedReservation.tournamentName ?? 'Campeonato',
+                  periodLabel: selectedReservation.periodLabel,
+                }
+              : undefined,
           }}
           onClose={() => setSelectedReservation(null)}
           canManage={Boolean(auth.currentUser && selectedReservation.participantIds.includes(auth.currentUser.uid))}

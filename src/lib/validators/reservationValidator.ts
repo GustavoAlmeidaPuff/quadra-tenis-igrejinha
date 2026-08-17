@@ -1,6 +1,8 @@
 import { Timestamp } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/firebase/admin';
 import { normalizeCourtId } from '@/lib/courts';
+import { formatConflictMessage } from '@/lib/reservationConflicts';
+import { formatZonedTime } from '@/lib/tournaments';
 
 export interface ValidationError {
   message: string;
@@ -94,44 +96,47 @@ export async function validateReservation(
 
   if (conflictDoc) {
     const conflict = conflictDoc.data();
+    const conflictStart = conflict.startAt.toDate();
+    const conflictEnd = conflict.endAt.toDate();
 
-    const participants = await adminDb
-      .collection('reservationParticipants')
-      .where('reservationId', '==', conflictDoc.id)
-      .get();
-
+    // Bloco de campeonato não tem participante: a mensagem sai com o nome dele.
     const participantNames: string[] = [];
-    for (const participantDoc of participants.docs) {
-      const participantData = participantDoc.data();
-      if (participantData.userId) {
-        const userDoc = await adminDb.collection('users').doc(participantData.userId).get();
-        if (userDoc.exists) {
-          const userData = userDoc.data();
-          participantNames.push(userData?.firstName || 'Jogador');
+    if (!conflict.type) {
+      const participants = await adminDb
+        .collection('reservationParticipants')
+        .where('reservationId', '==', conflictDoc.id)
+        .get();
+
+      for (const participantDoc of participants.docs) {
+        const participantData = participantDoc.data();
+        if (participantData.userId) {
+          const userDoc = await adminDb.collection('users').doc(participantData.userId).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            participantNames.push(userData?.firstName || 'Jogador');
+          }
+        } else if (participantData.guestName) {
+          participantNames.push(participantData.guestName);
         }
-      } else if (participantData.guestName) {
-        participantNames.push(participantData.guestName);
       }
     }
 
-    const namesText = participantNames.join(' e ');
-    const verb = participantNames.length === 1 ? 'vai jogar' : 'vão jogar';
     return {
       valid: false,
       error: {
-        message: `${namesText} ${verb} das ${conflict.startAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })} às ${conflict.endAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}, tente outro horário.`,
+        message: formatConflictMessage(
+          {
+            startAt: conflictStart,
+            endAt: conflictEnd,
+            type: conflict.type,
+            tournamentName: conflict.tournamentName,
+          },
+          participantNames
+        ),
         conflictingReservation: {
           participants: participantNames,
-          startTime: conflict.startAt.toDate().toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZone: 'America/Sao_Paulo',
-          }),
-          endTime: conflict.endAt.toDate().toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZone: 'America/Sao_Paulo',
-          }),
+          startTime: formatZonedTime(conflictStart),
+          endTime: formatZonedTime(conflictEnd),
         },
       },
     };

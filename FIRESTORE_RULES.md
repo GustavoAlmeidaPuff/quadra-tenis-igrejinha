@@ -73,6 +73,14 @@ service cloud.firestore {
                       request.auth.uid == resource.data.fromUserId;
     }
 
+    // Campeonatos (bloqueiam a quadra em roxo na agenda).
+    // Só o servidor escreve, pela rota /api/tournaments, que confere se quem
+    // pediu é chefe da quadra. O cliente apenas lê.
+    match /tournaments/{tournamentId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if false;
+    }
+
     // Courts
     match /courts/{courtId} {
       allow read: if request.auth != null;
@@ -102,6 +110,12 @@ service cloud.firestore {
 3. Go to **Firestore Database** → **Rules**
 4. Replace the editor contents with the rules above (including **Posts** with nested **comments** and **commentCount** update rules).
 5. Click **Publish**.
+
+**Campeonatos:** a coleção `tournaments` só é escrita pelo servidor (Admin SDK ignora as
+regras). Os períodos ficam em `reservations` com `type: 'tournament'` e `tournamentId`,
+por isso a agenda e a checagem de conflito continuam funcionando sem consulta nova.
+As duas queries usadas (`tournaments` por `courtId`, `reservations` por `tournamentId`)
+são de campo único e não pedem índice composto.
 
 **Indexes for notifications:**  
 

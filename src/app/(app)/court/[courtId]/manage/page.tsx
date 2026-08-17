@@ -14,7 +14,7 @@ import {
 import { auth, db } from '@/lib/firebase/client';
 import { Court, CourtReservationRules, DurationMode } from '@/lib/types';
 import { isDeveloper } from '@/lib/permissions';
-import { ArrowLeft, UserMinus, UserPlus } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Trophy, UserMinus, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import ErrorState from '@/components/ui/ErrorState';
 import { useToast } from '@/components/ui/Toast';
@@ -239,6 +239,24 @@ export default function GerenciarQuadraPage() {
           <p className="text-sm text-gray-500">Gerenciar quadra</p>
         </div>
       </div>
+
+      {/* Campeonatos */}
+      <Link
+        href={`/court/${courtId}/manage/tournaments`}
+        className="flex items-center gap-3 bg-white rounded-2xl border border-gray-200 p-5 hover:border-purple-300 hover:bg-purple-50/40 transition-colors"
+      >
+        <div className="p-2 bg-purple-100 text-purple-600 rounded-xl">
+          <Trophy className="w-5 h-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold text-gray-900">Criar um campeonato</h2>
+          <p className="text-xs text-gray-500">
+            Reserve a quadra em nome do campeonato. Os períodos aparecem em roxo na agenda
+            de todos.
+          </p>
+        </div>
+        <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+      </Link>
 
       {/* Reservation rules */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">

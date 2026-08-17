@@ -15,6 +15,12 @@ export interface User {
   courtIds?: string[];
 }
 
+/**
+ * 'play' (ou ausente, em docs antigos) é jogo de verdade. Os outros são
+ * bloqueios de quadra e não contam como partida jogada.
+ */
+export type ReservationType = 'play' | 'organizing' | 'tournament';
+
 export interface Reservation {
   id: string;
   startAt: Timestamp;
@@ -23,6 +29,36 @@ export interface Reservation {
   createdAt: Timestamp;
   /** Court for this reservation. Missing on legacy rows = 'quadra_1'. */
   courtId?: string;
+  /** Ausente = reserva comum de jogo. Ver ReservationType. */
+  type?: ReservationType;
+  /** Campeonato dono do bloco (só quando type === 'tournament'). */
+  tournamentId?: string;
+  /**
+   * Nome do campeonato copiado para dentro da reserva: a agenda desenha o bloco
+   * sem precisar de uma leitura extra por reserva. Renomear o campeonato
+   * reescreve este campo em todos os blocos dele.
+   */
+  tournamentName?: string;
+  /** Rótulo do período, ex.: "Sexta à noite". */
+  periodLabel?: string;
+}
+
+export interface Tournament {
+  id: string;
+  name: string;
+  courtId: string;
+  createdById: string;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+/** Um período do campeonato é, na prática, a reserva que bloqueia a quadra. */
+export interface TournamentPeriod {
+  /** Id da reserva correspondente. */
+  id: string;
+  startAt: Timestamp;
+  endAt: Timestamp;
+  label: string;
 }
 
 export interface ReservationParticipant {

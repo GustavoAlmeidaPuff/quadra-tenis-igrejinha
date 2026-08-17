@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, hasAdminCredentials } from '@/lib/firebase/admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { normalizeCourtId } from '@/lib/courts';
+import { formatConflictMessage } from '@/lib/reservationConflicts';
 
 /**
  * Verifica se um horário está livre para reserva (sem conflitos).
@@ -68,37 +69,37 @@ export async function GET(request: NextRequest) {
 
     if (conflictDoc) {
       const conflict = conflictDoc.data();
-      const participants = await adminDb
-        .collection('reservationParticipants')
-        .where('reservationId', '==', conflictDoc.id)
-        .get();
 
+      // Bloco de campeonato não tem participante para listar.
       const participantNames: string[] = [];
-      for (const p of participants.docs) {
-        const d = p.data();
-        if (d.userId) {
-          const u = await adminDb.collection('users').doc(d.userId).get();
-          participantNames.push(u.exists ? (u.data()?.firstName ?? 'Jogador') : 'Jogador');
-        } else if (d.guestName) {
-          participantNames.push(d.guestName);
+      if (!conflict.type) {
+        const participants = await adminDb
+          .collection('reservationParticipants')
+          .where('reservationId', '==', conflictDoc.id)
+          .get();
+
+        for (const p of participants.docs) {
+          const d = p.data();
+          if (d.userId) {
+            const u = await adminDb.collection('users').doc(d.userId).get();
+            participantNames.push(u.exists ? (u.data()?.firstName ?? 'Jogador') : 'Jogador');
+          } else if (d.guestName) {
+            participantNames.push(d.guestName);
+          }
         }
       }
-      const namesText = participantNames.join(' e ');
-      const verb = participantNames.length === 1 ? 'vai jogar' : 'vão jogar';
-      const startStr = conflict.startAt.toDate().toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'America/Sao_Paulo',
-      });
-      const endStr = conflict.endAt.toDate().toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'America/Sao_Paulo',
-      });
 
       return NextResponse.json({
         available: false,
-        error: `${namesText} ${verb} das ${startStr} às ${endStr}, tente outro horário.`,
+        error: formatConflictMessage(
+          {
+            startAt: conflict.startAt.toDate(),
+            endAt: conflict.endAt.toDate(),
+            type: conflict.type,
+            tournamentName: conflict.tournamentName,
+          },
+          participantNames
+        ),
       });
     }
 
